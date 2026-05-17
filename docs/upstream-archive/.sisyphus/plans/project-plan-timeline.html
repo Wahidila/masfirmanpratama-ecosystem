@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Plan — MasFirmanPratama.com</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0f1a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa, #6366f1, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        .header .badge {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 6px 16px;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #a5b4fc;
+            font-weight: 600;
+        }
+
+        /* Summary Cards */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 60px;
+        }
+
+        .summary-card {
+            background: rgba(30, 30, 50, 0.6);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .summary-card .number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #a78bfa;
+        }
+
+        .summary-card .label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #6366f1, #06b6d4, #10b981, #f59e0b);
+            border-radius: 2px;
+        }
+
+        .week-block {
+            margin-bottom: 48px;
+            position: relative;
+        }
+
+        .week-marker {
+            position: absolute;
+            left: -40px;
+            top: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #fff;
+            z-index: 2;
+        }
+
+        .week-1 .week-marker { background: #6366f1; box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
+        .week-2 .week-marker { background: #06b6d4; box-shadow: 0 0 20px rgba(6, 182, 212, 0.4); }
+        .week-3 .week-marker { background: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+        .week-4 .week-marker { background: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+
+        .week-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .week-1 .week-title { color: #a5b4fc; }
+        .week-2 .week-title { color: #67e8f9; }
+        .week-3 .week-title { color: #6ee7b7; }
+        .week-4 .week-title { color: #fcd34d; }
+
+        .week-date {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 16px;
+        }
+
+        .day-group {
+            background: rgba(30, 30, 50, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .day-group:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .day-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .day-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 10px;
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .task-list li {
+            position: relative;
+            padding-left: 20px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+
+        .task-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid #475569;
+        }
+
+        /* Milestone */
+        .milestone {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .week-1 .milestone { background: rgba(99, 102, 241, 0.1); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.2); }
+        .week-2 .milestone { background: rgba(6, 182, 212, 0.1); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.2); }
+        .week-3 .milestone { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .week-4 .milestone { background: rgba(245, 158, 11, 0.1); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.2); }
+
+        /* Decisions Section */
+        .decisions {
+            margin-top: 60px;
+            margin-bottom: 40px;
+        }
+
+        .decisions-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .decisions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .decision-card {
+            background: rgba(30, 30, 50, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .decision-icon {
+            font-size: 1.4rem;
+            margin-bottom: 6px;
+        }
+
+        .decision-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 4px;
+        }
+
+        .decision-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .config-notes {
+            background: rgba(30, 30, 50, 0.4);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            border-radius: 12px;
+            padding: 20px 24px;
+        }
+
+        .config-notes h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #a5b4fc;
+            margin-bottom: 12px;
+        }
+
+        .config-notes ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .config-notes li {
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            padding-left: 16px;
+            position: relative;
+        }
+
+        .config-notes li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #6366f1;
+        }
+
+        .config-notes code {
+            background: rgba(99, 102, 241, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            color: #a5b4fc;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            color: #475569;
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.6rem; }
+            .container { padding: 24px 16px; }
+            .summary { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>MasFirmanPratama.com</h1>
+            <p>Project Development Plan</p>
+            <span class="badge">30 Hari &bull; 13 Mei – 11 Juni 2026</span>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+            <div class="summary-card">
+                <div class="number">30</div>
+                <div class="label">Hari Kerja</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">2</div>
+                <div class="label">Laravel Apps</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">5</div>
+                <div class="label">Milestones</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">4</div>
+                <div class="label">Phases</div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline">
+
+            <!-- WEEK 1 -->
+            <div class="week-block week-1">
+                <div class="week-marker">W1</div>
+                <div class="week-title">Foundation & Store Frontend</div>
+                <div class="week-date">13 – 18 Mei 2026</div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 1–2 &bull; Sel–Rab</div>
+                    <div class="day-title">Project Setup & Database</div>
+                    <ul class="task-list">
+                        <li>Scaffold Laravel 11 — Store & Affiliate apps</li>
+                        <li>Database migrations (products, orders, payments, settings)</li>
+                        <li>Tailwind CSS + Alpine.js build pipeline</li>
+                        <li>Base Blade layouts & seeder data</li>
+                        <li>Git repo + branching strategy</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 3–4 &bull; Kam–Jum</div>
+                    <div class="day-title">Store Public Pages</div>
+                    <ul class="task-list">
+                        <li>Homepage — hero, benefit AMC, katalog, pricing, testimoni</li>
+                        <li>Katalog produk — grid view, filter kelas/buku</li>
+                        <li>Detail produk kelas — materi, jadwal, benefit</li>
+                        <li>Detail produk buku — deskripsi, preview, harga</li>
+                        <li>Responsive mobile polish</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 5–6 &bull; Sab–Min</div>
+                    <div class="day-title">Cart & Checkout (Manual Payment)</div>
+                    <ul class="task-list">
+                        <li>Session-based cart (tanpa login)</li>
+                        <li>Checkout — form data diri + pilih lunas/cicilan</li>
+                        <li>Integrasi Agenwebsite.com API (ongkir buku fisik)</li>
+                        <li>Halaman upload bukti bayar</li>
+                        <li>Halaman status order (tracking via order number)</li>
+                    </ul>
+                    <div class="milestone">🎯 M1: Store customer-facing live (local)</div>
+                </div>
+            </div>
+
+            <!-- WEEK 2 -->
+            <div class="week-block week-2">
+                <div class="week-marker">W2</div>
+                <div class="week-title">Admin Panel — Store Management</div>
+                <div class="week-date">19 – 25 Mei 2026</div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 7–8 &bull; Sen–Sel</div>
+                    <div class="day-title">Admin Auth & Dashboard</div>
+                    <ul class="task-list">
+                        <li>Admin login/logout</li>
+                        <li>Dashboard — revenue, orders today, pending confirmations</li>
+                        <li>Chart penjualan 30 hari</li>
+                        <li>Widget cicilan jatuh tempo</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 9–10 &bull; Rab–Kam</div>
+                    <div class="day-title">Produk & Pesanan</div>
+                    <ul class="task-list">
+                        <li>CRUD Produk (kelas & buku)</li>
+                        <li>List pesanan — filter, search, pagination</li>
+                        <li>Verifikasi bukti bayar (approve/reject)</li>
+                        <li>Track cicilan per order + progress bar</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 11–12 &bull; Jum–Sab</div>
+                    <div class="day-title">Pengiriman & WhatsApp Notifikasi</div>
+                    <ul class="task-list">
+                        <li>Input resi pengiriman buku fisik</li>
+                        <li>WhatsApp Gateway — notif admin & customer</li>
+                        <li>Reminder cicilan otomatis</li>
+                        <li>Laporan penjualan + export CSV</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 13 &bull; Min</div>
+                    <div class="day-title">Settings & Polish</div>
+                    <ul class="task-list">
+                        <li>Settings — info toko, rekening, WA config</li>
+                        <li>Installment scheme management</li>
+                        <li>Bug fixes & UI polish</li>
+                    </ul>
+                    <div class="milestone">🎯 M2: Admin Panel Store complete</div>
+                </div>
+            </div>
+
+            <!-- WEEK 3 -->
+            <div class="week-block week-3">
+                <div class="week-marker">W3</div>
+                <div class="week-title">Affiliate System</div>
+                <div class="week-date">26 Mei – 1 Juni 2026</div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 14–15 &bull; Sen–Sel</div>
+                    <div class="day-title">Affiliate DB & Auth</div>
+                    <ul class="task-list">
+                        <li>Database migrations affiliate (users, commissions, withdrawals, dll)</li>
+                        <li>Seed data produk afiliasi + komisi %</li>
+                        <li>Register affiliator (form + upload KTP + pilih tipe)</li>
+                        <li>Login/logout affiliator & admin</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 16–17 &bull; Rab–Kam</div>
+                    <div class="day-title">Landing & Dashboard Affiliator</div>
+                    <ul class="task-list">
+                        <li>Landing page — kalkulator, benefit, perbandingan tipe, FAQ</li>
+                        <li>Dashboard Non-Peserta — stats, chart, referral links, banner upgrade</li>
+                        <li>Dashboard Peserta — 5 stats, custom slug, QR, leaderboard</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 18–19 &bull; Jum–Sab</div>
+                    <div class="day-title">Fitur Affiliator</div>
+                    <ul class="task-list">
+                        <li>Referral Link Manager + QR Code</li>
+                        <li>Halaman Komisi — saldo, cooling period, filter</li>
+                        <li>Withdrawal — form pengajuan + histori</li>
+                        <li>Materi Marketing — download banner/video/copy</li>
+                        <li>Leaderboard + Profile</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 20 &bull; Min</div>
+                    <div class="day-title">Admin Affiliate Panel</div>
+                    <ul class="task-list">
+                        <li>Manage affiliator — approve/reject/suspend</li>
+                        <li>Manage komisi & withdrawal</li>
+                        <li>Manage produk afiliasi + materi marketing</li>
+                        <li>Event gamifikasi CRUD (preview)</li>
+                    </ul>
+                    <div class="milestone">🎯 M3: Affiliate System complete</div>
+                </div>
+            </div>
+
+            <!-- WEEK 4 -->
+            <div class="week-block week-4">
+                <div class="week-marker">W4</div>
+                <div class="week-title">Integration, Gamifikasi & Launch</div>
+                <div class="week-date">2 – 11 Juni 2026</div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 21–22 &bull; Sen–Sel</div>
+                    <div class="day-title">Webhook Store ↔ Affiliate</div>
+                    <ul class="task-list">
+                        <li>Webhook sender (order-paid, order-refunded)</li>
+                        <li>Webhook receiver + HMAC validation</li>
+                        <li>Referral tracking — klik → redirect → cookie → order</li>
+                        <li>API validate referral code</li>
+                        <li>Webhook logs + retry mechanism</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 23–24 &bull; Rab–Kam</div>
+                    <div class="day-title">Gamifikasi & Event Reward</div>
+                    <ul class="task-list">
+                        <li>CRUD Event — periode, target omset, reward (Umroh/Mobil)</li>
+                        <li>Auto-tracking progress affiliator</li>
+                        <li>Leaderboard per event (real-time)</li>
+                        <li>Notifikasi achievement</li>
+                    </ul>
+                    <div class="milestone">🎯 M4: Full integration done</div>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 25–26 &bull; Jum–Sab</div>
+                    <div class="day-title">Notifikasi & Email</div>
+                    <ul class="task-list">
+                        <li>Email templates (order, payment, resi)</li>
+                        <li>WhatsApp notif lengkap (admin + customer + affiliator)</li>
+                        <li>Reminder cicilan otomatis (scheduled)</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 27–28 &bull; Min–Sen</div>
+                    <div class="day-title">Testing & QA</div>
+                    <ul class="task-list">
+                        <li>E2E test: customer journey</li>
+                        <li>E2E test: affiliator journey</li>
+                        <li>E2E test: admin journey</li>
+                        <li>Security audit + performance optimization</li>
+                    </ul>
+                </div>
+
+                <div class="day-group">
+                    <div class="day-label">Day 29–30 &bull; Sel–Rab</div>
+                    <div class="day-title">Deployment & Launch</div>
+                    <ul class="task-list">
+                        <li>Setup hosting/VPS + SSL</li>
+                        <li>Deploy Store & Affiliate apps</li>
+                        <li>Smoke test production</li>
+                        <li>Seed production data</li>
+                        <li>Handover + training tim Mas Firman</li>
+                    </ul>
+                    <div class="milestone">🚀 M5: Production Launch!</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Tech Stack & Decisions -->
+        <div class="decisions">
+            <h2 class="decisions-title">Tech Stack & Keputusan</h2>
+            
+            <div class="decisions-grid">
+                <div class="decision-card">
+                    <div class="decision-icon">🛠️</div>
+                    <div class="decision-label">Backend</div>
+                    <div class="decision-value">Laravel 11</div>
+                </div>
+                <div class="decision-card">
+                    <div class="decision-icon">🎨</div>
+                    <div class="decision-label">Frontend</div>
+                    <div class="decision-value">Blade + Tailwind + Alpine.js + Chart.js</div>
+                </div>
+                <div class="decision-card">
+                    <div class="decision-icon">🗄️</div>
+                    <div class="decision-label">Database</div>
+                    <div class="decision-value">MySQL (2 DB)</div>
+                </div>
+                <div class="decision-card">
+                    <div class="decision-icon">🌐</div>
+                    <div class="decision-label">Hosting</div>
+                    <div class="decision-value">Hostinger Shared (SSH)</div>
+                </div>
+                <div class="decision-card">
+                    <div class="decision-icon">💬</div>
+                    <div class="decision-label">WhatsApp</div>
+                    <div class="decision-value">Xsender.id</div>
+                </div>
+                <div class="decision-card">
+                    <div class="decision-icon">🚚</div>
+                    <div class="decision-label">Ongkir</div>
+                    <div class="decision-value">Agenwebsite.com API</div>
+                </div>
+                <div class="decision-card">
+                    <div class="decision-icon">💳</div>
+                    <div class="decision-label">Payment</div>
+                    <div class="decision-value">Manual Transfer (Lunas/Cicilan)</div>
+                </div>
+                <div class="decision-card">
+                    <div class="decision-icon">🔐</div>
+                    <div class="decision-label">Admin Panel</div>
+                    <div class="decision-value">masfirmanpratama.com/admin</div>
+                </div>
+            </div>
+
+            <div class="config-notes">
+                <h3>Konfigurasi Penting</h3>
+                <ul>
+                    <li><strong>Admin Panel:</strong> Route prefix <code>/admin</code> di Store app (bukan subdomain)</li>
+                    <li><strong>Skema Cicilan:</strong> Admin bisa set bebas dari panel (CRUD)</li>
+                    <li><strong>Rekening Tujuan:</strong> Admin bisa set multi-rekening dari panel</li>
+                    <li><strong>Affiliate Domain:</strong> <code>affiliate.masfirmanpratama.com</code> (subdomain Hostinger)</li>
+                    <li><strong>Queue Driver:</strong> Database (shared hosting, bukan Redis)</li>
+                    <li><strong>Cron Job:</strong> Via Hostinger panel (reminder cicilan, expire orders)</li>
+                    <li><strong>Deploy:</strong> SSH + Composer + artisan migrate</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>MasFirmanPratama.com &bull; Project Plan v1.1 &bull; Updated 13 Mei 2026</p>
+        </div>
+    </div>
+</body>
+</html>

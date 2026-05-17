@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Affiliate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter", "sans-serif"]
+          },
+          colors: {
+            primary: {
+              50: "#eef2ff",
+              100: "#e0e7ff",
+              500: "#6366f1",
+              600: "#4f46e5",
+              700: "#4338ca",
+              800: "#3730a3",
+              900: "#312e81"
+            },
+            secondary: {
+              50: "#f0fdfa",
+              500: "#14b8a6",
+              600: "#0d9488",
+              900: "#134e4a"
+            },
+            accent: {
+              500: "#f59e0b",
+              600: "#d97706"
+            },
+            slate: {
+              850: "#1e293b"
+            }
+          },
+          animation: {
+            blob: "blob 7s infinite"
+          },
+          keyframes: {
+            blob: {
+              "0%": { transform: "translate(0px, 0px) scale(1)" },
+              "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+              "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+              "100%": { transform: "translate(0px, 0px) scale(1)" }
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="assets/css/tailwind-prototype.css">
+</head>
+<body class="relative min-h-screen bg-slate-50 text-slate-700">
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-primary-200/70 blur-3xl animate-blob"></div>
+    <div class="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-secondary-200/70 blur-3xl animate-blob"></div>
+  </div>
+
+  <div id="app-header"></div>
+
+  <main id="loginSection" class="mx-auto grid min-h-[calc(100vh-81px)] w-full max-w-6xl place-items-center px-4 py-10 sm:px-6 lg:px-8">
+    <section id="loginFormCard" class="glass hover-lift w-full max-w-xl rounded-3xl border border-white/60 p-6 shadow-2xl shadow-primary-950/10 sm:p-8">
+      <div class="mb-6">
+        <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-primary-600">Member Area</p>
+        <h1 class="mt-2 text-3xl font-extrabold text-slate-900">Login Dashboard Affiliate</h1>
+        <p class="mt-2 text-sm text-slate-600">Masukkan email dan password untuk mengakses panel affiliate.</p>
+      </div>
+
+      <form action="dashboard-nonpeserta.html" method="GET" class="space-y-4">
+        <div id="emailField">
+          <label class="mb-1.5 block text-sm font-semibold text-slate-700">Email</label>
+          <div class="relative">
+            <i data-lucide="mail" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+            <input type="email" class="w-full rounded-xl border border-slate-200 bg-white px-10 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" placeholder="nama@email.com" required>
+          </div>
+        </div>
+
+        <div id="passwordField">
+          <label class="mb-1.5 block text-sm font-semibold text-slate-700">Password</label>
+          <div class="relative">
+            <i data-lucide="lock" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+            <input type="password" class="w-full rounded-xl border border-slate-200 bg-white px-10 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" placeholder="Minimal 8 karakter" required>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-600" for="rememberMe">
+            <input id="rememberMe" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-300">
+            Ingat saya
+          </label>
+          <a href="#" class="text-sm font-semibold text-primary-600 hover:text-primary-700">Lupa password</a>
+        </div>
+
+        <button id="btnLogin" type="submit" class="ripple inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition hover:-translate-y-0.5 hover:bg-primary-700">Masuk Dashboard</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="app-footer"></div>
+
+  <button id="tourStartBtn" class="tour-fab ripple inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700">
+    <i data-lucide="signpost" class="h-4 w-4"></i>
+    Mulai Tur Alur Lengkap
+  </button>
+
+  <script src="assets/js/dynamic-layout.js"></script>
+  <script>
+    window.affiliateTourConfig = {
+      flow: "affiliate-login",
+      steps: [
+        { selector: "#loginSection", title: "Halaman Login", content: "Ini titik masuk affiliator aktif untuk mengakses fitur operasional." },
+        { selector: "#emailField", title: "Input Email", content: "Gunakan email yang terdaftar saat proses registrasi affiliate." },
+        { selector: "#passwordField", title: "Input Password", content: "Password autentikasi memastikan hanya pemilik akun yang bisa masuk." },
+        { selector: "#btnLogin", title: "Masuk Dashboard", content: "Setelah login berhasil, affiliator diarahkan ke dashboard untuk melihat performa.", nextPage: "dashboard-nonpeserta.html", nextFlow: "dashboard-nonpeserta", nextIndex: 0 }
+      ]
+    };
+  </script>
+  <script>lucide.createIcons();</script>
+  <script src="assets/js/affiliate-tour.js"></script>
+</body>
+</html>

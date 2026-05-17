@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firman Pratama | Expert in Mind Power & Life Mastery</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            },
+            secondary: {
+              50: '#f0fdfa',
+              500: '#14b8a6',
+              600: '#0d9488',
+              900: '#134e4a',
+            },
+            accent: {
+              500: '#f59e0b',
+              600: '#d97706',
+            },
+            slate: {
+              850: '#1e293b',
+              900: '#0f172a',
+            }
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'float-delayed': 'float 6s ease-in-out 3s infinite',
+            'blob': 'blob 7s infinite',
+            'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-20px)' },
+            },
+            blob: {
+              '0%': { transform: 'translate(0px, 0px) scale(1)' },
+              '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+              '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+              '100%': { transform: 'translate(0px, 0px) scale(1)' },
+            },
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS -->
+  <style>
+    /* Base styles */
+    body {
+      background-color: #f8fafc;
+      color: #334155;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Glassmorphism */
+    .glass {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Interactions */
+    .hover-lift {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .img-zoom-container {
+      overflow: hidden;
+    }
+
+    .img-zoom {
+      transition: transform 0.5s ease;
+    }
+
+    .group:hover .img-zoom {
+      transform: scale(1.08);
+    }
+
+    /* Ripple Effect */
+    .ripple {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ripple::after {
+      content: "";
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+      background-repeat: no-repeat;
+      background-position: 50%;
+      transform: scale(10, 10);
+      opacity: 0;
+      transition: transform .5s, opacity 1s;
+    }
+
+    .ripple:active::after {
+      transform: scale(0, 0);
+      opacity: 0.3;
+      transition: 0s;
+    }
+
+    /* Text Gradients */
+    .text-gradient {
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-image: linear-gradient(to right, #4f46e5, #0d9488);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Focus Ring */
+    :focus-visible {
+      outline: 2px solid #4f46e5;
+      outline-offset: 2px;
+    }
+
+    .animation-delay-200 {
+      animation-delay: 200ms;
+    }
+
+    .animation-delay-400 {
+      animation-delay: 400ms;
+    }
+  </style>
+</head>
+
+<body class="relative">
+
+  <div id="app-header"></div>
+
+  <!-- Hero Section -->
+  <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50">
+    <!-- Background Decorative Elements -->
+    <div class="absolute top-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+      <div
+        class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob">
+      </div>
+      <div
+        class="absolute top-[20%] right-[-10%] w-96 h-96 bg-secondary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-200">
+      </div>
+      <div
+        class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-accent-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-400">
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+        <!-- Hero Content -->
+        <div class="text-center lg:text-left animate-fade-in-up">
+          <div
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-100 text-primary-700 mb-6 font-medium text-sm">
+            <span class="flex h-2 w-2 rounded-full bg-primary-600 animate-pulse"></span>
+            Pakar Pikiran No. 1 di Indonesia
+          </div>
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
+            Kenali Kekuatan Pikiranmu,<br>
+            <span class="text-gradient">Ubah Hidup Jadi Ajaib</span>
+          </h1>
+          <p class="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+            Alpha Mind Control (AMC) adalah Metode yang Teruji, Halal & Logis untuk Mengenali, Mengontrol dan
+            Memaksimalkan Pikiran demi Mewujudkan Semua Impianmu. Mulai perubahanmu hari ini.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <a href="#kategori"
+              class="ripple flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg shadow-primary-500/30 hover:shadow-primary-500/40 transform hover:-translate-y-1">
+              Pelajari Alpha Mind Control <i data-lucide="book-open" class="w-5 h-5"></i>
+            </a>
+            <a href="#buku"
+              class="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-sm hover:shadow-md transform hover:-translate-y-1">
+              Lihat Koleksi Buku
+            </a>
+          </div>
+
+          <div class="mt-10 flex items-center justify-center lg:justify-start gap-4">
+            <div class="flex -space-x-4">
+              <img class="w-10 h-10 rounded-full border-2 border-white object-cover"
+                src="https://i.pravatar.cc/100?img=12" alt="Peserta AMC" loading="lazy">
+              <img class="w-10 h-10 rounded-full border-2 border-white object-cover"
+                src="https://i.pravatar.cc/100?img=33" alt="Peserta AMC" loading="lazy">
+              <img class="w-10 h-10 rounded-full border-2 border-white object-cover"
+                src="https://i.pravatar.cc/100?img=44" alt="Peserta AMC" loading="lazy">
+              <div
+                class="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                +2.5K</div>
+            </div>
+            <div class="text-sm font-medium text-slate-600">
+              Bergabung bersama 2,550+ Peserta Lainnya
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Illustration -->
+        <div class="relative lg:ml-10 mt-10 lg:mt-0 lg:block hidden">
+          <div
+            class="absolute inset-0 bg-gradient-to-tr from-primary-100 to-secondary-100 rounded-full blur-3xl opacity-50">
+          </div>
+          <div class="relative w-full h-[500px] flex justify-center items-center">
+            <!-- Main Central Element: Firman Foto -->
+            <div class="relative w-80 h-96 group z-20 animate-float">
+              <div
+                class="absolute -inset-4 bg-gradient-to-tr from-primary-500/20 to-secondary-500/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+              </div>
+              <div
+                class="relative h-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-8 border-white/50 glass">
+                <img src="../firman-foto.jpeg" alt="Mas Firman Pratama"
+                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  loading="lazy">
+                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-900/80 to-transparent">
+                  <h3 class="text-xl font-bold text-white mb-1">Mas Firman Pratama</h3>
+                  <p class="text-xs text-slate-200 font-medium tracking-wide">Pakar Kekuatan Pikiran</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating Accent 1 -->
+            <div
+              class="absolute -top-6 -right-12 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float-delayed flex items-center gap-3 border border-white/50">
+              <div class="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center shrink-0">
+                <i data-lucide="award" class="w-5 h-5 text-accent-600"></i>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Expertise</p>
+                <p class="text-sm font-bold text-slate-800">Mindset Mastery</p>
+              </div>
+            </div>
+
+            <!-- Floating Accent 2 -->
+            <div
+              class="absolute bottom-20 left-0 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float flex items-center gap-3">
+              <div class="w-10 h-10 bg-secondary-100 rounded-full flex items-center justify-center">
+                <i data-lucide="users" class="w-5 h-5 text-secondary-600"></i>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500 font-medium">Akses Eksklusif</p>
+                <p class="text-sm font-bold text-slate-800">Grup Konsultasi Khusus</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Logo Cloud / Partners -->
+  <section class="py-12 border-b border-slate-200 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <p class="text-center text-sm font-bold text-slate-400 tracking-widest uppercase mb-8">DILIPUT OLEH BERBAGAI MEDIA
+        TERKEMUKA DI INDONESIA</p>
+      <div
+        class="flex flex-wrap justify-center items-center gap-8 md:gap-12 lg:gap-16 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0">
+        <img src="../sindonews.png" alt="SindoNews"
+          class="h-8 md:h-10 lg:h-12 w-auto object-contain cursor-pointer hover:scale-105 transition-transform">
+        <img src="../tribunnews.jpg" alt="TribunNews"
+          class="h-8 md:h-10 lg:h-12 w-auto object-contain cursor-pointer hover:scale-105 transition-transform">
+        <img src="../merdeka.png" alt="Merdeka.com"
+          class="h-8 md:h-10 lg:h-12 w-auto object-contain cursor-pointer hover:scale-105 transition-transform">
+        <img src="../radarsurabaya.png" alt="Radar Surabaya"
+          class="h-8 md:h-10 lg:h-12 w-auto object-contain cursor-pointer hover:scale-105 transition-transform hidden sm:block">
+        <img src="../duta.co.png" alt="Duta Nusantara"
+          class="h-8 md:h-10 lg:h-12 w-auto object-contain cursor-pointer hover:scale-105 transition-transform hidden md:block">
+      </div>
+    </div>
+  </section>
+
+  <!-- Welcome Section -->
+  <section class="py-20 bg-white border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-4">SELAMAT DATANG DI WEBSITE INI
+        </h2>
+        <h3 class="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 leading-tight">Saya Ingin Berbagi Ilmu
+          Tentang <span class="text-gradient block mt-2 pb-2">Kesadaran yang Sesungguhnya</span></h3>
+        <p class="text-lg md:text-xl text-slate-600 mb-12 italic">"Banyak manusia sesungguhnya dalam kerugian jika tidak
+          menyadari tugasnya."</p>
+
+        <div
+          class="bg-slate-50 border border-slate-100 rounded-3xl p-8 md:p-12 shadow-sm mb-4 relative overflow-hidden">
+          <!-- Abstract Background Shape -->
+          <div
+            class="absolute -top-32 -left-32 w-64 h-64 bg-primary-100 rounded-full mix-blend-multiply opacity-50 blur-3xl">
+          </div>
+
+          <h4
+            class="text-xl md:text-2xl font-bold text-slate-900 mb-8 border-b-2 border-primary-200 inline-block pb-2 relative z-10">
+            Buku-buku karya saya yang sudah membantu banyak orang merubah hidupnya:</h4>
+
+          <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left mb-10 relative z-10">
+            <li
+              class="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover-lift group">
+              <div
+                class="w-10 h-10 bg-primary-50 text-primary-600 rounded-full flex items-center justify-center shrink-0 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                <i data-lucide="book" class="w-5 h-5"></i>
+              </div>
+              <span class="font-bold text-slate-700">10 Keajaiban Pikiran</span>
+            </li>
+            <li
+              class="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover-lift group">
+              <div
+                class="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+              </div>
+              <span class="font-bold text-slate-700">Alpha Telepati</span>
+            </li>
+            <li
+              class="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover-lift group">
+              <div
+                class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+              </div>
+              <span class="font-bold text-slate-700">Instan Hipnotis</span>
+            </li>
+            <li
+              class="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover-lift lg:col-span-1.5 group">
+              <div
+                class="w-10 h-10 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center shrink-0 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+              </div>
+              <span class="font-bold text-slate-700">Kitab 101 Kalimat Sugesti Ajaib</span>
+            </li>
+            <li
+              class="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover-lift lg:col-span-1.5 group">
+              <div
+                class="w-10 h-10 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <i data-lucide="coins" class="w-5 h-5"></i>
+              </div>
+              <span class="font-bold text-slate-700">Kitab Kunci Penarik Rezeki</span>
+            </li>
+          </ul>
+
+          <a href="#kategori"
+            class="inline-flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-10 py-5 rounded-full font-bold text-xl transition-all shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 transform hover:-translate-y-1 relative z-10 w-full sm:w-auto">
+            Saya Mau Ikut Kelas AMC, Klik Disini ! <i data-lucide="arrow-down-circle"
+              class="w-6 h-6 animate-bounce"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem/Pain Points Section -->
+  <section class="py-24 bg-slate-50 relative border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6">Anda Punya Masalah Seperti Ini?</h2>
+        <div class="w-24 h-1 bg-primary-500 mx-auto rounded-full"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- 1 -->
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover-lift group">
+          <div
+            class="w-14 h-14 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mb-6 group-hover:bg-red-500 group-hover:text-white transition-colors">
+            <i data-lucide="trending-down" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Bisnis Terasa Lesu</h3>
+          <p class="text-slate-600 mb-6 leading-relaxed">Sudah melakukan berbagai usaha, berbagai ilmu penjualan, tapi
+            bisnis masih sepi saja.</p>
+          <div
+            class="mt-auto px-4 py-2 bg-primary-50 text-primary-700 text-sm font-semibold rounded-lg inline-block border border-primary-100">
+            Maka anda butuh Formula AMC</div>
+        </div>
+
+        <!-- 2 -->
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover-lift group">
+          <div
+            class="w-14 h-14 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center mb-6 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+            <i data-lucide="wallet" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Hutang Menumpuk</h3>
+          <p class="text-slate-600 mb-6 leading-relaxed">Hutang terus menumpuk dan tidak kunjung lunas padahal sudah
+            berusaha kesana kemari.</p>
+          <div
+            class="mt-auto px-4 py-2 bg-primary-50 text-primary-700 text-sm font-semibold rounded-lg inline-block border border-primary-100">
+            Maka anda butuh Formula AMC</div>
+        </div>
+
+        <!-- 3 -->
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover-lift group">
+          <div
+            class="w-14 h-14 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center mb-6 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+            <i data-lucide="arrow-down-to-line" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Susah Naik Jabatan</h3>
+          <p class="text-slate-600 mb-6 leading-relaxed">Sudah rajin bekerja bertahun-tahun, rajin absen tapi susah
+            untuk naik jabatan malah dicuekin atasan.</p>
+          <div
+            class="mt-auto px-4 py-2 bg-primary-50 text-primary-700 text-sm font-semibold rounded-lg inline-block border border-primary-100">
+            Maka anda butuh Formula AMC</div>
+        </div>
+
+        <!-- 4 -->
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover-lift group">
+          <div
+            class="w-14 h-14 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+            <i data-lucide="hourglass" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Hidup Terasa Stagnan</h3>
+          <p class="text-slate-600 mb-6 leading-relaxed">Usia bertambah tetapi hidup masih biasa saja, belum punya rumah
+            dan belum ada mobil.</p>
+          <div
+            class="mt-auto px-4 py-2 bg-primary-50 text-primary-700 text-sm font-semibold rounded-lg inline-block border border-primary-100">
+            Maka anda butuh Formula AMC</div>
+        </div>
+
+        <!-- 5 -->
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover-lift group">
+          <div
+            class="w-14 h-14 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center mb-6 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+            <i data-lucide="baby" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Anak Susah Menurut</h3>
+          <p class="text-slate-600 mb-6 leading-relaxed">Sering memarahi anak, tapi anak malah semakin susah menurut dan
+            malas belajar.</p>
+          <div
+            class="mt-auto px-4 py-2 bg-primary-50 text-primary-700 text-sm font-semibold rounded-lg inline-block border border-primary-100">
+            Maka anda butuh Formula AMC</div>
+        </div>
+
+        <!-- 6 -->
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover-lift group">
+          <div
+            class="w-14 h-14 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center mb-6 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+            <i data-lucide="heart-crack" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Pasangan Pergi</h3>
+          <p class="text-slate-600 mb-6 leading-relaxed">Orang yang anda cintai tiba-tiba berubah. Anda ingin membuat
+            seseorang suka kepada anda?</p>
+          <div
+            class="mt-auto px-4 py-2 bg-primary-50 text-primary-700 text-sm font-semibold rounded-lg inline-block border border-primary-100">
+            Maka anda butuh Formula AMC</div>
+        </div>
+      </div>
+
+      <div class="mt-16 text-center">
+        <a href="#kategori"
+          class="inline-flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-8 md:px-10 py-4 md:py-5 rounded-full font-extrabold text-lg md:text-xl transition-all shadow-lg shadow-accent-500/30 transform hover:-translate-y-1">
+          Saya Mau Mengubah Hidup <span class="bg-white/20 px-3 py-1 rounded-lg ml-2">#DisiniJalannya</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Formula AMC Section -->
+  <section class="py-24 bg-white border-t border-slate-100 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+        <!-- Left: Image -->
+        <div class="relative order-2 lg:order-1 group">
+          <div
+            class="absolute inset-0 bg-gradient-to-tr from-primary-200 to-secondary-200 rounded-3xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500">
+          </div>
+          <img src="../formula-amc-firman-pratama.png" alt="Formula AMC Firman Pratama"
+            class="relative z-10 w-full h-auto rounded-3xl shadow-xl border border-slate-100 hover-lift object-cover"
+            loading="lazy">
+        </div>
+
+        <!-- Right: Text & Stats -->
+        <div class="order-1 lg:order-2">
+          <h2 class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-4">Formula Alpha Mind Control
+          </h2>
+          <h3 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6 leading-tight">
+            TERBUKTI sebagai metode efektif dalam <span class="text-gradient">Menciptakan Keajaiban dalam Hidup</span>
+          </h3>
+          <p class="text-lg md:text-xl text-slate-600 mb-10 leading-relaxed">
+            Firman Pratama menciptakan sebuah formula Ajaib yang membuat setiap manusia mampu mengenali, mengontrol dan
+            memaksimalkan Pikirannya.
+          </p>
+
+          <!-- Stats Breakdown -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+            <div class="bg-primary-50 p-6 rounded-2xl border border-primary-100">
+              <div class="text-4xl font-extrabold text-primary-600 mb-2">80<span class="text-2xl">%</span></div>
+              <p class="text-sm font-bold text-primary-900 uppercase tracking-wide">Praktek<br>Langsung</p>
+            </div>
+            <div class="bg-secondary-50 p-6 rounded-2xl border border-secondary-100">
+              <div class="text-4xl font-extrabold text-secondary-600 mb-2">20<span class="text-2xl">%</span></div>
+              <p class="text-sm font-bold text-secondary-900 uppercase tracking-wide">Teori Yang<br>Benar</p>
+            </div>
+            <div class="bg-amber-50 p-6 rounded-2xl border border-amber-100">
+              <div class="text-4xl font-extrabold text-amber-600 mb-2">100<span class="text-2xl">%</span></div>
+              <p class="text-sm font-bold text-amber-900 uppercase tracking-wide">Ilmiah Untuk<br>Semua</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About / Intro Section -->
+  <section class="py-24 bg-white relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div
+        class="bg-primary-50 rounded-3xl p-8 md:p-12 lg:p-16 border border-primary-100 shadow-sm relative overflow-hidden hover-lift">
+
+        <!-- Decorative bg pattern inside -->
+        <div
+          class="absolute -top-24 -right-24 w-64 h-64 bg-primary-200 rounded-full mix-blend-multiply opacity-50 blur-3xl">
+        </div>
+        <div
+          class="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary-200 rounded-full mix-blend-multiply opacity-50 blur-3xl">
+        </div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
+          <div class="max-w-2xl text-center lg:text-left">
+            <div
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-primary-700 mb-6 font-bold text-sm shadow-sm border border-slate-100">
+              <i data-lucide="user" class="w-4 h-4 text-primary-600"></i>
+              Firman Pratama
+            </div>
+
+            <h2 class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-6 leading-tight">
+              Kenali Kekuatan <span class="text-gradient">Pikiran Anda</span>
+            </h2>
+
+            <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+              <strong class="text-primary-700 font-extrabold">ALPHA MIND CONTROL</strong> adalah satu-satunya Metode
+              yang <span class="text-slate-800 font-bold border-b-2 border-accent-500">Mudah dan Efektif</span> untuk
+              Mengenali, Mengontrol dan Memaksimalkan Pikiran untuk Mewujudkan Semua Impianmu.
+            </p>
+
+            <a href="#kategori"
+              class="inline-flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg shadow-primary-500/30 hover:shadow-primary-500/40 transform hover:-translate-y-1">
+              Pelajari Sekarang <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </a>
+          </div>
+
+          <div class="hidden lg:flex flex-shrink-0 relative">
+            <div
+              class="absolute inset-0 bg-gradient-to-tr from-primary-300 to-secondary-300 rounded-full blur-3xl opacity-40">
+            </div>
+            <div
+              class="w-64 h-64 bg-white rounded-full shadow-2xl flex items-center justify-center relative z-20 border-8 border-white/50 animate-float">
+              <i data-lucide="sparkles" class="w-24 h-24 text-primary-500"></i>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Statistics Section -->
+  <section class="py-20 relative bg-slate-900 overflow-hidden">
+    <!-- Abstract Shapes -->
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-64 h-64 bg-primary-500 rounded-full filter blur-[80px]"></div>
+      <div class="absolute bottom-0 left-0 w-64 h-64 bg-secondary-500 rounded-full filter blur-[80px]"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-white/10">
+        <div class="text-center px-4">
+          <div class="text-4xl md:text-5xl font-extrabold text-white mb-2"><span class="counter"
+              data-target="2550">0</span>+</div>
+          <p class="text-slate-400 font-medium uppercase tracking-wide text-sm">Peserta Bahagia</p>
+        </div>
+        <div class="text-center px-4">
+          <div class="text-4xl md:text-5xl font-extrabold text-white mb-2"><span class="counter"
+              data-target="12">0</span>+</div>
+          <p class="text-slate-400 font-medium uppercase tracking-wide text-sm">Tahun Pengalaman</p>
+        </div>
+        <div class="text-center px-4">
+          <div class="text-4xl md:text-5xl font-extrabold text-white mb-2"><span class="counter"
+              data-target="125">0</span>+</div>
+          <p class="text-slate-400 font-medium uppercase tracking-wide text-sm">Artikel Edukatif</p>
+        </div>
+        <div class="text-center px-4">
+          <div class="text-4xl md:text-5xl font-extrabold text-white mb-2"><span class="counter"
+              data-target="1000">0</span>+</div>
+          <p class="text-slate-400 font-medium uppercase tracking-wide text-sm">Video Bimbingan</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Impact / Philosophy Section -->
+  <section class="py-24 bg-white relative overflow-hidden border-b border-slate-100">
+    <div class="absolute top-0 left-0 w-1/3 h-full bg-secondary-50 rounded-r-full blur-3xl -z-10"></div>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+      <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6 leading-tight">
+        Raih Hidup yang Lebih Baik dengan Teknik Teruji :<br>
+        <span class="text-gradient mt-2 block">Alpha Telepati dan Alpha Mind Control</span>
+      </h2>
+      <p class="text-lg text-slate-600 mb-12 leading-relaxed">
+        "Alpha Mind Control dan Alpha Telepati adalah dua teknik revolusioner yang telah membantu ribuan orang untuk
+        mencapai perubahan nyata dalam hidup mereka untuk meraih kesuksesan finansial, mengatasi stres, dan mencapai
+        tujuan hidup dengan lebih efektif."
+      </p>
+
+      <!-- Quote block -->
+      <div class="relative bg-slate-50 border border-slate-100 rounded-3xl p-8 md:p-10 shadow-sm mx-auto max-w-3xl">
+        <i data-lucide="quote" class="absolute -top-5 left-8 w-10 h-10 text-primary-200 fill-primary-50"></i>
+        <p class="text-lg text-slate-700 italic font-medium leading-relaxed relative z-10">
+          "Sesungguhnya pada yang demikian itu benar-benar terdapat tanda&ndash;tanda (kekuasaan Allah) bagi kaum yang
+          berfikir."
+        </p>
+        <p class="text-primary-600 font-bold mt-4">(QS. al-Jasiyah/45: 13)</p>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- Materi AMC Section -->
+  <section class="py-24 relative bg-slate-900 overflow-hidden border-t border-slate-800 border-b border-primary-900/30">
+    <!-- Abstract Backgrounds -->
+    <div
+      class="absolute top-0 right-0 w-96 h-96 bg-primary-900 rounded-full mix-blend-screen filter blur-[100px] opacity-40">
+    </div>
+    <div
+      class="absolute bottom-0 left-0 w-96 h-96 bg-accent-900 rounded-full mix-blend-screen filter blur-[100px] opacity-20">
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs tracking-[0.2em] font-extrabold text-accent-500 uppercase mb-4">Apa Saja Yang Dibahas?</h2>
+        <h3 class="text-3xl md:text-4xl font-extrabold text-white mb-6 leading-tight">
+          20 Materi Ajaib Di Kelas
+          <span class="text-primary-400 block mt-2 text-gradient pb-2">Alpha Mind Control</span>
+        </h3>
+        <div class="w-24 h-1 bg-primary-600 mx-auto rounded-full mb-8"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 lg:gap-x-12">
+
+        <!-- Kolom Kiri -->
+        <div class="space-y-2">
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Memahami benar apa itu pikiran bawah sadar</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Memahami cara memodifikasi data dalam pikiran
+              bawah sadar</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Mengetahui letak "HATI" sebenarnya</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Cara mengakses pikiran bawah sadar</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Mengetahui apakah anda memiliki bakat sukses-kaya
+            </p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Cara memunculkan "bola energi"</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Cara melindungi diri dengan "sarung energi"</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Cara berbicara dengan bawah sadar</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik memasuki kondisi Alpha-State</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik Alpha Telepati untuk mempengaruhi orang
+              lain tanpa bertatap muka</p>
+          </div>
+        </div>
+
+        <!-- Kolom Kanan -->
+        <div class="space-y-2">
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik untuk melakukan "pelet pengasihan" yang
+              HALAL</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik untuk "menarik uang gaib" (pesugihan) yang
+              HALAL</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik untuk merasakan suatu tempat kedamaian</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik untuk melakukan astral-projection
+              (perjalanan antar ruang)</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik untuk mengunci Alpha-State</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik untuk membuat sahabat virtual
+              (pendamping/sedulur papat limo pancer)</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik untuk membuat karyawan virtual agar dapat
+              bekerja untuk Anda</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Teknik melatih alpha-state walau membuka mata</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Cara membuat kalimat doa yang 99% terkabul</p>
+          </div>
+
+          <div
+            class="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+            <div
+              class="mt-0.5 w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <i data-lucide="check" class="w-4 h-4 text-primary-300"></i>
+            </div>
+            <p class="text-slate-300 font-medium leading-relaxed mt-1">Memasukkan kunci bahwa Sukses = AKU + Tuhan</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories Grid -->
+  <section id="kategori" class="py-20 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Program Kelas Alpha Mind Control</h2>
+        <p class="text-lg text-slate-600">Pilih format kelas yang sesuai dengan rutinitas Anda. Baik itu daring, luring
+          maupun eksklusif satu lawan satu bersama Mas Firman.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Kelas Reguler -->
+        <div
+          class="group relative bg-white rounded-3xl p-8 border border-slate-100 shadow-sm hover-lift flex flex-col h-full overflow-hidden">
+          <div class="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+            <i data-lucide="video" class="w-32 h-32 text-blue-600"></i>
+          </div>
+          <div class="mb-6 relative z-10">
+            <h3 class="text-2xl font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">Kelas Reguler
+            </h3>
+            <p class="text-sm text-slate-600 min-h-[60px] leading-relaxed">Kelas Reguler Banyak Orang sesuai jadwal
+              diatur oleh admin. Bisa dilakukan Online via zoom satu persatu tapi sesuai antrian</p>
+          </div>
+
+          <div class="mb-8 relative z-10 pb-8 border-b border-slate-100">
+            <div class="text-3xl font-extrabold text-slate-900">Rp4.500.000</div>
+          </div>
+
+          <ul class="space-y-4 mb-8 flex-grow relative z-10 text-sm text-slate-700 font-medium">
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>20 Materi AMC</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Modul materi AMC</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Buku Alpha Telepati</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Sertifikat dan alat tulis (reguler offline)</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span class="leading-relaxed">Grup Telegram Peserta AMC dan Pertemuan Rutin setiap bulan</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Jadwal Kelas online sesuai antrian</span>
+            </li>
+          </ul>
+
+          <div class="mt-auto relative z-10">
+            <a href="course-detail.html"
+              class="block w-full text-center bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl py-3.5 font-bold transition-all shadow-sm">
+              Mulai
+            </a>
+            <p class="text-xs text-slate-400 mt-4 text-center leading-relaxed">*Pembayaran bisa dicicil melalui
+              marketplace atau ke admin sampai lunas</p>
+          </div>
+        </div>
+
+        <!-- Kelas Privat -->
+        <div
+          class="group relative bg-white rounded-3xl p-8 border border-slate-100 shadow-sm hover-lift flex flex-col h-full overflow-hidden ring-2 ring-primary-500 transform lg:-translate-y-4">
+          <div class="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+            <i data-lucide="mic" class="w-32 h-32 text-orange-600"></i>
+          </div>
+          <div
+            class="absolute top-0 left-1/2 -translate-x-1/2 bg-primary-500 text-white px-4 py-1 rounded-b-xl text-xs font-bold tracking-wider uppercase">
+            Terlaris</div>
+
+          <div class="mb-6 relative z-10 mt-2">
+            <h3 class="text-2xl font-bold text-slate-900 mb-3 group-hover:text-orange-600 transition-colors">Kelas
+              Privat</h3>
+            <p class="text-sm text-slate-600 min-h-[60px] leading-relaxed">Dilakukan secara offline, materi sama dengan
+              reguler tetapi kelas satu persatu sehingga materi bisa spesifik sesuai masalah</p>
+          </div>
+
+          <div class="mb-8 relative z-10 pb-8 border-b border-slate-100">
+            <div class="text-3xl font-extrabold text-slate-900">Rp7.500.000</div>
+          </div>
+
+          <ul class="space-y-4 mb-8 flex-grow relative z-10 text-sm text-slate-700 font-medium">
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>20 Materi AMC</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Modul Materi AMC</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Buku Alpha Telepati</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Sertifikat dan alat tulis (notes)</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span class="leading-relaxed">Grup Telegram Peserta AMC dan Pertemuan Rutin setiap bulan</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+              <span>Jadwal Antrian Kelas privat lebih cepat</span>
+            </li>
+          </ul>
+
+          <div class="mt-auto relative z-10">
+            <a href="course-detail.html"
+              class="block w-full text-center bg-primary-600 text-white hover:bg-primary-700 hover:shadow-lg rounded-xl py-3.5 font-bold transition-all">
+              Mulai
+            </a>
+            <p class="text-xs text-slate-400 mt-4 text-center leading-relaxed">*Pembayaran bisa dicicil melalui
+              marketplace atau ke admin sampai lunas</p>
+          </div>
+        </div>
+
+        <!-- Kelas Platinum -->
+        <div
+          class="group relative bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-xl hover-lift flex flex-col h-full overflow-hidden">
+          <div class="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+            <i data-lucide="gem" class="w-32 h-32 text-emerald-400"></i>
+          </div>
+          <div class="mb-6 relative z-10">
+            <h3 class="text-2xl font-bold text-white mb-3 group-hover:text-emerald-400 transition-colors">Kelas Platinum
+            </h3>
+            <p class="text-sm text-slate-300 min-h-[60px] leading-relaxed">Program khusus selama 3 hari untuk mengenali
+              semua penghambat diri agar mempercepat Perubahan dalam Kehidupan</p>
+          </div>
+
+          <div class="mb-8 relative z-10 pb-8 border-b border-slate-800">
+            <div class="text-3xl font-extrabold text-white">Rp22.500.000</div>
+          </div>
+
+          <ul class="space-y-4 mb-8 flex-grow relative z-10 text-sm text-slate-300 font-medium">
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+              <span>Materi Advanced</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+              <span>Kamar Hotel 3 hari 2 malam</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+              <span>Makan 3x Sehari</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+              <span>Terdapat tugas selama pelatihan</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+              <span>Modul kelas Platinum dan alat tulis, notes</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+              <span>Durasi lebih lama untuk bebas curhat</span>
+            </li>
+          </ul>
+
+          <div class="mt-auto relative z-10">
+            <a href="course-detail.html"
+              class="block w-full text-center bg-white text-slate-900 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl py-3.5 font-bold transition-all shadow-md">
+              Pilih Paket
+            </a>
+            <p class="text-xs text-slate-400 mt-4 text-center leading-relaxed">*Pembayaran bisa dicicil melalui
+              marketplace atau ke admin sampai lunas</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Courses Carousel / Cards -->
+  <section id="buku" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-end mb-12">
+        <div class="max-w-2xl">
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Karya Buku & Kitab Ajaib</h2>
+          <p class="text-lg text-slate-600">Pelajari pondasi alam bawah sadar, manipulasi telepati sehat, secara
+            otodidak hanya dengan membaca karya bestseller ini.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Course Card 1 -->
+        <div
+          class="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover-lift flex flex-col h-full">
+          <div class="relative h-64 bg-slate-100 p-4 img-zoom-container flex justify-center items-center">
+            <img src="assets/images/alpha telepathy.png" alt="Buku Alpha Telepati"
+              class="h-full w-auto object-contain img-zoom group-hover:scale-105 transition-transform duration-300">
+            <div
+              class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary-700 shadow-sm">
+              Mindset</div>
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors">Buku Alpha
+              Telepati</h3>
+            <p class="text-sm text-slate-600 mb-4 flex-grow">Teknik mempengaruhi orang lain tanpa bertatap muka. Membuat
+              seseorang menuruti keinginan anda tanpa ia disadarkan.</p>
+
+            <div class="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-100">
+              <span class="flex items-center gap-1"><i data-lucide="book-open" class="w-4 h-4"></i> Cetakan Fisik</span>
+              <span class="flex items-center gap-1"><i data-lucide="truck" class="w-4 h-4"></i> Kirim ke Seluruh
+                Indonesia</span>
+            </div>
+
+            <div class="flex justify-between items-center mt-auto">
+              <a href="book-detail.html"
+                class="w-full text-center bg-primary-600 text-white rounded-lg py-2.5 font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+                Pesan Sekarang
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course Card 2 -->
+        <div
+          class="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover-lift flex flex-col h-full">
+          <div class="relative h-64 bg-slate-100 p-4 img-zoom-container flex justify-center items-center">
+            <img src="assets/images/10 keajaiban pikiran.png" alt="Buku 10 Keajaiban Pikiran"
+              class="h-full w-auto object-contain img-zoom group-hover:scale-105 transition-transform duration-300">
+            <div
+              class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-accent-600 shadow-sm">
+              Fondasi</div>
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors">Buku 10
+              Keajaiban Pikiran</h3>
+            <p class="text-sm text-slate-600 mb-4 flex-grow">Langkah awal yang esensial membuka pengetahuan absolut
+              tentang keajaiban-keajaiban yang tersembunyi di balik otak kita.</p>
+
+            <div class="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-100">
+              <span class="flex items-center gap-1"><i data-lucide="book-open" class="w-4 h-4"></i> Cetakan Fisik</span>
+              <span class="flex items-center gap-1"><i data-lucide="star" class="w-4 h-4"></i> Best Seller Umum</span>
+            </div>
+
+            <div class="flex justify-between items-center mt-auto">
+              <a href="book-detail.html"
+                class="w-full text-center bg-primary-600 text-white rounded-lg py-2.5 font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+                Pesan Sekarang
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course Card 3 -->
+        <div
+          class="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover-lift flex flex-col h-full">
+          <div class="relative h-64 bg-slate-100 p-4 img-zoom-container flex justify-center items-center">
+            <img src="assets/images/kitab kunci penarik rezeki.png" alt="Kitab Kunci Penarik Rezeki"
+              class="h-full w-auto object-contain img-zoom group-hover:scale-105 transition-transform duration-300">
+            <div
+              class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-secondary-600 shadow-sm">
+              Spirituality / Rezeki</div>
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors">Kitab Kunci
+              Penarik Rezeki</h3>
+            <p class="text-sm text-slate-600 mb-4 flex-grow">Kitab panduan khusus meningkatkan dan memperlancar volume
+              rezeki. Pelajari sudut pandang spiritual baru mengenai energi mendatangkan uang.</p>
+
+            <div class="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-100">
+              <span class="flex items-center gap-1"><i data-lucide="book-open" class="w-4 h-4"></i> Edisi
+                Eksklusif</span>
+              <span class="flex items-center gap-1"><i data-lucide="gem" class="w-4 h-4"></i> Praktik Langsung</span>
+            </div>
+
+            <div class="flex justify-between items-center mt-auto">
+              <a href="book-detail.html"
+                class="w-full text-center bg-primary-600 text-white rounded-lg py-2.5 font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+                Pesan Sekarang
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course Card 4 -->
+        <div
+          class="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover-lift flex flex-col h-full">
+          <div class="relative h-64 bg-slate-100 p-4 img-zoom-container flex justify-center items-center">
+            <img src="assets/images/kitab 101 kalimat sugesti ajaib.png" alt="Kitab 101 Kalimat Sugesti Ajaib"
+              class="h-full w-auto object-contain img-zoom group-hover:scale-105 transition-transform duration-300">
+            <div
+              class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-emerald-600 shadow-sm">
+              Sugesti</div>
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors">Kitab 101
+              Kalimat Sugesti</h3>
+            <p class="text-sm text-slate-600 mb-4 flex-grow">Kumpulan kalimat sugesti ajaib untuk berbagai kebutuhan
+              hidup, membantu Anda memprogram ulang pikiran bawah sadar dengan mudah.</p>
+
+            <div class="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-100">
+              <span class="flex items-center gap-1"><i data-lucide="book-open" class="w-4 h-4"></i> Edisi
+                Spesial</span>
+              <span class="flex items-center gap-1"><i data-lucide="zap" class="w-4 h-4"></i> Mudah Dipahami</span>
+            </div>
+
+            <div class="flex justify-between items-center mt-auto">
+              <a href="book-detail.html"
+                class="w-full text-center bg-primary-600 text-white rounded-lg py-2.5 font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+                Pesan Sekarang
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course Card 5 -->
+        <div
+          class="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover-lift flex flex-col h-full">
+          <div class="relative h-64 bg-slate-100 p-4 img-zoom-container flex justify-center items-center">
+            <img src="assets/images/instan hypnosis.png" alt="Buku Instan Hypnosis"
+              class="h-full w-auto object-contain img-zoom group-hover:scale-105 transition-transform duration-300">
+            <div
+              class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-purple-600 shadow-sm">
+              Hipnosis</div>
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors">Buku Instan
+              Hypnosis</h3>
+            <p class="text-sm text-slate-600 mb-4 flex-grow">Panduan praktis dan instan untuk menguasai keterampilan
+              hipnosis dalam waktu singkat untuk berbagai keperluan positif.</p>
+
+            <div class="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-100">
+              <span class="flex items-center gap-1"><i data-lucide="book-open" class="w-4 h-4"></i> Cetakan Fisik</span>
+              <span class="flex items-center gap-1"><i data-lucide="brain" class="w-4 h-4"></i> Teknik Praktis</span>
+            </div>
+
+            <div class="flex justify-between items-center mt-auto">
+              <a href="book-detail.html"
+                class="w-full text-center bg-primary-600 text-white rounded-lg py-2.5 font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+                Pesan Sekarang
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section id="testimoni" class="py-20 bg-slate-50 relative overflow-hidden">
+    <div class="absolute right-0 top-0 w-1/3 h-full bg-primary-50 rounded-l-full blur-3xl -z-10"></div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Kisah Nyata Peserta Kelas AMC</h2>
+        <p class="text-lg text-slate-600">Terbukti memberikan jalan terang pada bisnis, karir, finansial rumah tangga,
+          hingga kebahagiaan hidup ribuan alumni kami.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Testi 1 -->
+        <div
+          class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative">
+          <i data-lucide="quote" class="absolute top-8 right-8 w-12 h-12 text-primary-100"></i>
+          <p class="text-slate-700 mb-6 relative z-10 font-medium leading-relaxed">"Sangat bersyukur bertemu kelas ini.
+            Dari AMC Saya semakin menyadari bahwa Hidup Ini sungguh Indah, Enak Dan Menyenangkan jika kita paham
+            rumusnya."</p>
+          <div class="flex items-center gap-4">
+            <div
+              class="w-12 h-12 rounded-full border-2 border-primary-100 bg-slate-100 flex items-center justify-center text-primary-600 font-bold">
+              R</div>
+            <div>
+              <h4 class="font-bold text-slate-900">Ria Handayani</h4>
+              <p class="text-sm text-primary-600 font-medium">Alumni Kelas Reguler</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Testi 2 -->
+        <div
+          class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative transform lg:-translate-y-4">
+          <i data-lucide="quote" class="absolute top-8 right-8 w-12 h-12 text-primary-100"></i>
+          <p class="text-slate-700 mb-6 relative z-10 font-medium leading-relaxed">"Luar biasa! Setelah mempraktikkan
+            isi kelasnya dengan bimbingan Mas Firman, saya yakin kita Bisa Mencapai Apapun Yang Kita Inginkan Dengan
+            Kekuatan Pikiran."</p>
+          <div class="flex items-center gap-4">
+            <div
+              class="w-12 h-12 rounded-full border-2 border-primary-100 bg-slate-100 flex items-center justify-center text-primary-600 font-bold">
+              F</div>
+            <div>
+              <h4 class="font-bold text-slate-900">Fitria</h4>
+              <p class="text-sm text-primary-600 font-medium">Alumni Kelas Private</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Testi 3 -->
+        <div
+          class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative">
+          <i data-lucide="quote" class="absolute top-8 right-8 w-12 h-12 text-primary-100"></i>
+          <p class="text-slate-700 mb-6 relative z-10 font-medium leading-relaxed">"Rasional, logis tanpa embel-embel
+            sihir tapi AMC Adalah Ilmu Yang Sangat Mind Blowing bagi nalar saya, sangat aplikatif di dunia kerja."</p>
+          <div class="flex items-center gap-4">
+            <div
+              class="w-12 h-12 rounded-full border-2 border-primary-100 bg-slate-100 flex items-center justify-center text-primary-600 font-bold">
+              E</div>
+            <div>
+              <h4 class="font-bold text-slate-900">Edi</h4>
+              <p class="text-sm text-primary-600 font-medium">Alumni AMC</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Newsletter CTA -->
+  <section class="py-24 bg-white relative">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-primary-900 rounded-[2.5rem] overflow-hidden relative shadow-2xl">
+        <!-- Background decoration -->
+        <div class="absolute inset-0">
+          <div
+            class="absolute -top-24 -right-24 w-96 h-96 bg-primary-600 rounded-full mix-blend-multiply opacity-50 blur-3xl">
+          </div>
+          <div
+            class="absolute -bottom-24 -left-24 w-96 h-96 bg-accent-600 rounded-full mix-blend-multiply opacity-20 blur-3xl">
+          </div>
+        </div>
+
+        <div class="relative p-10 md:p-16 text-center z-10">
+          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Dapatkan Kalimat Sugesti Gratis!</h2>
+          <p class="text-primary-100 mb-10 max-w-2xl mx-auto">Masukan alamat email Anda untuk menerima informasi rutin
+            mengenai afirmasi positif, trik AMC terbaru dan jadwal kelas Mas Firman.</p>
+
+          <form class="max-w-md mx-auto relative flex items-center">
+            <input type="email" placeholder="Masukkan alamat email..."
+              class="w-full pl-6 pr-32 py-4 rounded-full bg-white/10 border border-white/20 text-white placeholder-primary-200 focus:outline-none focus:bg-white focus:text-slate-900 focus:placeholder-slate-400 transition-all">
+            <button type="submit"
+              class="absolute right-2 ripple bg-accent-500 hover:bg-accent-600 text-white px-6 py-2.5 rounded-full font-semibold transition-colors">
+              Subscribe
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="app-footer"></div>
+
+  <!-- Init JS Scripts -->
+  <script src="assets/js/dynamic-layout.js"></script>
+  <script>
+    // Init Lucide Icons
+    lucide.createIcons();
+
+    // Navbar Scroll Effect
+    const navbar = document.getElementById('navbar');
+    if (navbar) {
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 20) {
+          navbar.classList.add('shadow-md', 'bg-white/95');
+          navbar.classList.remove('border-gray-100');
+        } else {
+          navbar.classList.remove('shadow-md', 'bg-white/95');
+          navbar.classList.add('border-gray-100');
+        }
+      });
+    }
+
+    // Mobile Menu Toggle
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+
+    if (btn && menu) {
+      btn.addEventListener('click', () => {
+        menu.classList.toggle('hidden');
+        // Adding a simple fade in effect equivalent
+        if (!menu.classList.contains('hidden')) {
+          menu.style.animation = 'fadeInUp 0.2s ease-out';
+        }
+      });
+    }
+
+    // Animated Counters
+    const counters = document.querySelectorAll('.counter');
+    const speed = 200; // The lower the slower
+
+    const startCounting = (counter) => {
+      const updateCount = () => {
+        const target = +counter.getAttribute('data-target');
+        const count = +counter.innerText;
+        const inc = target / speed;
+
+        if (count < target) {
+          counter.innerText = Math.ceil(count + inc);
+          setTimeout(updateCount, 20);
+        } else {
+          // ensure commas at thousands
+          counter.innerText = target.toLocaleString('id-ID');
+        }
+      };
+      updateCount();
+    };
+
+    // Intersection Observer to trigger counting when visible
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.5
+    };
+
+    const authObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          startCounting(entry.target);
+          // Stop observing once animated
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    counters.forEach(counter => {
+      authObserver.observe(counter);
+    });
+  </script>
+</body>
+
+</html>

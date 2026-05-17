@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Kelas Reguler | Firman Pratama</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        },
+                        secondary: {
+                            50: '#f0fdfa',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            900: '#134e4a',
+                        },
+                        accent: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        slate: {
+                            850: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 3s infinite',
+                        'blob': 'blob 7s infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS -->
+    <style>
+        /* Base styles */
+        body {
+            background-color: #f8fafc;
+            color: #334155;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Interactions */
+        .hover-lift {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .img-zoom-container {
+            overflow: hidden;
+        }
+
+        .img-zoom {
+            transition: transform 0.5s ease;
+        }
+
+        .group:hover .img-zoom {
+            transform: scale(1.08);
+        }
+
+        /* Ripple Effect */
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ripple::after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform .5s, opacity 1s;
+        }
+
+        .ripple:active::after {
+            transform: scale(0, 0);
+            opacity: 0.3;
+            transition: 0s;
+        }
+
+        /* Text Gradients */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(to right, #4f46e5, #0d9488);
+        }
+    </style>
+</head>
+
+<body class="relative bg-slate-50">
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 glass border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <a href="index.html" class="flex-shrink-0 flex items-center gap-2 cursor-pointer">
+                    <div
+                        class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
+                        <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight text-slate-900">Firman<span
+                            class="text-primary-600">Pratama</span></span>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html#kategori"
+                        class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Program</a>
+                    <a href="index.html#buku"
+                        class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Buku</a>
+                    <a href="index.html#testimoni"
+                        class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Testimoni</a>
+                    <div class="h-6 w-px bg-slate-200"></div>
+                    <a href="login.html"
+                        class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Member Area</a>
+                    <a href="https://wa.me/6281230633464"
+                        class="ripple bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-full font-medium transition-colors shadow-lg shadow-primary-500/30">Konsultasi
+                        Sekarang</a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn"
+                        class="text-slate-600 hover:text-primary-600 focus:outline-none p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Layer -->
+    <main class="pt-32 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <!-- Background Elements -->
+        <div
+            class="absolute top-0 right-0 w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply opacity-20 blur-3xl animate-blob -z-10">
+        </div>
+        <div
+            class="absolute bottom-64 left-10 w-80 h-80 bg-secondary-200 rounded-full mix-blend-multiply opacity-20 blur-3xl animate-blob animation-delay-200 -z-10">
+        </div>
+
+        <!-- Breadcrumbs -->
+        <nav
+            class="flex text-sm text-slate-500 mb-8 items-center gap-2 relative z-10 w-fit bg-white/50 px-4 py-2 rounded-full border border-slate-100 backdrop-blur-sm">
+            <a href="index.html" class="hover:text-primary-600 transition-colors font-medium flex items-center gap-1"><i
+                    data-lucide="home" class="w-4 h-4"></i> Beranda</a>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            <a href="index.html#kategori" class="hover:text-primary-600 transition-colors font-medium">Program AMC</a>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            <span class="text-primary-600 font-bold">Kelas Reguler</span>
+        </nav>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
+
+            <!-- Main Detailed Information (Left side, takes 7 or 8 columns on large) -->
+            <div class="lg:col-span-8 space-y-10">
+
+                <!-- Title & Overview -->
+                <div>
+                    <div
+                        class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-bold uppercase tracking-wider mb-4 border border-primary-100 shadow-sm">
+                        <i data-lucide="award" class="w-4 h-4"></i> Paling Diminati
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-6 leading-tight">
+                        Kelas Reguler <span class="text-gradient block mt-2">Alpha Mind Control</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 leading-relaxed mb-6 font-medium">
+                        Kelas Reguler Banyak Orang sesuai jadwal yang diatur oleh admin. Tersedia format online via zoom
+                        eksklusif satu persatu (berdasarkan antrian) atau kelas terpusat di berbagai wilayah (offline).
+                    </p>
+
+                    <div
+                        class="flex flex-wrap items-center gap-6 text-sm text-slate-600 border-t border-b border-slate-200/60 py-4 mb-4">
+                        <div
+                            class="flex items-center gap-2 font-medium bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-100">
+                            <i data-lucide="users" class="w-5 h-5 text-primary-500"></i> 1000+ Peserta Terdaftar</div>
+                        <div
+                            class="flex items-center gap-2 font-medium bg-amber-50/50 px-3 py-1.5 rounded-lg border border-amber-100/50 text-amber-800">
+                            <i data-lucide="star" class="w-5 h-5 text-accent-500"></i> 4.9/5 Rating Kepuasan</div>
+                        <div
+                            class="flex items-center gap-2 font-medium bg-secondary-50/50 px-3 py-1.5 rounded-lg border border-secondary-100/50 text-secondary-800">
+                            <i data-lucide="clock" class="w-5 h-5 text-secondary-500"></i> Fleksibel & Terjadwal</div>
+                    </div>
+                </div>
+
+                <!-- Media Cover (Image/Video Representation) -->
+                <div
+                    class="relative w-full aspect-[16/9] rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 group">
+                    <img src="../firman-foto.jpeg" alt="Kelas Reguler Alpha Mind Control"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-95">
+                    <div
+                        class="absolute inset-0 bg-slate-900/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <button
+                            class="w-20 h-20 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-primary-600 hover:scale-110 transition-transform shadow-2xl">
+                            <i data-lucide="play" class="w-8 h-8 ml-1 text-primary-600"></i>
+                        </button>
+                    </div>
+                    <div class="absolute bottom-6 left-6 right-6">
+                        <div class="glass-dark p-4 rounded-xl inline-block max-w-sm">
+                            <p class="text-white font-medium text-sm">"Mengubah hidup berawal dari mengubah pikiran
+                                bawah sadar Anda dengan cara yang tepat dan logis."</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Syllabus / Points -->
+                <div
+                    class="bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
+                    <h2
+                        class="text-2xl md:text-3xl font-bold text-slate-900 mb-8 border-b-2 border-primary-100 inline-block pb-2">
+                        Materi Apa Saja Yang Dibahas?</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex items-start gap-4 group">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-slate-600 font-medium leading-relaxed">Memahami benar apa itu pikiran bawah
+                                sadar</p>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-slate-600 font-medium leading-relaxed">Memahami cara memodifikasi data dalam
+                                pikiran</p>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-slate-600 font-medium leading-relaxed">Mengetahui letak "HATI" sebenarnya</p>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-slate-600 font-medium leading-relaxed">Teknik Alpha Telepati (mempengaruhi
+                                orang lain)</p>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-slate-600 font-medium leading-relaxed">Teknik "tarik uang gaib" yang Halal
+                            </p>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </div>
+                            <p class="text-slate-600 font-medium leading-relaxed">Cara membuat kalimat doa yang 99%
+                                terkabul</p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-8 bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center text-slate-600 font-medium">
+                        Dan <span class="text-primary-600 font-bold">14 materi inti lainnya</span> yang akan dipelajari
+                        secara bertahap dalam kelas.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkout Sticky Panel (Right side, takes 4 columns) -->
+            <div class="lg:col-span-4 mt-6 lg:mt-0">
+                <div
+                    class="sticky top-28 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 hover-lift">
+
+                    <div class="mb-6 flex justify-between items-start">
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">Harga Normal</p>
+                            <div class="text-4xl font-extrabold text-slate-900 leading-none">Rp4.500.000</div>
+                        </div>
+                        <div
+                            class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100">
+                            Cicilan Tersedia
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100 mb-6">
+
+                    <h3 class="font-bold text-slate-900 mb-4 text-lg">Fasilitas Spesial:</h3>
+                    <ul class="space-y-4 mb-8 text-sm text-slate-600">
+                        <li class="flex items-start gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500 mt-0.5">
+                                <i data-lucide="check" class="w-3.5 h-3.5 border-emerald-200"></i>
+                            </div>
+                            <span class="font-medium leading-relaxed text-base pt-0.5">Akses 20 Modul Materi AMC</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500 mt-0.5">
+                                <i data-lucide="check" class="w-3.5 h-3.5 border-emerald-200"></i>
+                            </div>
+                            <span class="font-medium leading-relaxed text-base pt-0.5">Buku Eksklusif Alpha
+                                Telepati</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500 mt-0.5">
+                                <i data-lucide="check" class="w-3.5 h-3.5 border-emerald-200"></i>
+                            </div>
+                            <span class="font-medium leading-relaxed text-base pt-0.5">Sertifikat & Alat Tulis <br><span
+                                    class="text-slate-400 text-xs">(hanya bagi peserta luring)</span></span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500 mt-0.5">
+                                <i data-lucide="check" class="w-3.5 h-3.5 border-emerald-200"></i>
+                            </div>
+                            <span class="font-medium leading-relaxed text-base pt-0.5">Grup VIP Telegram Alumni (Seumur
+                                Hidup)</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500 mt-0.5">
+                                <i data-lucide="check" class="w-3.5 h-3.5 border-emerald-200"></i>
+                            </div>
+                            <span class="font-medium leading-relaxed text-base pt-0.5">Pertemuan Rutin Setiap
+                                Bulan</span>
+                        </li>
+                    </ul>
+
+                    <a href="checkout.html"
+                        class="ripple block w-full text-center bg-primary-600 hover:bg-primary-700 text-white rounded-2xl py-4 font-extrabold text-lg transition-all shadow-[0_10px_30px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] transform hover:-translate-y-1">
+                        Checkout Kelas
+                    </a>
+
+                    <p class="text-xs text-slate-400 mt-4 text-center leading-relaxed font-medium">100% Menggunakan
+                        metode Logis dan Ilmiah. Tidak membawa-bawa hal gaib/mistis.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-300 py-16 border-t border-slate-800 mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white">
+                            <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+                        </div>
+                        <span class="font-bold text-xl text-white">Firman<span
+                                class="text-primary-500">Pratama</span></span>
+                    </div>
+                    <p class="text-sm mb-6 text-slate-400 leading-relaxed">Pakar Pikiran No.1 Indonesia. Penulis Buku,
+                        Konsultan
+                        Bisnis & Pencipta Metode AMC.</p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-6">Layanan Pilihan</h4>
+                    <ul class="space-y-4 text-sm">
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Kelas Biasa AMC</a></li>
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Kelas Privat AMC</a></li>
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Kelas Platinum</a></li>
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Pembelian Karya</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-6">Komunitas Web</h4>
+                    <ul class="space-y-4 text-sm">
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Profil Pribadi</a></li>
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Testimoni Alumni</a></li>
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Artikel Keajaiban</a></li>
+                        <li><a href="#" class="hover:text-primary-400 transition-colors">Afiliasi Program</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-6">Pusat Layanan</h4>
+                    <ul class="space-y-4 text-sm">
+                        <li class="flex items-center gap-3">
+                            <i data-lucide="phone" class="w-5 h-5 text-primary-500 flex-shrink-0"></i>
+                            <span>081.2306.33.464</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <i data-lucide="mail" class="w-5 h-5 text-primary-500 flex-shrink-0"></i>
+                            <span>admin@masfirmanpratama.com</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-8 flex justify-between items-center text-sm">
+                <p>&copy; 2026 Firman Pratama - AMC. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navbar.classList.add('shadow-md', 'bg-white/95');
+                navbar.classList.remove('border-gray-100');
+            } else {
+                navbar.classList.remove('shadow-md', 'bg-white/95');
+                navbar.classList.add('border-gray-100');
+            }
+        });
+
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        btn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+    </script>
+</body>
+
+</html>

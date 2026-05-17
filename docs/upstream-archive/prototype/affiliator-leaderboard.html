@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard Affiliate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "sans-serif"] },
+          colors: {
+            primary: { 50: "#eef2ff", 100: "#e0e7ff", 500: "#6366f1", 600: "#4f46e5", 700: "#4338ca", 800: "#3730a3", 900: "#312e81" },
+            secondary: { 50: "#f0fdfa", 500: "#14b8a6", 600: "#0d9488", 900: "#134e4a" },
+            accent: { 500: "#f59e0b", 600: "#d97706" },
+            slate: { 850: "#1e293b" }
+          },
+          animation: { blob: "blob 7s infinite" },
+          keyframes: {
+            blob: {
+              "0%": { transform: "translate(0px, 0px) scale(1)" },
+              "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+              "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+              "100%": { transform: "translate(0px, 0px) scale(1)" }
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="assets/css/tailwind-prototype.css">
+</head>
+<body class="relative min-h-screen bg-slate-50 text-slate-700">
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-primary-200/70 blur-3xl animate-blob"></div>
+    <div class="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-secondary-200/70 blur-3xl animate-blob"></div>
+  </div>
+
+  <div class="app-layout">
+    <aside class="app-sidebar hidden flex-col p-4 lg:flex">
+      <a href="dashboard-peserta.html" class="mb-4 inline-flex items-center gap-2 text-base font-extrabold text-slate-900">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg shadow-primary-500/30"><i data-lucide="network" class="h-4 w-4"></i></span>
+        Affiliate Panel
+      </a>
+      <nav class="grid gap-1">
+        <a class="nav-pill" href="dashboard-peserta.html">Dashboard</a>
+        <a class="nav-pill" href="affiliator-links.html">Link Referral</a>
+        <a class="nav-pill" href="affiliator-commissions.html">Statistik Komisi</a>
+        <a class="nav-pill" href="affiliator-withdrawals.html">Penarikan Dana</a>
+        <a class="nav-pill" href="affiliator-marketing.html">Materi Marketing</a>
+        <a class="nav-pill active" href="affiliator-leaderboard.html">Leaderboard</a>
+        <a class="nav-pill" href="affiliator-profile.html">Profil Akun</a>
+      </nav>
+    </aside>
+
+    <div class="app-main">
+      <header class="app-topbar flex items-center justify-between px-4 py-3 sm:px-6">
+        <strong id="leaderboardHeader" class="text-slate-900">Leaderboard & Gamification</strong>
+        <span class="text-sm">Ahmad Setiawan</span>
+      </header>
+
+      <main class="p-4 sm:p-6">
+        <section id="contestBanner" class="page-hero rounded-2xl px-4 py-4">
+          <h2 class="text-lg font-bold">Kontes Bulanan Affiliate</h2>
+          <p class="mt-1 text-sm text-white/85">Top 3 penjualan mendapatkan bonus tambahan di luar komisi reguler.</p>
+        </section>
+
+        <section id="myPosition" class="panel-card mt-4 p-4">
+          <p class="text-sm text-slate-600">Posisi Anda saat ini:</p>
+          <h3 class="mt-1 text-2xl font-extrabold text-slate-900">#1 - Ahmad Setiawan</h3>
+          <p class="mt-1 text-sm text-slate-600">12 penjualan | estimasi bonus Rp 2.000.000</p>
+        </section>
+
+        <section id="leaderboardTable" class="panel-card mt-4 p-4">
+          <h2 class="text-base font-bold text-slate-900">Peringkat Top Affiliator</h2>
+          <div class="mt-3 overflow-auto rounded-xl border border-slate-200">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+              <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th class="px-4 py-3">Peringkat</th>
+                  <th class="px-4 py-3">Nama</th>
+                  <th class="px-4 py-3">Penjualan</th>
+                  <th class="px-4 py-3 text-right">Bonus</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+                <tr><td class="px-4 py-3">#1</td><td class="px-4 py-3">Ahmad Setiawan</td><td class="px-4 py-3">12</td><td class="px-4 py-3 text-right">Rp 2.000.000</td></tr>
+                <tr><td class="px-4 py-3">#2</td><td class="px-4 py-3">Hendro W.</td><td class="px-4 py-3">9</td><td class="px-4 py-3 text-right">Rp 1.000.000</td></tr>
+                <tr><td class="px-4 py-3">#3</td><td class="px-4 py-3">Siti Rahmawati</td><td class="px-4 py-3">6</td><td class="px-4 py-3 text-right">1gr Emas</td></tr>
+                <tr><td class="px-4 py-3">#4</td><td class="px-4 py-3">Joko S.</td><td class="px-4 py-3">4</td><td class="px-4 py-3 text-right">-</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <button id="tourStartBtn" class="tour-fab ripple inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700">
+    <i data-lucide="signpost" class="h-4 w-4"></i>
+    Mulai Tur Alur Lengkap
+  </button>
+
+  <script>
+    window.affiliateTourConfig = {
+      flow: "aff-leaderboard",
+      steps: [
+        { selector: "#leaderboardHeader", title: "Halaman Leaderboard", content: "Bagian gamification untuk memotivasi aktivitas promosi affiliator." },
+        { selector: "#contestBanner", title: "Informasi Kompetisi", content: "Banner menjelaskan periode kontes dan skema bonus tambahan." },
+        { selector: "#myPosition", title: "Posisi Saya", content: "Affiliator langsung melihat ranking dan estimasi bonus pribadi." },
+        { selector: "#leaderboardTable", title: "Tabel Peringkat", content: "Peringkat memperlihatkan performa top affiliator sebagai acuan kompetitif.", nextPage: "affiliator-profile.html", nextFlow: "aff-profile", nextIndex: 0 }
+      ]
+    };
+  </script>
+  <script>lucide.createIcons();</script>
+  <script src="assets/js/affiliate-tour.js"></script>
+</body>
+</html>

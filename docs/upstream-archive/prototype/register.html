@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrasi Affiliate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter", "sans-serif"]
+          },
+          colors: {
+            primary: {
+              50: "#eef2ff",
+              100: "#e0e7ff",
+              500: "#6366f1",
+              600: "#4f46e5",
+              700: "#4338ca",
+              800: "#3730a3",
+              900: "#312e81"
+            },
+            secondary: {
+              50: "#f0fdfa",
+              500: "#14b8a6",
+              600: "#0d9488",
+              900: "#134e4a"
+            },
+            accent: {
+              500: "#f59e0b",
+              600: "#d97706"
+            },
+            slate: {
+              850: "#1e293b"
+            }
+          },
+          animation: {
+            blob: "blob 7s infinite"
+          },
+          keyframes: {
+            blob: {
+              "0%": { transform: "translate(0px, 0px) scale(1)" },
+              "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+              "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+              "100%": { transform: "translate(0px, 0px) scale(1)" }
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="assets/css/tailwind-prototype.css">
+</head>
+<body class="relative min-h-screen bg-slate-50 text-slate-700">
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-primary-200/70 blur-3xl animate-blob"></div>
+    <div class="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-secondary-200/70 blur-3xl animate-blob"></div>
+  </div>
+
+  <div id="app-header"></div>
+
+  <main id="registerSection" class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <section class="glass rounded-3xl border border-white/60 p-6 shadow-2xl shadow-primary-950/10 sm:p-8">
+      <div class="mb-6">
+        <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-primary-600">Onboarding</p>
+        <h1 class="mt-2 text-3xl font-extrabold text-slate-900">Form Registrasi Affiliate</h1>
+        <p class="mt-2 text-sm text-slate-600">Lengkapi data berikut untuk aktivasi akun affiliate dan validasi pencairan komisi.</p>
+      </div>
+
+      <form action="register-pending.html" method="GET" class="space-y-4">
+        <div id="typeAffiliator">
+          <label class="mb-1.5 block text-sm font-semibold text-slate-700">Tipe Affiliator</label>
+          <select class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" required>
+            <option value="">Pilih tipe affiliator</option>
+            <option>Non-Peserta (Reguler)</option>
+            <option>Peserta/Alumni (Prioritas)</option>
+          </select>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div id="fullNameField">
+            <label class="mb-1.5 block text-sm font-semibold text-slate-700">Nama Lengkap</label>
+            <input type="text" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" placeholder="Nama sesuai KTP" required>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-semibold text-slate-700">Nomor WhatsApp</label>
+            <input type="text" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" placeholder="08xxxxxxxxxx" required>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-semibold text-slate-700">Email Login</label>
+            <input type="email" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" placeholder="email aktif" required>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-semibold text-slate-700">Password</label>
+            <input type="password" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" placeholder="Minimal 8 karakter" required>
+          </div>
+        </div>
+
+        <div id="uploadIdentity">
+          <label class="mb-1.5 block text-sm font-semibold text-slate-700">Upload Identitas (KTP)</label>
+          <input type="file" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-primary-700" required>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-3">
+          <div id="bankNameField">
+            <label class="mb-1.5 block text-sm font-semibold text-slate-700">Nama Bank</label>
+            <select class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" required>
+              <option value="">Pilih bank</option>
+              <option>BCA</option>
+              <option>Mandiri</option>
+              <option>BNI</option>
+              <option>BRI</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-semibold text-slate-700">Nomor Rekening</label>
+            <input type="text" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" required>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-semibold text-slate-700">Atas Nama</label>
+            <input type="text" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200" required>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          Nama rekening wajib sama dengan identitas untuk validasi pencairan penarikan dana.
+        </div>
+
+        <div id="submitRegister">
+          <button type="submit" class="ripple inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition hover:-translate-y-0.5 hover:bg-primary-700">Kirim Pendaftaran</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <div id="app-footer"></div>
+
+  <button id="tourStartBtn" class="tour-fab ripple inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700">
+    <i data-lucide="signpost" class="h-4 w-4"></i>
+    Mulai Tur Alur Lengkap
+  </button>
+
+  <script src="assets/js/dynamic-layout.js"></script>
+  <script>
+    window.affiliateTourConfig = {
+      flow: "affiliate-register",
+      steps: [
+        { selector: "#typeAffiliator", title: "Pilih Tipe Affiliator", content: "Tentukan kategori akun untuk skema komisi yang sesuai." },
+        { selector: "#fullNameField", title: "Data Personal", content: "Nama dan kontak dipakai untuk verifikasi akun dan komunikasi operasional." },
+        { selector: "#uploadIdentity", title: "Upload Dokumen", content: "Dokumen identitas diperlukan untuk kontrol keamanan dan anti-fraud." },
+        { selector: "#bankNameField", title: "Data Rekening", content: "Data bank dipakai pada tahap penarikan komisi (penarikan dana)." },
+        { selector: "#submitRegister", title: "Kirim Pendaftaran", content: "Setelah submit, akun masuk status pending dan menunggu review admin.", nextPage: "register-pending.html", nextFlow: "affiliate-register-pending", nextIndex: 0 }
+      ]
+    };
+  </script>
+  <script>lucide.createIcons();</script>
+  <script src="assets/js/affiliate-tour.js"></script>
+</body>
+</html>

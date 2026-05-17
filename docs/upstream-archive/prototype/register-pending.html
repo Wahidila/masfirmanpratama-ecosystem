@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status Registrasi Affiliate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter", "sans-serif"]
+          },
+          colors: {
+            primary: {
+              50: "#eef2ff",
+              100: "#e0e7ff",
+              500: "#6366f1",
+              600: "#4f46e5",
+              700: "#4338ca",
+              800: "#3730a3",
+              900: "#312e81"
+            },
+            secondary: {
+              50: "#f0fdfa",
+              500: "#14b8a6",
+              600: "#0d9488",
+              900: "#134e4a"
+            },
+            accent: {
+              500: "#f59e0b",
+              600: "#d97706"
+            },
+            slate: {
+              850: "#1e293b"
+            }
+          },
+          animation: {
+            blob: "blob 7s infinite"
+          },
+          keyframes: {
+            blob: {
+              "0%": { transform: "translate(0px, 0px) scale(1)" },
+              "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+              "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+              "100%": { transform: "translate(0px, 0px) scale(1)" }
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="assets/css/tailwind-prototype.css">
+</head>
+<body class="relative min-h-screen bg-slate-50 text-slate-700">
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-primary-200/70 blur-3xl animate-blob"></div>
+    <div class="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-secondary-200/70 blur-3xl animate-blob"></div>
+  </div>
+
+  <div id="app-header"></div>
+
+  <main id="pendingPage" class="mx-auto grid min-h-screen w-full max-w-5xl place-items-center px-4 py-8 sm:px-6 lg:px-8">
+    <section class="glass w-full max-w-2xl rounded-3xl border border-white/60 p-6 shadow-2xl shadow-primary-950/10 sm:p-8">
+      <div class="text-center">
+        <span class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+          <i data-lucide="hourglass" class="h-7 w-7"></i>
+        </span>
+        <h1 id="statusHeader" class="mt-4 text-3xl font-extrabold text-slate-900">Pendaftaran Sedang Ditinjau</h1>
+        <p class="mt-2 text-sm text-slate-600">Data affiliate Anda sudah diterima. Tim admin akan melakukan verifikasi maksimal 1x24 jam kerja.</p>
+      </div>
+
+      <div id="timelineStatus" class="mt-6 space-y-4 rounded-2xl border border-slate-100 bg-white/80 p-4 sm:p-5">
+        <div class="flex gap-3">
+          <span class="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <i data-lucide="check-circle-2" class="h-4 w-4"></i>
+          </span>
+          <div>
+            <p class="font-bold text-slate-900">Data Diterima</p>
+            <p class="text-sm text-slate-500">10 Apr 2026 14:00</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <span class="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary-50 text-primary-600">
+            <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+          </span>
+          <div>
+            <p class="font-bold text-slate-900">Review Admin</p>
+            <p class="text-sm text-slate-500">Validasi identitas, data bank, dan tipe affiliate</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <span class="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-amber-50 text-amber-600">
+            <i data-lucide="mail-check" class="h-4 w-4"></i>
+          </span>
+          <div>
+            <p class="font-bold text-slate-900">Notifikasi Email</p>
+            <p class="text-sm text-slate-500">Email konfirmasi approve/reject akan dikirim otomatis</p>
+          </div>
+        </div>
+      </div>
+
+      <a href="affiliate.html" class="ripple mt-6 inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition hover:-translate-y-0.5 hover:bg-primary-700">Kembali ke Halaman Affiliate</a>
+    </section>
+  </main>
+
+  <div id="app-footer"></div>
+
+  <button id="tourStartBtn" class="tour-fab ripple inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700">
+    <i data-lucide="signpost" class="h-4 w-4"></i>
+    Mulai Tur Alur Lengkap
+  </button>
+
+  <script src="assets/js/dynamic-layout.js"></script>
+  <script>
+    window.affiliateTourConfig = {
+      flow: "affiliate-register-pending",
+      steps: [
+        { selector: "#statusHeader", title: "Status Pending", content: "Setelah submit registrasi, akun belum langsung aktif dan menunggu review admin." },
+        { selector: "#timelineStatus", title: "Timeline Verifikasi", content: "Timeline ini menjelaskan urutan proses sampai akun affiliate dinyatakan aktif.", nextPage: "login.html", nextFlow: "affiliate-login", nextIndex: 0 }
+      ]
+    };
+  </script>
+  <script>lucide.createIcons();</script>
+  <script src="assets/js/affiliate-tour.js"></script>
+</body>
+</html>

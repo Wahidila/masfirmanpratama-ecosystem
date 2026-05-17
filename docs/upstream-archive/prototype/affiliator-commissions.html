@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Komisi Affiliate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "sans-serif"] },
+          colors: {
+            primary: { 50: "#eef2ff", 100: "#e0e7ff", 500: "#6366f1", 600: "#4f46e5", 700: "#4338ca", 800: "#3730a3", 900: "#312e81" },
+            secondary: { 50: "#f0fdfa", 500: "#14b8a6", 600: "#0d9488", 900: "#134e4a" },
+            accent: { 500: "#f59e0b", 600: "#d97706" },
+            slate: { 850: "#1e293b" }
+          },
+          animation: { blob: "blob 7s infinite" },
+          keyframes: {
+            blob: {
+              "0%": { transform: "translate(0px, 0px) scale(1)" },
+              "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+              "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+              "100%": { transform: "translate(0px, 0px) scale(1)" }
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="assets/css/tailwind-prototype.css">
+</head>
+<body class="relative min-h-screen bg-slate-50 text-slate-700">
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-primary-200/70 blur-3xl animate-blob"></div>
+    <div class="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-secondary-200/70 blur-3xl animate-blob"></div>
+  </div>
+
+  <div class="app-layout">
+    <aside class="app-sidebar hidden flex-col p-4 lg:flex">
+      <a href="dashboard-peserta.html" class="mb-4 inline-flex items-center gap-2 text-base font-extrabold text-slate-900">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg shadow-primary-500/30"><i data-lucide="network" class="h-4 w-4"></i></span>
+        Affiliate Panel
+      </a>
+      <nav class="grid gap-1">
+        <a class="nav-pill" href="dashboard-peserta.html">Dashboard</a>
+        <a class="nav-pill" href="affiliator-links.html">Link Referral</a>
+        <a class="nav-pill active" href="affiliator-commissions.html">Statistik Komisi</a>
+        <a class="nav-pill" href="affiliator-withdrawals.html">Penarikan Dana</a>
+        <a class="nav-pill" href="affiliator-marketing.html">Materi Marketing</a>
+        <a class="nav-pill" href="affiliator-leaderboard.html">Leaderboard</a>
+        <a class="nav-pill" href="affiliator-profile.html">Profil Akun</a>
+      </nav>
+    </aside>
+
+    <div class="app-main">
+      <header class="app-topbar flex items-center justify-between px-4 py-3 sm:px-6">
+        <strong id="commissionHeader" class="text-slate-900">Komisi & Statistik Komisi</strong>
+        <span class="text-sm">Ahmad Setiawan</span>
+      </header>
+
+      <main class="p-4 sm:p-6">
+        <section id="balanceCards" class="grid gap-3 md:grid-cols-3">
+          <article class="kpi-card"><p class="kpi-label">Total Pendapatan</p><p class="kpi-value">Rp 15.650.000</p></article>
+          <article class="kpi-card"><p class="kpi-label">Pending (7 Hari)</p><p class="kpi-value text-amber-600">Rp 585.000</p></article>
+          <article class="kpi-card"><p class="kpi-label">Saldo Aktif</p><p class="kpi-value text-emerald-600">Rp 1.450.000</p></article>
+        </section>
+
+        <div id="coolingInfo" class="page-hero mt-4 rounded-2xl px-4 py-3 text-sm font-medium">Komisi order baru masuk status pending dan otomatis aktif setelah cooling period 7 hari.</div>
+
+        <section id="filterTabs" class="panel-card mt-4 p-4">
+          <div class="flex flex-wrap gap-2">
+            <button class="rounded-lg bg-primary-600 px-3 py-2 text-xs font-bold text-white">Semua</button>
+            <button class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">Pending</button>
+            <button class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">Cair</button>
+            <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">Refunded</button>
+          </div>
+        </section>
+
+        <section id="commissionTable" class="panel-card mt-4 p-4">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-base font-bold text-slate-900">Daftar Komisi per Invoice</h2>
+            <a href="affiliator-withdrawals.html" class="ripple inline-flex items-center justify-center rounded-xl bg-primary-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-primary-500/30">Lanjut Penarikan Dana</a>
+          </div>
+
+          <div class="overflow-auto rounded-xl border border-slate-200">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+              <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th class="px-4 py-3">Invoice</th>
+                  <th class="px-4 py-3">Produk</th>
+                  <th class="px-4 py-3">Estimasi Cair</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3 text-right">Komisi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+                <tr>
+                  <td class="px-4 py-3">INV-2026409</td>
+                  <td class="px-4 py-3">Kelas Reguler AMC</td>
+                  <td class="px-4 py-3">16 Apr 2026</td>
+                  <td class="px-4 py-3"><span class="status-pill status-pending">Pending</span></td>
+                  <td class="px-4 py-3 text-right">Rp 585.000</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3">INV-2026328</td>
+                  <td class="px-4 py-3">Buku Alpha Telepati</td>
+                  <td class="px-4 py-3">04 Apr 2026</td>
+                  <td class="px-4 py-3"><span class="status-pill status-success">Cair</span></td>
+                  <td class="px-4 py-3 text-right">Rp 53.820</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3">INV-2026301</td>
+                  <td class="px-4 py-3">Kelas Reguler AMC</td>
+                  <td class="px-4 py-3">-</td>
+                  <td class="px-4 py-3"><span class="status-pill status-danger">Refunded</span></td>
+                  <td class="px-4 py-3 text-right line-through">Rp 585.000</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <button id="tourStartBtn" class="tour-fab ripple inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700">
+    <i data-lucide="signpost" class="h-4 w-4"></i>
+    Mulai Tur Alur Lengkap
+  </button>
+
+  <script>
+    window.affiliateTourConfig = {
+      flow: "aff-commissions",
+      steps: [
+        { selector: "#commissionHeader", title: "Halaman Komisi", content: "Pusat monitoring komisi untuk semua transaksi referral." },
+        { selector: "#balanceCards", title: "Ringkasan Saldo", content: "Pisahkan saldo total, pending, dan aktif agar keputusan penarikan lebih tepat." },
+        { selector: "#coolingInfo", title: "Cooling Period", content: "Informasi ini menjelaskan alasan komisi belum langsung aktif setelah pembayaran." },
+        { selector: "#filterTabs", title: "Filter Status", content: "Gunakan tab status untuk audit cepat transaksi komisi per kategori." },
+        { selector: "#commissionTable", title: "Tabel Komisi", content: "Tabel ini menjadi referensi utama sebelum affiliator melakukan penarikan dana.", nextPage: "affiliator-withdrawals.html", nextFlow: "aff-withdrawals", nextIndex: 0 }
+      ]
+    };
+  </script>
+  <script>lucide.createIcons();</script>
+  <script src="assets/js/affiliate-tour.js"></script>
+</body>
+</html>

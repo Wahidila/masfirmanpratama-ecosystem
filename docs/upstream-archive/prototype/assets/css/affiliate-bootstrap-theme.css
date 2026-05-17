@@ -1,0 +1,301 @@
+:root {
+  /* Brand Terracotta replacing Blue */
+  --aff-primary: #c96442;
+  --aff-primary-dark: #ad543b;
+  --aff-primary-soft: #f0eee6;
+  /* Focus / interactive */
+  --aff-danger: #b53333;
+  --aff-danger-dark: #912828;
+  /* Basic surfaces */
+  --aff-white: #faf9f5;
+  --aff-bg-soft: #f5f4ed;
+  --aff-border: #e8e6dc;
+  --aff-text: #141413;
+  --aff-muted: #5e5d59;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background: var(--aff-bg-soft) !important;
+  color: var(--aff-text);
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.display-6,
+.navbar-brand,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-family: Georgia, serif !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  letter-spacing: normal !important;
+}
+
+[data-lucide] {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.2;
+}
+
+.bg-soft {
+  background: var(--aff-bg-soft) !important;
+}
+
+.brand-primary,
+.text-brand {
+  color: var(--aff-primary) !important;
+}
+
+/* Base button styles to remove heavy shadows */
+.btn {
+  border-radius: 8px;
+  font-family: "Inter", sans-serif;
+  transition: all 0.2s ease;
+}
+
+/* Primary equivalent (Brand Terracotta) */
+.btn-brand {
+  background: var(--aff-primary) !important;
+  border-color: var(--aff-primary) !important;
+  color: #faf9f5 !important;
+  font-weight: 500;
+  box-shadow: var(--aff-primary) 0 0 0 0, var(--aff-primary) 0 0 0 1px !important;
+}
+
+.btn-brand:hover,
+.btn-brand:focus {
+  background: var(--aff-primary-dark) !important;
+  border-color: var(--aff-primary-dark) !important;
+  color: #faf9f5 !important;
+  transform: none !important;
+}
+
+/* Secondary equivalent (White Surface / Warm Sand) */
+.btn-critical {
+  background: #ffffff !important;
+  border-color: #f0eee6 !important;
+  color: #141413 !important;
+  font-weight: 500;
+  border-radius: 12px !important;
+  box-shadow: #ffffff 0 0 0 0, #d1cfc5 0 0 0 1px !important;
+}
+
+.btn-critical:hover,
+.btn-critical:focus {
+  background: #e8e6dc !important;
+  border-color: #e8e6dc !important;
+  color: #141413 !important;
+  transform: none !important;
+}
+
+.outline-brand {
+  border: 1px solid var(--aff-border) !important;
+  color: #4d4c48 !important;
+  background: #f0eee6 !important;
+  box-shadow: #f0eee6 0 0 0 0, #d1cfc5 0 0 0 1px !important;
+}
+
+.outline-brand:hover {
+  background: #e8e6dc !important;
+  color: #141413 !important;
+}
+
+/* Navigation */
+.navbar-aff {
+  border-bottom: 1px solid var(--aff-border) !important;
+  background: var(--aff-white) !important;
+  backdrop-filter: none !important;
+}
+
+.navbar-brand {
+  color: var(--aff-text) !important;
+}
+
+/* Cards & Containers */
+.panel-card,
+.kpi-card {
+  border: 1px solid var(--aff-border) !important;
+  border-radius: 8px !important;
+  background: var(--aff-white) !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 4px 24px !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.panel-card:hover {
+  box-shadow: #f0eee6 0 0 0 0, #d1cfc5 0 0 0 1px !important;
+  transform: translateY(-2px);
+}
+
+.kpi-label {
+  color: var(--aff-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12px;
+  font-weight: 500;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-family: Georgia, serif;
+  font-weight: 500;
+  color: var(--aff-text);
+  line-height: 1.1;
+}
+
+/* App shell overrides */
+.app-shell {
+  min-height: 100vh;
+  background: var(--aff-bg-soft) !important;
+}
+
+.app-sidebar {
+  width: 260px;
+  border-right: 1px solid var(--aff-border) !important;
+  background: var(--aff-bg-soft) !important;
+}
+
+.app-topbar {
+  border-bottom: 1px solid var(--aff-border) !important;
+  background: var(--aff-white) !important;
+  backdrop-filter: none !important;
+}
+
+/* Nav pills */
+.nav-pill {
+  border-radius: 8px !important;
+  color: var(--aff-text) !important;
+  font-weight: 400 !important;
+  font-family: "Inter", sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.nav-pill:hover {
+  color: #141413 !important;
+  background: #f0eee6 !important;
+}
+
+.nav-pill.active {
+  background: #e8e6dc !important;
+  color: #141413 !important;
+  font-weight: 500 !important;
+  border: 1px solid #d1cfc5;
+}
+
+/* Hero Section override */
+.page-hero {
+  border-radius: 32px !important;
+  border: 1px solid var(--aff-border) !important;
+  background: var(--aff-white) !important;
+  color: var(--aff-text) !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 4px 24px !important;
+}
+
+.page-hero h1,
+.page-hero .display-6 {
+  color: var(--aff-text) !important;
+}
+
+.page-hero p {
+  color: var(--aff-muted) !important;
+}
+
+/* Tailwind utility overrides inside page-hero to enforce the new background */
+.from-affPrimary {
+  --tw-gradient-from: var(--aff-white) !important;
+}
+
+.to-blue-700 {
+  --tw-gradient-to: var(--aff-white) !important;
+}
+
+.bg-gradient-to-br {
+  background-image: none !important;
+}
+
+/* Status tags */
+.status-pill {
+  border-radius: 4px !important;
+  font-size: 0.75rem;
+  padding: 0.16rem 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.12px;
+}
+
+.status-pending {
+  background: #f0eee6 !important;
+  color: #87867f !important;
+  border: 1px solid #e8e6dc;
+}
+
+.status-success {
+  background: #e8fbf0 !important;
+  color: #067647 !important;
+}
+
+.status-danger {
+  background: #ffe7e7 !important;
+  color: #b53333 !important;
+}
+
+/* Tour bubble overrides */
+.tour-bubble {
+  background: var(--aff-white) !important;
+  border: 1px solid var(--aff-border) !important;
+  border-radius: 12px !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 4px 24px !important;
+}
+
+.tour-title {
+  font-family: Georgia, serif !important;
+  color: var(--aff-text) !important;
+}
+
+.tour-highlight {
+  box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.7), rgba(0, 0, 0, 0.05) 0 8px 24px !important;
+}
+
+/* Surface overrides */
+.bg-white {
+  background-color: var(--aff-white) !important;
+}
+
+.text-dark {
+  color: var(--aff-text) !important;
+}
+
+.text-secondary {
+  color: var(--aff-muted) !important;
+}
+
+/* Links */
+a.text-brand:hover,
+a.text-decoration-none:hover {
+  text-decoration: underline !important;
+}
+
+/* Inputs */
+.form-control,
+.form-select {
+  border: 1px solid var(--aff-border);
+  border-radius: 12px;
+  color: var(--aff-text);
+  background-color: var(--aff-white);
+  padding: 0.6rem 12px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #3898ec;
+  box-shadow: 0 0 0 1px #3898ec;
+}

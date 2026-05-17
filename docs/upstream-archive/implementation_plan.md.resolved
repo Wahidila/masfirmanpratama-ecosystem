@@ -1,0 +1,39 @@
+# Goal Description
+The objective is to entirely redesign the remaining 15 HTML prototype pages to match the pristine *Tailwind CSS* design established in [index.html](file:///d:/laragon/www/firmanaffiliate/prototype/index.html) and [DESIGN.md](file:///d:/laragon/www/firmanaffiliate/DESIGN.md). Currently, they utilize a hybrid Bootstrap-to-Tailwind mapping layer that restricts layout freedom and lacks native `glassmorphism`, spacing, and interactive styling.
+
+## User Review Required
+> [!IMPORTANT]
+> The revamp will be broken down into 4 phases. Replacing structural layout (grids, flex, and cards) from Bootstrap to native Tailwind utility classes requires rewriting the body of each HTML. We will proceed with generating each file completely. Please approve the plan.
+
+## Proposed Changes
+
+### Authentication & Onboarding Flow
+Replace the Bootstrap rows/cols with a centered layout and deep shadow glass cards. Backgrounds will use the animated SVG blob effect.
+#### [MODIFY] [login.html](file:///d:/laragon/www/firmanaffiliate/prototype/login.html)
+#### [MODIFY] [register.html](file:///d:/laragon/www/firmanaffiliate/prototype/register.html)
+#### [MODIFY] [register-pending.html](file:///d:/laragon/www/firmanaffiliate/prototype/register-pending.html)
+
+### Checkout Flow
+Convert checkout layouts to split Tailwind grids (2 columns on lg).
+#### [MODIFY] [cart.html](file:///d:/laragon/www/firmanaffiliate/prototype/cart.html)
+#### [MODIFY] [checkout.html](file:///d:/laragon/www/firmanaffiliate/prototype/checkout.html)
+#### [MODIFY] [checkout-success.html](file:///d:/laragon/www/firmanaffiliate/prototype/checkout-success.html)
+
+### Core Dashboards
+Refactor the admin and member dashboards to use a modern sidebar layout (`fixed w-64`, `flex-1`) with glass headers, statistic cards, and modern tables.
+#### [MODIFY] [dashboard-peserta.html](file:///d:/laragon/www/firmanaffiliate/prototype/dashboard-peserta.html)
+#### [MODIFY] [dashboard-nonpeserta.html](file:///d:/laragon/www/firmanaffiliate/prototype/dashboard-nonpeserta.html)
+#### [MODIFY] [admin.html](file:///d:/laragon/www/firmanaffiliate/prototype/admin.html)
+
+### Affiliator Sub-pages
+Update the internal dashboard pages to reflect the sidebar layout and modern table components. 
+#### [MODIFY] [affiliator-commissions.html](file:///d:/laragon/www/firmanaffiliate/prototype/affiliator-commissions.html)
+#### [MODIFY] [affiliator-leaderboard.html](file:///d:/laragon/www/firmanaffiliate/prototype/affiliator-leaderboard.html)
+#### [MODIFY] [affiliator-links.html](file:///d:/laragon/www/firmanaffiliate/prototype/affiliator-links.html)
+#### [MODIFY] [affiliator-marketing.html](file:///d:/laragon/www/firmanaffiliate/prototype/affiliator-marketing.html)
+#### [MODIFY] [affiliator-profile.html](file:///d:/laragon/www/firmanaffiliate/prototype/affiliator-profile.html)
+#### [MODIFY] [affiliator-withdrawals.html](file:///d:/laragon/www/firmanaffiliate/prototype/affiliator-withdrawals.html)
+
+## Verification Plan
+### Manual Verification
+- Review the layout of the rewritten pages in the browser to ensure the layout is not broken and looks premium as per [DESIGN.md](file:///d:/laragon/www/firmanaffiliate/DESIGN.md).

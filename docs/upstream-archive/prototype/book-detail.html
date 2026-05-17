@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Buku | Firman Pratama</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        },
+                        secondary: {
+                            50: '#f0fdfa',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            900: '#134e4a',
+                        },
+                        accent: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        slate: {
+                            850: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 3s infinite',
+                        'blob': 'blob 7s infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS -->
+    <style>
+        /* Base styles */
+        body {
+            background-color: #f8fafc;
+            color: #334155;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Interactions */
+        .hover-lift {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .img-zoom-container {
+            overflow: hidden;
+        }
+
+        .img-zoom {
+            transition: transform 0.5s ease;
+        }
+
+        .group:hover .img-zoom {
+            transform: scale(1.08);
+        }
+
+        /* Ripple Effect */
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ripple::after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform .5s, opacity 1s;
+        }
+
+        .ripple:active::after {
+            transform: scale(0, 0);
+            opacity: 0.3;
+            transition: 0s;
+        }
+
+        /* Text Gradients */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(to right, #4f46e5, #0d9488);
+        }
+    </style>
+</head>
+
+<body class="relative bg-slate-50">
+
+    <div id="app-header"></div>
+
+    <!-- Main Content Layer -->
+    <main class="pt-32 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <!-- Breadcrumbs -->
+        <nav
+            class="flex text-sm text-slate-500 mb-8 items-center gap-2 relative z-10 w-fit bg-white/50 px-4 py-2 rounded-full border border-slate-100 backdrop-blur-sm">
+            <a href="index.html" class="hover:text-primary-600 transition-colors font-medium flex items-center gap-1"><i
+                    data-lucide="home" class="w-4 h-4"></i> Beranda</a>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            <a href="index.html#buku" class="hover:text-primary-600 transition-colors font-medium">Karya Buku</a>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            <span class="text-primary-600 font-bold">10 Keajaiban Pikiran</span>
+        </nav>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
+
+            <!-- Left side: Book Cover -->
+            <div class="lg:col-span-5 relative group perspective">
+                <div
+                    class="sticky top-28 bg-slate-100/50 p-12 rounded-[2.5rem] border border-slate-100 flex items-center justify-center shadow-inner overflow-hidden img-zoom-container">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-tr from-accent-200 to-primary-200 opacity-20 mix-blend-multiply blur-2xl">
+                    </div>
+                    <img src="assets/images/10 keajaiban pikiran.png" alt="Buku 10 Keajaiban Pikiran"
+                        class="w-full h-auto max-h-[500px] object-contain img-zoom group-hover:scale-105 transition-transform duration-500 drop-shadow-2xl relative z-10">
+                </div>
+            </div>
+
+            <!-- Right side: Details & Checkout Card -->
+            <div class="lg:col-span-7 flex flex-col gap-10">
+
+                <div>
+                    <div
+                        class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-50 text-accent-700 text-xs font-bold uppercase tracking-wider mb-4 border border-accent-100 shadow-sm">
+                        <i data-lucide="star" class="w-4 h-4"></i> Best Seller Umum
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-6 leading-tight">
+                        Buku: 10 <span class="text-gradient block mt-2">Keajaiban Pikiran</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 leading-relaxed mb-6 font-medium">
+                        Langkah awal yang esensial membuka pengetahuan absolut tentang keajaiban-keajaiban yang
+                        tersembunyi di balik otak dan pikiran bawah sadar kita.
+                    </p>
+                </div>
+
+                <!-- Details Table -->
+                <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <h2 class="text-2xl font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Informasi Buku
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 text-sm text-slate-600">
+                        <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span class="text-slate-400">Penulis</span>
+                            <span class="font-bold text-slate-800">Firman Pratama</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span class="text-slate-400">Penerbit</span>
+                            <span class="font-bold text-slate-800">Wahana Sejati</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span class="text-slate-400">Format</span>
+                            <span class="font-bold text-slate-800">Fisik (Buku Cetak)</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span class="text-slate-400">Bahasa</span>
+                            <span class="font-bold text-slate-800">Indonesia</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Checkout Interactive Card -->
+                <div
+                    class="bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 hover-lift relative overflow-hidden mt-auto">
+                    <div
+                        class="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-bl-full -z-10 mix-blend-multiply opacity-50 transition-transform group-hover:scale-110">
+                    </div>
+
+                    <div class="mb-6">
+                        <p class="text-slate-500 font-medium mb-1">Harga Spesial</p>
+                        <div class="flex items-end gap-3">
+                            <div class="text-4xl lg:text-5xl font-extrabold text-slate-900 leading-none">Rp150.000</div>
+                            <span class="text-slate-400 line-through font-medium text-lg mb-1">Rp250.000</span>
+                        </div>
+                    </div>
+
+                    <p
+                        class="text-sm text-slate-500 mb-8 font-medium bg-slate-50 p-3 rounded-xl border border-slate-100 flex gap-2 items-center">
+                        <i data-lucide="truck" class="w-4 h-4 text-primary-500 shrink-0"></i> Dikirim ke seluruh
+                        Indonesia (belum termasuk ongkir).
+                    </p>
+
+                    <a href="checkout.html"
+                        class="ripple block w-full text-center bg-primary-600 hover:bg-primary-700 text-white rounded-2xl py-4 font-extrabold text-lg transition-all shadow-[0_10px_30px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] transform hover:-translate-y-1 mb-4">
+                        Pesan Buku Sekarang
+                    </a>
+
+                    <div class="flex gap-4">
+                        <button
+                            class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl py-3 font-semibold transition-all shadow-sm flex items-center justify-center gap-2">
+                            <i data-lucide="heart" class="w-4 h-4"></i> Favorit
+                        </button>
+                        <button
+                            class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl py-3 font-semibold transition-all shadow-sm flex items-center justify-center gap-2">
+                            <i data-lucide="share-2" class="w-4 h-4"></i> Bagikan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="app-footer"></div>
+
+    <script src="assets/js/dynamic-layout.js"></script>
+    <script>
+        lucide.createIcons();
+        const navbar = document.getElementById('navbar');
+        if (navbar) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 20) {
+                    navbar.classList.add('shadow-md', 'bg-white/95');
+                    navbar.classList.remove('border-gray-100');
+                } else {
+                    navbar.classList.remove('shadow-md', 'bg-white/95');
+                    navbar.classList.add('border-gray-100');
+                }
+            });
+        }
+
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        if (btn && menu) {
+            btn.addEventListener('click', () => {
+                menu.classList.toggle('hidden');
+            });
+        }
+    </script>
+</body>
+
+</html>

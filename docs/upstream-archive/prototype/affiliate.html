@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Program Affiliate | Firman Pratama</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            },
+            secondary: {
+              50: '#f0fdfa',
+              500: '#14b8a6',
+              600: '#0d9488',
+              900: '#134e4a',
+            },
+            accent: {
+              500: '#f59e0b',
+              600: '#d97706',
+            },
+            slate: {
+              850: '#1e293b',
+              900: '#0f172a',
+            }
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'float-delayed': 'float 6s ease-in-out 3s infinite',
+            'blob': 'blob 7s infinite',
+            'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-20px)' },
+            },
+            blob: {
+              '0%': { transform: 'translate(0px, 0px) scale(1)' },
+              '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+              '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+              '100%': { transform: 'translate(0px, 0px) scale(1)' },
+            },
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS -->
+  <style>
+    /* Base styles */
+    body {
+      background-color: #f8fafc;
+      color: #334155;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Glassmorphism */
+    .glass {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Interactions */
+    .hover-lift {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Ripple Effect */
+    .ripple {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ripple::after {
+      content: "";
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+      background-repeat: no-repeat;
+      background-position: 50%;
+      transform: scale(10, 10);
+      opacity: 0;
+      transition: transform .5s, opacity 1s;
+    }
+
+    .ripple:active::after {
+      transform: scale(0, 0);
+      opacity: 0.3;
+      transition: 0s;
+    }
+
+    /* Text Gradients */
+    .text-gradient {
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-image: linear-gradient(to right, #4f46e5, #0d9488);
+    }
+
+    .animation-delay-200 {
+      animation-delay: 200ms;
+    }
+
+    .animation-delay-400 {
+      animation-delay: 400ms;
+    }
+  </style>
+</head>
+
+<body class="relative bg-slate-50 text-slate-700">
+
+  <!-- Navigation -->
+  <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-300 glass border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-20">
+        <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+          <div
+            class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
+            <i data-lucide="network" class="w-6 h-6"></i>
+          </div>
+          <span class="font-bold text-2xl tracking-tight text-slate-900">Mas Firman <span
+              class="text-primary-600">Affiliate</span></span>
+        </div>
+
+        <!-- Desktop Menu -->
+        <div class="hidden md:flex items-center space-x-8">
+          <a href="#caraKerja" class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Cara
+            Kerja</a>
+          <a href="#sistemKomisi" class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Komisi</a>
+          <a href="index.html" class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Utama</a>
+          <div class="h-6 w-px bg-slate-200"></div>
+          <a href="login.html" class="text-slate-600 hover:text-primary-600 font-medium transition-colors">Login</a>
+          <a href="register.html" id="ctaDaftar"
+            class="ripple bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-full font-bold transition-all shadow-lg shadow-primary-500/30">
+            Daftar Affiliate
+          </a>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <div class="md:hidden flex items-center">
+          <button id="mobile-menu-btn"
+            class="text-slate-600 hover:text-primary-600 focus:outline-none p-2 rounded-lg hover:bg-slate-100 transition-colors">
+            <i data-lucide="menu" class="w-6 h-6"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Menu Panel (Hidden by default) -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-100 absolute w-full shadow-xl">
+      <div class="px-4 pt-2 pb-6 space-y-2">
+        <a href="#caraKerja"
+          class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Cara
+          Kerja</a>
+        <a href="#sistemKomisi"
+          class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Komisi</a>
+        <a href="index.html"
+          class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Utama</a>
+        <div class="border-t border-slate-100 my-2"></div>
+        <a href="login.html"
+          class="block px-3 py-3 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Login</a>
+        <a href="register.html"
+          class="block w-full text-center bg-primary-600 text-white px-4 py-3 rounded-lg font-bold mt-4 shadow-md">Daftar
+          Affiliate</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Layer -->
+  <main>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50" id="heroAffiliate">
+      <!-- Background Decorative Elements -->
+      <div class="absolute top-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div
+          class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob">
+        </div>
+        <div
+          class="absolute top-[20%] right-[-10%] w-96 h-96 bg-secondary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-200">
+        </div>
+        <div
+          class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-accent-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-400">
+        </div>
+      </div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          <div class="animate-fade-in-up">
+            <div
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-100 text-primary-700 mb-6 font-bold text-sm shadow-sm tracking-wide">
+              <i data-lucide="network" class="w-4 h-4"></i> Program Resmi AMC
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
+              Bagikan Link Referral,<br> <span class="text-gradient">Pantau Komisi dengan Mudah</span>
+            </h1>
+            <p class="text-lg text-slate-600 mb-8 max-w-2xl leading-relaxed">
+              Bergabunglah menjadi mitra bisnis kami. Bagikan pengalaman ajaib transformasi Anda melalui buku dan Kelas
+              AMC, lalu raih komisi menjanjikan secara pasif di setiap transaksinya.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <a href="register.html"
+                class="ripple inline-flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-extrabold text-lg transition-all shadow-[0_10px_30px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] transform hover:-translate-y-1">
+                Mulai Pendaftaran <i data-lucide="arrow-right" class="w-5 h-5"></i>
+              </a>
+              <a href="login.html"
+                class="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-sm hover:shadow-md transform hover:-translate-y-1">
+                Login Dashboard
+              </a>
+            </div>
+          </div>
+
+          <!-- Right panel illustration -->
+          <div class="relative lg:ml-10 mt-10 lg:mt-0">
+            <div
+              class="glass-dark p-8 md:p-10 rounded-[2.5rem] shadow-2xl relative z-20 border border-slate-700/50 animate-float transform rotate-1 hover:rotate-0 transition-transform duration-500">
+              <h2 class="text-xl font-bold text-white mb-8 flex items-center gap-3 border-b border-slate-700/50 pb-4"><i
+                  data-lucide="workflow" class="text-primary-400"></i> Ringkasan Alur Sistem</h2>
+              <ul class="space-y-6">
+                <li class="flex items-start gap-4">
+                  <div
+                    class="w-10 h-10 rounded-full bg-slate-800 text-primary-400 flex items-center justify-center shrink-0 border border-slate-700 font-bold shadow-lg shadow-primary-900/50">
+                    1</div>
+                  <div class="text-slate-300 font-medium pt-2">Daftar secara gratis, cepat, dan mudah untuk diverifikasi
+                    admin.</div>
+                </li>
+                <li class="flex items-start gap-4">
+                  <div
+                    class="w-10 h-10 rounded-full bg-slate-800 text-accent-400 flex items-center justify-center shrink-0 border border-slate-700 font-bold shadow-lg shadow-accent-900/50">
+                    2</div>
+                  <div class="text-slate-300 font-medium pt-2">Akses *sales kit* dan membagikan link referral milik akun
+                    Anda.</div>
+                </li>
+                <li class="flex items-start gap-4">
+                  <div
+                    class="w-10 h-10 rounded-full bg-slate-800 text-emerald-400 flex items-center justify-center shrink-0 border border-slate-700 font-bold shadow-lg shadow-emerald-900/50">
+                    3</div>
+                  <div class="text-slate-300 font-medium pt-2">Sistem otomatis melacak klik dan menghitung omset komisi
+                    masuk.</div>
+                </li>
+                <li class="flex items-start gap-4">
+                  <div
+                    class="w-10 h-10 rounded-full bg-slate-800 text-secondary-400 flex items-center justify-center shrink-0 border border-slate-700 font-bold shadow-lg shadow-secondary-900/50">
+                    4</div>
+                  <div class="text-slate-300 font-medium pt-2">Tarik saldo komisi aktif langsung ke rekening Bank.</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cara Kerja Section -->
+    <section class="py-24 bg-white relative" id="caraKerja">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <h2 class="text-xs tracking-[0.2em] font-extrabold text-accent-500 uppercase mb-4">Langkah Mudah</h2>
+          <h3 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6">Cara Kerja Program Affiliate</h3>
+          <p class="text-lg text-slate-600">Sederhana, transparan, dan pastinya sangat logis untuk dipahami bagaimana
+            Anda menghasilkan uang.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <!-- Step 1 -->
+          <div
+            class="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm hover-lift text-center relative overflow-hidden group h-full flex flex-col justify-start">
+            <div
+              class="text-[8rem] font-black text-slate-100 absolute -top-10 -right-4 z-0 transition-transform group-hover:scale-110 select-none">
+              1</div>
+            <div class="relative z-10">
+              <div
+                class="w-16 h-16 bg-primary-100 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary-600 group-hover:text-white transition-colors shadow-sm">
+                <i data-lucide="user-plus" class="w-8 h-8"></i>
+              </div>
+              <h4 class="text-xl font-bold text-slate-900 mb-3">Daftar & Aktivasi</h4>
+              <p class="text-slate-600 leading-relaxed font-medium">Pendaftaran 100% gratis. Segera isi form dan tim
+                admin kami akan meninjau akun aktif Anda dengan cepat.</p>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div
+            class="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm hover-lift text-center relative overflow-hidden group h-full flex flex-col justify-start md:translate-y-4">
+            <div
+              class="text-[8rem] font-black text-slate-100 absolute -top-10 -right-4 z-0 transition-transform group-hover:scale-110 select-none">
+              2</div>
+            <div class="relative z-10">
+              <div
+                class="w-16 h-16 bg-accent-100 text-accent-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-accent-500 group-hover:text-white transition-colors shadow-sm">
+                <i data-lucide="share-2" class="w-8 h-8"></i>
+              </div>
+              <h4 class="text-xl font-bold text-slate-900 mb-3">Sebarkan Tautan</h4>
+              <p class="text-slate-600 leading-relaxed font-medium">Akses dashboard, salin tautan program kelas atau
+                buku, lalu rekomendasikan di media sosial atau jaringan Anda sendiri.</p>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div
+            class="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm hover-lift text-center relative overflow-hidden group h-full flex flex-col justify-start md:translate-y-8">
+            <div
+              class="text-[8rem] font-black text-slate-100 absolute -top-10 -right-4 z-0 transition-transform group-hover:scale-110 select-none">
+              3</div>
+            <div class="relative z-10">
+              <div
+                class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-emerald-500 group-hover:text-white transition-colors shadow-sm">
+                <i data-lucide="wallet" class="w-8 h-8"></i>
+              </div>
+              <h4 class="text-xl font-bold text-slate-900 mb-3">Tarik Komisi Tunai</h4>
+              <p class="text-slate-600 leading-relaxed font-medium">Lacak setiap transaksi penjualan tercatat. Ajukan
+                pencairan dana senyaman pencarian ke bank manapun.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sistem Komisi Section -->
+    <section class="py-24 bg-slate-900 relative border-t border-slate-800 border-b border-primary-900/30"
+      id="sistemKomisi">
+      <!-- Abstract backgrounds -->
+      <div
+        class="absolute top-0 right-0 w-96 h-96 bg-primary-900 rounded-full mix-blend-screen filter blur-[100px] opacity-30">
+      </div>
+      <div
+        class="absolute bottom-0 left-0 w-96 h-96 bg-accent-900 rounded-full mix-blend-screen filter blur-[100px] opacity-20">
+      </div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-6">Skema Komisi Penghasilan</h2>
+          <p class="text-lg text-slate-400">Terdapat dua penyesuaian skema. Kami memberikan keuntungan eksklusif bagi
+            Peserta dan Alumni AMC.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+
+          <!-- Reguler Affiliate -->
+          <div
+            class="bg-slate-800 p-8 md:p-10 rounded-[2.5rem] border border-slate-700 shadow-xl hover-lift group relative overflow-hidden flex flex-col justify-between">
+            <div
+              class="absolute top-[-2rem] right-[-2rem] p-8 opacity-5 transition-transform duration-700 group-hover:scale-110 group-hover:rotate-12 group-hover:opacity-10">
+              <i data-lucide="user" class="w-48 h-48 text-white"></i></div>
+
+            <div class="relative z-10">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-sm font-extrabold uppercase tracking-wider mb-6 border border-slate-600">
+                Non-Peserta AMC
+              </div>
+              <h3 class="text-3xl font-bold text-white mb-4">Affiliate <span class="text-primary-400">Reguler</span>
+              </h3>
+              <p class="text-slate-400 mb-8 border-b border-slate-700 pb-8 text-lg">Ideal bagi publik awam yang tertarik
+                meraup penghasilan dengan merekomendasikan karya tulisan Mas Firman ke masyarakat luas.</p>
+
+              <ul class="space-y-4 mb-10 text-slate-300 font-medium">
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-primary-400 shrink-0"></i>
+                  <span>Mendapatkan komisi Buku Fisik sebesar <strong>10%</strong>.</span>
+                </li>
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-primary-400 shrink-0"></i>
+                  <span>Mendapat komisi pendaftaran Kursus Kelas sebesar <strong>5%</strong>.</span>
+                </li>
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-primary-400 shrink-0"></i>
+                  <span>Dashboard real-time untuk memantau trafik URL rujukan Anda.</span>
+                </li>
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-primary-400 shrink-0"></i>
+                  <span>Tautan dinamis yang bebas dibagikan ke target audiens manapun.</span>
+                </li>
+              </ul>
+            </div>
+
+            <a href="register.html"
+              class="block w-full text-center bg-slate-700 text-white rounded-2xl py-4 font-bold text-lg hover:bg-slate-600 transition-colors border border-slate-600 relative z-10">Daftar
+              Sekarang</a>
+          </div>
+
+          <!-- Priority Affiliate -->
+          <div
+            class="bg-gradient-to-br from-primary-900 to-slate-900 p-8 md:p-10 rounded-[2.5rem] border border-primary-500/50 shadow-2xl hover-lift group relative overflow-hidden transform lg:-translate-y-4 flex flex-col justify-between">
+            <div
+              class="absolute top-[-2rem] right-[-2rem] p-8 opacity-10 transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-12 group-hover:opacity-20">
+              <i data-lucide="crown" class="w-48 h-48 text-accent-400"></i></div>
+
+            <div class="relative z-10">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/20 text-accent-300 text-sm font-extrabold uppercase tracking-wider mb-6 border border-accent-500/30">
+                <i data-lucide="star" class="w-4 h-4 fill-current"></i> Peserta / Alumni AMC
+              </div>
+              <h3 class="text-3xl font-bold text-white mb-4">Affiliate <span class="text-accent-400">Prioritas</span>
+              </h3>
+              <p class="text-slate-300 mb-8 border-b border-primary-700 pb-8 text-lg">Keuntungan maksimal eksklusif
+                sebagai wujud ucapan terima kasih kepada para Alumni dan Peserta aktif Alpha Mind Control.</p>
+
+              <ul class="space-y-4 mb-10 text-slate-200 font-medium">
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-accent-400 shrink-0"></i>
+                  <span>Mendapatkan komisi Buku Fisik sampai dengan <strong>15%</strong>.</span>
+                </li>
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-accent-400 shrink-0"></i>
+                  <span>Mendapatkan komisi Kursus Kelas terbesar sampai dengan <strong>10%</strong>.</span>
+                </li>
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-accent-400 shrink-0"></i>
+                  <span>URL Tautan rujukan yang dapat dikustomisasi namanya + QR Code.</span>
+                </li>
+                <li class="flex items-start gap-4">
+                  <i data-lucide="check-circle-2" class="w-6 h-6 text-accent-400 shrink-0"></i>
+                  <span>Insentif papan klaseemen (Leaderboard) dengan bonus spektakuler.</span>
+                </li>
+              </ul>
+            </div>
+
+            <a href="register.html"
+              class="block w-full text-center bg-accent-500 text-white rounded-2xl py-4 font-extrabold text-lg hover:bg-accent-600 transition-colors shadow-lg relative z-10">Daftar
+              Menjadi Prioritas</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white py-10 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-primary-100 rounded flex items-center justify-center text-primary-600">
+          <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+        </div>
+        <span class="font-bold text-lg text-slate-900">Mas Firman Affiliate</span>
+      </div>
+      <p class="text-sm font-medium text-slate-500">&copy; 2026 Firman Pratama - AMC. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Floating Tour Button -->
+  <button id="tourStartBtn"
+    class="fixed bottom-6 right-6 z-50 shadow-2xl shadow-accent-500/40 bg-accent-500 hover:bg-accent-600 text-white px-6 py-3.5 rounded-full font-bold transition-all hover:scale-105 flex flex-row items-center gap-2 border border-accent-400 ripple">
+    <i data-lucide="signpost" class="w-5 h-5"></i> Mulai Tur Sistem
+  </button>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Still imported for compatibility with the original bootstrap-dependent logic mapping if any -->
+  <script>
+    lucide.createIcons();
+
+    // Navbar Scroll Effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 20) {
+        navbar.classList.add('shadow-md', 'bg-white/95');
+        navbar.classList.remove('border-slate-100');
+      } else {
+        navbar.classList.remove('shadow-md', 'bg-white/95');
+        navbar.classList.add('border-slate-100');
+      }
+    });
+
+    // Mobile Menu Toggle
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    btn.addEventListener('click', () => {
+      menu.classList.toggle('hidden');
+      if (!menu.classList.contains('hidden')) {
+        menu.style.animation = 'fadeInUp 0.2s ease-out';
+      }
+    });
+
+    // Affiliate Tour Configuration
+    window.affiliateTourConfig = {
+      flow: "affiliate-landing",
+      steps: [
+        { selector: "#heroAffiliate", title: "Program Affiliate", content: "Halaman ini menjelaskan keuntungan program dan titik awal alur affiliate." },
+        { selector: "#caraKerja", title: "Cara Kerja Bertahap", content: "Alur registrasi, sharing, hingga komisi dirangkum sederhana di sini." },
+        { selector: "#sistemKomisi", title: "Skema Komisi", content: "Bandingkan perbedaan margin benefit untuk alumni AMC atau non-peserta." },
+        { selector: "#ctaDaftar", title: "Aksi Utama", content: "Klik tombol pendaftaran di navigasi untuk memulai proses aktivasi mitra.", nextPage: "register.html", nextFlow: "affiliate-register", nextIndex: 0 }
+      ]
+    };
+  </script>
+  <script src="assets/js/affiliate-tour.js"></script>
+
+</body>
+
+</html>
