@@ -55,7 +55,7 @@ Referral tracking via `/ref/{code}` → cookie 30 hari attached ke order.
 
 ## 🌐 Preview server (development)
 
-- **URL preview store:** http://104.64.220.129:3001
+- **URL preview store:** http://43.133.128.222:3001
 - **Port store:** `3001` (alokasi dari `/root/malang-creative/_ports.json`, key `masfirmanpratama-store`)
 - **Bind address:** `0.0.0.0:<port>` (jangan `127.0.0.1`, biar bisa diakses dari IP publik)
 - **Multi-app**: project ini punya `store/` + `affiliate/` (TBD) — tiap app dapet port sendiri
