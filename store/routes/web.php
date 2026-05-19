@@ -201,6 +201,7 @@ if (! app()->environment('production')) {
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProductController;
 
 Route::prefix('admin')->name('admin.')->group(function () {
     // Guest (login form + attempt)
@@ -217,5 +218,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/', fn () => redirect()->route('admin.dashboard'))->name('home');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Produk CRUD (M2 — task t_2dce058d)
+        // Bind {product} pakai slug (Product::getRouteKeyName()).
+        Route::resource('products', ProductController::class)
+            ->except(['show'])
+            ->parameters(['products' => 'product']);
     });
 });

@@ -8,10 +8,10 @@
     // Nav structure: ready (link) + coming-soon (disabled placeholder M2 sprint).
     $primaryNav = [
         ['key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'grid', 'route' => 'admin.dashboard', 'enabled' => true],
+        ['key' => 'products', 'label' => 'Produk', 'icon' => 'package', 'route' => 'admin.products.index', 'enabled' => true],
     ];
 
     $comingSoon = [
-        ['key' => 'products', 'label' => 'Produk', 'icon' => 'package'],
         ['key' => 'orders', 'label' => 'Pesanan', 'icon' => 'shopping-bag'],
         ['key' => 'payments', 'label' => 'Verifikasi Bayar', 'icon' => 'check-circle'],
         ['key' => 'installments', 'label' => 'Skema Cicilan', 'icon' => 'layers'],
