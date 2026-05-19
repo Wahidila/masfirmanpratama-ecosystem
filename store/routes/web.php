@@ -220,8 +220,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', fn () => redirect()->route('admin.dashboard'))->name('home');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // Produk CRUD (M2 — task t_2dce058d)
+        // Produk CRUD (M2 — task t_2dce058d, t_e51df9e5)
         // Bind {product} pakai slug (Product::getRouteKeyName()).
+        Route::post('products/bulk', [ProductController::class, 'bulk'])->name('products.bulk');
+        Route::post('products/{product}/restore', [ProductController::class, 'restore'])
+            ->withTrashed()
+            ->name('products.restore');
         Route::resource('products', ProductController::class)
             ->except(['show'])
             ->parameters(['products' => 'product']);

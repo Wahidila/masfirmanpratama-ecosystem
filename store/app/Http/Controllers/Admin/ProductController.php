@@ -14,15 +14,22 @@ use Illuminate\View\View;
 class ProductController extends Controller
 {
     /**
-     * Quick stats + listing produk dengan optional filter status & type.
+     * Quick stats + listing produk dengan optional filter status, type, search,
+     * dan view (active=default, trashed=onlyTrashed for archived view).
      */
     public function index(Request $request): View
     {
         $filterStatus = $request->query('status');
         $filterType = $request->query('type');
         $search = trim((string) $request->query('q', ''));
+        $view = $request->query('view', 'active'); // 'active' (default) | 'trashed'
 
         $query = Product::query()->latest('id');
+
+        // View toggle: trashed = onlyTrashed (soft-deleted), default = exclude trashed
+        if ($view === 'trashed') {
+            $query->onlyTrashed();
+        }
 
         if (in_array($filterStatus, ['draft', 'active', 'archived'], true)) {
             $query->where('status', $filterStatus);
@@ -46,6 +53,7 @@ class ProductController extends Controller
             'active' => Product::where('status', 'active')->count(),
             'draft' => Product::where('status', 'draft')->count(),
             'archived' => Product::where('status', 'archived')->count(),
+            'trashed' => Product::onlyTrashed()->count(),
         ];
 
         return view('admin.products.index', [
@@ -54,6 +62,7 @@ class ProductController extends Controller
             'filterStatus' => $filterStatus,
             'filterType' => $filterType,
             'search' => $search,
+            'view' => $view,
         ]);
     }
 
@@ -132,11 +141,121 @@ class ProductController extends Controller
     public function destroy(Product $product): RedirectResponse
     {
         $title = $product->title;
-        $product->delete(); // soft delete
+        $product->delete(); // soft delete (deleted_at terisi)
 
         return redirect()
             ->route('admin.products.index')
             ->with('status', "Produk \"{$title}\" dipindahkan ke arsip (soft delete).");
+    }
+
+    /**
+     * Restore produk yang sudah soft-deleted.
+     * Route: POST /admin/products/{slug}/restore
+     */
+    public function restore(string $slug): RedirectResponse
+    {
+        $product = Product::onlyTrashed()->where('slug', $slug)->firstOrFail();
+        $product->restore();
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('status', "Produk \"{$product->title}\" berhasil dipulihkan.");
+    }
+
+    /**
+     * Bulk action di index list. Format request: action + ids[].
+     * Action: archive (status='archived'), activate (status='active'),
+     *         soft_delete (delete()), restore (restore()), force_delete (force).
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'action' => ['required', 'string', 'in:archive,activate,soft_delete,restore,force_delete'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'min:1'],
+        ]);
+
+        $action = $data['action'];
+        $ids = $data['ids'];
+
+        // Untuk restore/force_delete kita perlu trashed records, action lain pakai active set
+        $query = in_array($action, ['restore', 'force_delete'], true)
+            ? Product::onlyTrashed()
+            : Product::query();
+
+        $products = $query->whereIn('id', $ids)->get();
+        $count = $products->count();
+
+        if ($count === 0) {
+            return back()->with('status', 'Tidak ada produk yang cocok untuk diproses.');
+        }
+
+        $message = match ($action) {
+            'archive' => $this->bulkUpdateStatus($products, 'archived'),
+            'activate' => $this->bulkUpdateStatus($products, 'active'),
+            'soft_delete' => $this->bulkSoftDelete($products),
+            'restore' => $this->bulkRestore($products),
+            'force_delete' => $this->bulkForceDelete($products),
+        };
+
+        return redirect()
+            ->route('admin.products.index', $request->only(['view', 'status', 'type', 'q']))
+            ->with('status', $message);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     */
+    protected function bulkUpdateStatus($products, string $status): string
+    {
+        foreach ($products as $product) {
+            $product->status = $status;
+            $product->save();
+        }
+
+        $label = $status === 'active' ? 'diaktifkan' : 'di-archive';
+
+        return "{$products->count()} produk berhasil {$label}.";
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     */
+    protected function bulkSoftDelete($products): string
+    {
+        foreach ($products as $product) {
+            $product->delete();
+        }
+
+        return "{$products->count()} produk dipindahkan ke arsip (soft delete).";
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     */
+    protected function bulkRestore($products): string
+    {
+        foreach ($products as $product) {
+            $product->restore();
+        }
+
+        return "{$products->count()} produk berhasil dipulihkan.";
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     */
+    protected function bulkForceDelete($products): string
+    {
+        $count = 0;
+        foreach ($products as $product) {
+            // Cleanup image dulu sebelum hard delete
+            $this->deleteImage($product->image_path);
+            $product->forceDelete();
+            $count++;
+        }
+
+        return "{$count} produk dihapus permanen.";
     }
 
     // ---------------------------------------------------------------------
