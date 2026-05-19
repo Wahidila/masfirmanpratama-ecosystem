@@ -79,6 +79,39 @@ class OrderController extends Controller
     }
 
     /**
+     * Show order detail with items, payments, customer info.
+     */
+    public function show(Order $order): View
+    {
+        $order->load([
+            'items' => fn ($q) => $q->orderBy('id'),
+            'items.product',
+            'payments' => fn ($q) => $q->orderBy('created_at'),
+            'payments.verifier',
+        ]);
+
+        $totalPaid = (float) $order->payments
+            ->where('status', 'verified')
+            ->sum('amount');
+        $totalPending = (float) $order->payments
+            ->where('status', 'pending')
+            ->sum('amount');
+        $totalRejected = (float) $order->payments
+            ->where('status', 'rejected')
+            ->sum('amount');
+        $remaining = max(0, (float) $order->total - $totalPaid);
+
+        return view('admin.orders.show', [
+            'order' => $order,
+            'totalPaid' => $totalPaid,
+            'totalPending' => $totalPending,
+            'totalRejected' => $totalRejected,
+            'remaining' => $remaining,
+            'statuses' => self::STATUSES,
+        ]);
+    }
+
+    /**
      * Parse YYYY-MM-DD ke Carbon, atau null kalau invalid/empty.
      */
     protected function parseDate(?string $value): ?Carbon

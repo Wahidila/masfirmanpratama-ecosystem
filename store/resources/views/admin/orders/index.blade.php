@@ -139,8 +139,10 @@
                     <div>{{ $order->created_at?->format('H:i') }} WIB</div>
                 </td>
                 <td class="px-4 py-3 text-right">
-                    {{-- Detail page belum ada (task t_11e4dc6b berikutnya) --}}
-                    <span class="text-xs text-slate-400">—</span>
+                    <a href="{{ route('admin.orders.show', $order) }}"
+                       class="text-xs font-medium text-primary-600 hover:text-primary-700">
+                        Detail →
+                    </a>
                 </td>
             </tr>
         @endforeach

@@ -233,6 +233,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Pesanan (M2 — task t_b543e461) — index list dengan filter & pagination
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        // Pesanan detail (M2 — task t_11e4dc6b) — items, payments, customer info
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
         // Settings (M2 — task t_6be9a4e4) — store info + bank accounts CRUD
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
