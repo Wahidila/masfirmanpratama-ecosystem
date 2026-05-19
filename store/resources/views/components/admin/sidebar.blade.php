@@ -10,13 +10,11 @@
         ['key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'grid', 'route' => 'admin.dashboard', 'enabled' => true],
         ['key' => 'products', 'label' => 'Produk', 'icon' => 'package', 'route' => 'admin.products.index', 'enabled' => true],
         ['key' => 'orders', 'label' => 'Pesanan', 'icon' => 'shopping-bag', 'route' => 'admin.orders.index', 'enabled' => true],
+        ['key' => 'installments', 'label' => 'Skema Cicilan', 'icon' => 'layers', 'route' => 'admin.installment-schemes.index', 'enabled' => true],
         ['key' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'route' => 'admin.settings.index', 'enabled' => true],
     ];
 
-    $comingSoon = [
-        ['key' => 'payments', 'label' => 'Verifikasi Bayar', 'icon' => 'check-circle'],
-        ['key' => 'installments', 'label' => 'Skema Cicilan', 'icon' => 'layers'],
-    ];
+    $comingSoon = [];
 
     $iconClass = 'h-4 w-4 shrink-0';
 @endphp
@@ -39,14 +37,16 @@
             </a>
         @endforeach
 
-        <p class="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Coming soon (M2 sprint)</p>
+        @if (! empty($comingSoon))
+            <p class="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Coming soon (M2 sprint)</p>
 
-        @foreach ($comingSoon as $item)
-            <span class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-slate-400 cursor-not-allowed select-none">
-                <x-admin.icon :name="$item['icon']" class="h-4 w-4 shrink-0 opacity-60" />
-                {{ $item['label'] }}
-            </span>
-        @endforeach
+            @foreach ($comingSoon as $item)
+                <span class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-slate-400 cursor-not-allowed select-none">
+                    <x-admin.icon :name="$item['icon']" class="h-4 w-4 shrink-0 opacity-60" />
+                    {{ $item['label'] }}
+                </span>
+            @endforeach
+        @endif
     </nav>
 
     <div class="border-t border-slate-100 p-4">

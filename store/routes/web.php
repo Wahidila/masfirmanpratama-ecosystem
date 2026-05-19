@@ -201,6 +201,7 @@ if (! app()->environment('production')) {
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\InstallmentSchemeController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -247,5 +248,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('settings.store-info.update');
         Route::put('settings/bank-accounts', [SettingsController::class, 'updateBankAccounts'])
             ->name('settings.bank-accounts.update');
+
+        // Installment schemes (M2 — task t_8446fbd4) — global + per-product CRUD
+        Route::post('installment-schemes/{installment_scheme}/toggle',
+            [InstallmentSchemeController::class, 'toggle'])
+            ->name('installment-schemes.toggle');
+        Route::resource('installment-schemes', InstallmentSchemeController::class)
+            ->except(['show'])
+            ->parameters(['installment-schemes' => 'installment_scheme']);
     });
 });

@@ -1,6 +1,35 @@
 @php
+    use App\Models\InstallmentScheme;
+
+    /**
+     * Installment schemes (M2 — task t_8446fbd4): DB-backed.
+     * Active global schemes only on cart-level checkout (no specific product).
+     * Format ke FE: {name, n, dp_pct} — kompat dengan Alpine component existing.
+     *
+     * Fallback: kalau tabel installment_schemes belum ada (mis. test legacy
+     * tanpa RefreshDatabase) atau empty (fresh install tanpa seeder), pakai
+     * config sebagai safety net biar checkout tidak blank.
+     */
+    try {
+        $dbSchemes = InstallmentScheme::query()
+            ->active()
+            ->forProduct(null)
+            ->orderBy('n_installments')
+            ->get(['name', 'n_installments', 'dp_pct'])
+            ->map(fn ($s) => [
+                'name' => $s->name,
+                'n' => $s->n_installments,
+                'dp_pct' => (int) $s->dp_pct,
+            ])
+            ->all();
+    } catch (\Throwable) {
+        $dbSchemes = [];
+    }
+
     /** @var array<int, array{name: string, n: int, dp_pct: int}> $installmentSchemes */
-    $installmentSchemes = config('store.installment_schemes', []);
+    $installmentSchemes = ! empty($dbSchemes)
+        ? $dbSchemes
+        : config('store.installment_schemes', []);
     /** @var array<int, array{code: string, label: string, price: int}> $shippingMethods */
     $shippingMethods = config('store.shipping_methods', []);
     /** @var array<int, string> $provinces */
