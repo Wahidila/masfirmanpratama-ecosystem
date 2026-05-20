@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\UploadController;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -85,87 +86,33 @@ Route::get('/checkout/success/{order}', function (string $order) {
 /*
  * GET /upload/{order_number}
  * --------------------------------------------------------------------------
- * M1 stateless: payment context (lunas/cicilan, nominal, jumlah pembayaran,
- * cicilan ke-berapa) di-pass via query string dari halaman checkout success.
- * M2: ganti dengan UploadController@show — fetch order dari `orders` +
- *     `order_payments` untuk auto-detect status (paid/partial_paid),
- *     hitung nominal dari skema cicilan, dan disable opsi cicilan yang
- *     belum jatuh tempo / sudah lunas.
+ * M2 (task t_c0616c67): UploadController@show — fetch real Order kalau ada di
+ * DB, render view dengan pending payments + auto-detect cicilan/lunas dari
+ * payments count. Fallback ke M1 stub kalau order_number ngga match (backward
+ * compat dengan prototype + signed URL dari checkout).
  *
- * TODO (M2 — KRITIS KEAMANAN): route ini WAJIB di-token-protect (signed URL
- * Laravel atau JWT) sebelum production. Lihat catatan di view.
+ * TODO (task t_8a063559): wajib harden token-protect (signed URL Laravel atau
+ * JWT) — saat ini signed URL TTL 24h dari CheckoutController, tapi route ini
+ * belum require signed middleware (biar M1 stub flow tetap jalan).
  */
-Route::get('/upload/{order_number}', function (string $order_number, Request $request) {
-    $paymentType = in_array($request->query('type'), ['lunas', 'cicilan'], true)
-        ? $request->query('type')
-        : 'lunas';
-
-    $totalTransfer = max(0, (int) $request->query('total', 0));
-
-    $totalPayments = (int) $request->query('n', $paymentType === 'cicilan' ? 2 : 1);
-    if ($paymentType === 'cicilan') {
-        $totalPayments = max(2, min(24, $totalPayments));
-    } else {
-        $totalPayments = 1;
-    }
-
-    $defaultSequence = (int) $request->query('seq', 0);
-    $defaultSequence = max(0, min($totalPayments - 1, $defaultSequence));
-
-    return view('pages.upload', [
-        'orderNumber' => $order_number,
-        'paymentType' => $paymentType,
-        'totalTransfer' => $totalTransfer,
-        'totalPayments' => $totalPayments,
-        'defaultSequence' => $defaultSequence,
-    ]);
-})
-    ->where('order_number', '[A-Za-z0-9\-]+')
+Route::get('/upload/{order_number}', [UploadController::class, 'show'])
+    ->where('order_number', '[A-Za-z0-9\\-]+')
     ->name('upload.show');
 
 /*
  * POST /upload/{order_number}
  * --------------------------------------------------------------------------
- * M1 stub: validasi format + ukuran, lalu kembali ke halaman upload dengan
- * flash success state. File NOT disimpan ke storage di M1 (UI smoke test only).
+ * M2 (task t_c0616c67): UploadController@store — validate file (image, max
+ * 2MB), match payment by sequence, save ke storage/app/public/payment-proofs/,
+ * update order_payment.proof_path + paid_at, fire PaymentSubmitted event.
  *
- * M2: ganti closure ini dengan UploadController@store →
- *   - validate signed URL / JWT (TODO keamanan di atas)
- *   - simpan file ke storage/app/private/proofs/{YYYY}/{MM}/{order}-{seq}.{ext}
- *     dengan rename random hex (jangan trust filename client)
- *   - update orders.status + order_payments[seq].status = 'awaiting_review'
- *   - kirim WA notification ke admin via Fonnte/Wablas
+ * Order.status TIDAK transition saat upload (schema source-of-truth: enum
+ * pending|partial_paid|paid|... ngga punya 'payment_review'). Status
+ * transition ke 'paid' / 'partial_paid' di OrderController::approvePayment
+ * setelah admin verify.
  */
-Route::post('/upload/{order_number}', function (string $order_number, Request $request) {
-    $request->validate([
-        'proof_file' => [
-            'required',
-            'file',
-            'image',
-            'mimes:jpeg,jpg,png,webp',
-            'max:2048', // KB → 2 MB
-        ],
-        'installment_sequence' => ['nullable', 'integer', 'min:0', 'max:23'],
-        'note' => ['nullable', 'string', 'max:500'],
-    ], [
-        'proof_file.required' => 'Pilih file bukti transfer dulu sebelum mengirim.',
-        'proof_file.image' => 'File harus berupa gambar (JPG, PNG, atau WebP).',
-        'proof_file.mimes' => 'Format tidak didukung. Pakai JPG, PNG, atau WebP.',
-        'proof_file.max' => 'Ukuran file terlalu besar. Maksimal 2 MB.',
-    ]);
-
-    return redirect()
-        ->route('upload.show', array_filter([
-            'order_number' => $order_number,
-            'type' => $request->query('type'),
-            'total' => $request->query('total'),
-            'n' => $request->query('n'),
-            'seq' => $request->query('seq'),
-        ]))
-        ->with('upload.success', true)
-        ->with('upload.sequence', (int) $request->input('installment_sequence', 0));
-})
-    ->where('order_number', '[A-Za-z0-9\-]+')
+Route::post('/upload/{order_number}', [UploadController::class, 'store'])
+    ->where('order_number', '[A-Za-z0-9\\-]+')
     ->name('upload.store');
 
 // Order tracking — M1 dummy + M2 hydrate (task t_34ed789d):

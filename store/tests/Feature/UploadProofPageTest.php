@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class UploadProofPageTest extends TestCase
 {
+    use RefreshDatabase;
+
     private const ORDER = 'MFP-20260516-ABC123';
 
     // ─── GET /upload/{order_number} ─────────────────────────────────────────
