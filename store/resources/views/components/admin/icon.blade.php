@@ -24,8 +24,17 @@
         'search' => '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
         'filter' => '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
         'archive' => '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+        'message-square' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     ];
     $svg = $paths[$name] ?? '';
+
+    // Dev-time guard: kalau icon name ngga ada di whitelist, log peringatan biar
+    // bug "icon ngga muncul" gampang ke-spot. Production tetap render kosong
+    // (fail-soft, ngga break layout). Pernah kejadian: sidebar `wa-notifications`
+    // pakai 'message-square' yang lupa di-whitelist → silent missing icon.
+    if ($svg === '' && config('app.debug')) {
+        \Log::warning("[admin.icon] Icon name '{$name}' tidak ada di whitelist. Tambahin di store/resources/views/components/admin/icon.blade.php.");
+    }
 @endphp
 
 <svg xmlns="http://www.w3.org/2000/svg" class="{{ $class }}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $svg !!}</svg>
