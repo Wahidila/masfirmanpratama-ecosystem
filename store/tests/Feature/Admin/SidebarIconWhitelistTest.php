@@ -14,6 +14,10 @@ use Tests\TestCase;
  * icon='message-square', tapi `<x-admin.icon>` whitelist component lupa
  * include 'message-square' → silent missing icon (empty <svg>) di sidebar.
  *
+ * Bug case 2 (2026-05-22, M2-hardening C1): mobile drawer di-add. Nav
+ * config dipindah ke config/admin-nav.php. Test ini sekarang validasi
+ * source of truth dari config (bukan dari sidebar.blade.php seperti dulu).
+ *
  * Test ini static-render only (cepat). Untuk visual regression suite full,
  * lihat docs/qc/visual-review-M2-admin.md (task t_bfc4f9c0).
  */
@@ -50,26 +54,23 @@ class SidebarIconWhitelistTest extends TestCase
             $emptyCount,
             "Sidebar punya {$emptyCount} icon yang render <svg> kosong (whitelist miss). ".
                 'Cek `store/resources/views/components/admin/icon.blade.php` whitelist '.
-                'vs `components/admin/sidebar.blade.php $primaryNav[*].icon`.'
+                'vs `config/admin-nav.php::primary[*].icon`.'
         );
     }
 
     /**
-     * Static check: parse sidebar nav array dan validate setiap `icon` value
+     * Static check: parse nav config dan validate setiap `icon` value
      * ada di whitelist component. Lebih cepat dari render full page, dan
      * memberi error message lebih spesifik.
      */
     public function test_sidebar_nav_icons_are_all_whitelisted(): void
     {
-        $sidebarPath = resource_path('views/components/admin/sidebar.blade.php');
         $iconPath = resource_path('views/components/admin/icon.blade.php');
-
-        $sidebar = file_get_contents($sidebarPath);
         $icon = file_get_contents($iconPath);
 
-        // Extract icon names dari sidebar nav array literal.
-        preg_match_all("/'icon'\\s*=>\\s*'([^']+)'/", $sidebar, $sidebarMatches);
-        $required = array_unique($sidebarMatches[1] ?? []);
+        // Source of truth: config/admin-nav.php
+        $primary = config('admin-nav.primary', []);
+        $required = array_unique(array_column($primary, 'icon'));
 
         // Extract whitelist keys dari icon.blade.php $paths array.
         preg_match_all("/'([a-z0-9-]+)'\\s*=>\\s*'<(?:path|rect|circle|polyline|polygon|line)/", $icon, $iconMatches);
@@ -79,7 +80,7 @@ class SidebarIconWhitelistTest extends TestCase
 
         $this->assertEmpty(
             $missing,
-            'Sidebar request icon yang ngga di whitelist: '.implode(', ', $missing).
+            'Nav config request icon yang ngga di whitelist: '.implode(', ', $missing).
                 ". Tambahin path SVG-nya di {$iconPath} \$paths array."
         );
     }
