@@ -51,7 +51,7 @@ class OrderSeeder extends Seeder
             'items' => [[$kelasReguler, 1]],
             'payments' => [
                 ['amount' => 1350000, 'method' => 'transfer', 'status' => 'verified',
-                 'paid_at' => Carbon::now()->subDays(5), 'verified_at' => Carbon::now()->subDays(4)],
+                    'paid_at' => Carbon::now()->subDays(5), 'verified_at' => Carbon::now()->subDays(4)],
             ],
         ]);
 
@@ -70,7 +70,7 @@ class OrderSeeder extends Seeder
             ],
             'payments' => [
                 ['amount' => 295000, 'method' => 'transfer', 'status' => 'verified',
-                 'paid_at' => Carbon::now()->subDays(3), 'verified_at' => Carbon::now()->subDays(2)],
+                    'paid_at' => Carbon::now()->subDays(3), 'verified_at' => Carbon::now()->subDays(2)],
             ],
         ]);
 
@@ -87,7 +87,7 @@ class OrderSeeder extends Seeder
             'items' => [[$bukuTelepathy ?? $bukuKeajaiban, 2]],
             'payments' => [
                 ['amount' => 350000, 'method' => 'transfer', 'status' => 'verified',
-                 'paid_at' => Carbon::now()->subDays(7), 'verified_at' => Carbon::now()->subDays(6)],
+                    'paid_at' => Carbon::now()->subDays(7), 'verified_at' => Carbon::now()->subDays(6)],
             ],
         ]);
 
@@ -103,7 +103,7 @@ class OrderSeeder extends Seeder
             'items' => [[$bukuKeajaiban, 1]],
             'payments' => [
                 ['amount' => 150000, 'method' => 'transfer', 'status' => 'verified',
-                 'paid_at' => Carbon::now()->subDays(10), 'verified_at' => Carbon::now()->subDays(9)],
+                    'paid_at' => Carbon::now()->subDays(10), 'verified_at' => Carbon::now()->subDays(9)],
             ],
         ]);
     }
@@ -151,6 +151,6 @@ class OrderSeeder extends Seeder
 
     private function generateOrderNumber(string $suffix): string
     {
-        return 'MFP-' . $suffix . '-' . strtoupper(Str::random(6));
+        return 'MFP-'.$suffix.'-'.strtoupper(Str::random(6));
     }
 }

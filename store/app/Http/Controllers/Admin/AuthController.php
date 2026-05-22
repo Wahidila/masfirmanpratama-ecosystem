@@ -45,7 +45,7 @@ class AuthController extends Controller
 
         return redirect()
             ->intended(route('admin.dashboard'))
-            ->with('status', 'Login berhasil. Halo, ' . $admin->name . '.');
+            ->with('status', 'Login berhasil. Halo, '.$admin->name.'.');
     }
 
     /**

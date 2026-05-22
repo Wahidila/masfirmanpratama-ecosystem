@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductRequest;
 use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -204,7 +205,7 @@ class ProductController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     * @param  Collection<int, Product>  $products
      */
     protected function bulkUpdateStatus($products, string $status): string
     {
@@ -219,7 +220,7 @@ class ProductController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     * @param  Collection<int, Product>  $products
      */
     protected function bulkSoftDelete($products): string
     {
@@ -231,7 +232,7 @@ class ProductController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     * @param  Collection<int, Product>  $products
      */
     protected function bulkRestore($products): string
     {
@@ -243,7 +244,7 @@ class ProductController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     * @param  Collection<int, Product>  $products
      */
     protected function bulkForceDelete($products): string
     {

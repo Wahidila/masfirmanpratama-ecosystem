@@ -7,6 +7,7 @@ use App\Models\InstallmentScheme;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class InstallmentSchemeController extends Controller
@@ -141,7 +142,7 @@ class InstallmentSchemeController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, Product>
+     * @return Collection<int, Product>
      */
     protected function productOptions()
     {
