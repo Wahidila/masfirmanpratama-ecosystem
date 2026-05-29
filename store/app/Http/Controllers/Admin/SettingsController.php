@@ -86,7 +86,10 @@ class SettingsController extends Controller
             }
         }
 
-        $accounts = collect($data['bank_accounts'] ?? [])
+        /** @var array<int, array<string, mixed>> $rawAccounts */
+        $rawAccounts = $data['bank_accounts'] ?? [];
+
+        $accounts = collect($rawAccounts)
             ->filter(fn ($acc) => ! empty($acc['bank']) && ! empty($acc['number']))
             ->map(fn ($acc) => [
                 'bank' => $acc['bank'],

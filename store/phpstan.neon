@@ -1,0 +1,29 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+
+    level: 6
+
+    # Laravel-specific exclusions yang Larastan udah cover lewat extension,
+    # tapi sometimes false-positive di edge case (Eloquent magic, dst).
+    ignoreErrors:
+        # Allow `\$this->user` di Pollicy/Action yang dynamic-resolved
+        - identifier: missingType.iterableValue
+        # Eloquent collection generic typing — udah cukup ketat tanpa explicit
+        - identifier: missingType.generics
+
+    # Skip vendor + storage cache build artifact
+    excludePaths:
+        # Laravel 11 ngga punya Kernel.php files (config-based bootstrap),
+        # tapi kalau project di-downgrade ke L10 path ini akan exist.
+        - app/Console/Kernel.php (?)
+        - app/Http/Kernel.php (?)
+
+    # Reasonable defaults untuk project Laravel 11
+    treatPhpDocTypesAsCertain: false
+
+    # Cache di tempat yang sama dengan tools lain
+    tmpDir: storage/framework/cache/phpstan

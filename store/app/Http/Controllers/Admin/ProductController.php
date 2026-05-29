@@ -197,6 +197,7 @@ class ProductController extends Controller
             'soft_delete' => $this->bulkSoftDelete($products),
             'restore' => $this->bulkRestore($products),
             'force_delete' => $this->bulkForceDelete($products),
+            default => 'Aksi tidak dikenal.',
         };
 
         return redirect()

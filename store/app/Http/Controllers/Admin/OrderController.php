@@ -159,7 +159,7 @@ class OrderController extends Controller
         ]);
 
         DB::transaction(function () use ($order, $payment, $validated, $request) {
-            if (isset($validated['amount']) && $validated['amount'] !== null) {
+            if (isset($validated['amount'])) {
                 $payment->amount = $validated['amount'];
             }
             $payment->status = 'verified';
