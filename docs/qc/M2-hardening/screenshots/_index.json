@@ -1,0 +1,172 @@
+{
+  "shots": [
+    {
+      "id": "login",
+      "viewport": "mobile-375",
+      "file": "login__mobile-375.png"
+    },
+    {
+      "id": "dashboard",
+      "viewport": "mobile-375",
+      "file": "dashboard__mobile-375.png"
+    },
+    {
+      "id": "products-index",
+      "viewport": "mobile-375",
+      "file": "products-index__mobile-375.png"
+    },
+    {
+      "id": "products-create",
+      "viewport": "mobile-375",
+      "file": "products-create__mobile-375.png"
+    },
+    {
+      "id": "products-create-validation",
+      "viewport": "mobile-375",
+      "file": "products-create-validation__mobile-375.png"
+    },
+    {
+      "id": "orders-index",
+      "viewport": "mobile-375",
+      "file": "orders-index__mobile-375.png"
+    },
+    {
+      "id": "orders-show",
+      "viewport": "mobile-375",
+      "file": "orders-show__mobile-375.png"
+    },
+    {
+      "id": "settings",
+      "viewport": "mobile-375",
+      "file": "settings__mobile-375.png"
+    },
+    {
+      "id": "wa-notifications",
+      "viewport": "mobile-375",
+      "file": "wa-notifications__mobile-375.png"
+    },
+    {
+      "id": "installment-schemes",
+      "viewport": "mobile-375",
+      "file": "installment-schemes__mobile-375.png"
+    },
+    {
+      "id": "installment-schemes-create",
+      "viewport": "mobile-375",
+      "file": "installment-schemes-create__mobile-375.png"
+    },
+    {
+      "id": "login",
+      "viewport": "tablet-768",
+      "file": "login__tablet-768.png"
+    },
+    {
+      "id": "dashboard",
+      "viewport": "tablet-768",
+      "file": "dashboard__tablet-768.png"
+    },
+    {
+      "id": "products-index",
+      "viewport": "tablet-768",
+      "file": "products-index__tablet-768.png"
+    },
+    {
+      "id": "products-create",
+      "viewport": "tablet-768",
+      "file": "products-create__tablet-768.png"
+    },
+    {
+      "id": "products-create-validation",
+      "viewport": "tablet-768",
+      "file": "products-create-validation__tablet-768.png"
+    },
+    {
+      "id": "orders-index",
+      "viewport": "tablet-768",
+      "file": "orders-index__tablet-768.png"
+    },
+    {
+      "id": "orders-show",
+      "viewport": "tablet-768",
+      "file": "orders-show__tablet-768.png"
+    },
+    {
+      "id": "settings",
+      "viewport": "tablet-768",
+      "file": "settings__tablet-768.png"
+    },
+    {
+      "id": "wa-notifications",
+      "viewport": "tablet-768",
+      "file": "wa-notifications__tablet-768.png"
+    },
+    {
+      "id": "installment-schemes",
+      "viewport": "tablet-768",
+      "file": "installment-schemes__tablet-768.png"
+    },
+    {
+      "id": "installment-schemes-create",
+      "viewport": "tablet-768",
+      "file": "installment-schemes-create__tablet-768.png"
+    },
+    {
+      "id": "login",
+      "viewport": "desktop-1440",
+      "file": "login__desktop-1440.png"
+    },
+    {
+      "id": "dashboard",
+      "viewport": "desktop-1440",
+      "file": "dashboard__desktop-1440.png"
+    },
+    {
+      "id": "products-index",
+      "viewport": "desktop-1440",
+      "file": "products-index__desktop-1440.png"
+    },
+    {
+      "id": "products-create",
+      "viewport": "desktop-1440",
+      "file": "products-create__desktop-1440.png"
+    },
+    {
+      "id": "products-create-validation",
+      "viewport": "desktop-1440",
+      "file": "products-create-validation__desktop-1440.png"
+    },
+    {
+      "id": "orders-index",
+      "viewport": "desktop-1440",
+      "file": "orders-index__desktop-1440.png"
+    },
+    {
+      "id": "orders-show",
+      "viewport": "desktop-1440",
+      "file": "orders-show__desktop-1440.png"
+    },
+    {
+      "id": "settings",
+      "viewport": "desktop-1440",
+      "file": "settings__desktop-1440.png"
+    },
+    {
+      "id": "wa-notifications",
+      "viewport": "desktop-1440",
+      "file": "wa-notifications__desktop-1440.png"
+    },
+    {
+      "id": "installment-schemes",
+      "viewport": "desktop-1440",
+      "file": "installment-schemes__desktop-1440.png"
+    },
+    {
+      "id": "installment-schemes-create",
+      "viewport": "desktop-1440",
+      "file": "installment-schemes-create__desktop-1440.png"
+    }
+  ],
+  "errors": [],
+  "started": "2026-05-27T09:22:49.415Z",
+  "finished": "2026-05-27T09:23:34.055Z"
+}
