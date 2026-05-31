@@ -494,9 +494,68 @@
         </div>
     </section>
 
-    {{-- ======================================================
+    {{-- ==============================================================
+       | WELCOME / SELAMAT DATANG — Intro Mas Firman + Buku Karya
+       |============================================================== --}}
+    <section id="welcome" class="py-20 lg:py-24 bg-white border-t border-slate-100" aria-label="Selamat Datang">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-4">
+                    Selamat Datang
+                </p>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 leading-tight">
+                    Selamat Datang di <span class="text-gradient">Website Ini</span>
+                </h2>
+                <p class="text-lg text-slate-600 mb-2">
+                    Saya ingin berbagi ilmu tentang Kesadaran yang Sesungguhnya.
+                </p>
+                <p class="text-lg text-slate-600">
+                    Banyak manusia sesungguhnya dalam kerugian jika tidak menyadari tugasnya.
+                </p>
+            </div>
+
+            <div class="max-w-4xl mx-auto">
+                <p class="text-center text-base md:text-lg text-slate-700 font-medium mb-8">
+                    Buku-buku karya saya yang sudah membantu banyak orang untuk merubah hidupnya
+                </p>
+
+                @if(isset($welcomeBooks) && $welcomeBooks->isNotEmpty())
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 md:gap-6">
+                        @foreach ($welcomeBooks as $book)
+                            <a
+                                href="{{ route('products.show', $book->slug) }}"
+                                class="group flex flex-col items-center text-center rounded-2xl bg-slate-50 border border-slate-100 p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                                aria-label="Lihat detail buku {{ $book->title }}"
+                            >
+                                @if($book->image_path)
+                                    <img
+                                        src="{{ asset($book->image_path) }}"
+                                        alt="Sampul buku {{ $book->title }}"
+                                        width="160"
+                                        height="220"
+                                        loading="lazy"
+                                        decoding="async"
+                                        class="w-24 h-32 md:w-28 md:h-36 object-cover rounded-xl mb-3 shadow-sm group-hover:shadow-md transition-shadow"
+                                    >
+                                @else
+                                    <div class="w-24 h-32 md:w-28 md:h-36 rounded-xl mb-3 bg-primary-100 flex items-center justify-center text-primary-500">
+                                        <i data-lucide="book-open" class="w-8 h-8"></i>
+                                    </div>
+                                @endif
+                                <span class="text-sm font-semibold text-slate-800 group-hover:text-primary-600 transition-colors leading-snug">
+                                    {{ $book->title }}
+                                </span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- ==============================================================
        | 2. BENEFIT AMC (4 cards)
-       |====================================================== --}}
+       |============================================================== --}}
     <section id="benefit" class="py-20 lg:py-24 bg-white border-t border-slate-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center max-w-3xl mx-auto mb-14">

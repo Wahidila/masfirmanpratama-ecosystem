@@ -22,6 +22,9 @@ class HomeController extends Controller
                 'href' => url('/produk/'.$p->slug),
             ]);
 
-        return view('pages.home', compact('products'));
+        $slugs = ['10-keajaiban-pikiran', 'alpha-telepathy', 'instan-hypnosis', 'kitab-101-kalimat-sugesti-ajaib', 'kitab-kunci-penarik-rezeki'];
+        $welcomeBooks = Product::whereIn('slug', $slugs)->get()->sortBy(fn ($p) => array_search($p->slug, $slugs))->values();
+
+        return view('pages.home', compact('products', 'welcomeBooks'));
     }
 }
