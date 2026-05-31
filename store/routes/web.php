@@ -5,6 +5,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingRateController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\Webhooks\AwbCallbackController;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
@@ -149,6 +150,10 @@ Route::get('/track/{order_number}', function (string $order_number) {
 Route::post('/shipping/rates', [ShippingRateController::class, 'rates'])
     ->middleware('throttle:30,1')
     ->name('shipping.rates');
+
+// Agenwebsite AWB callback webhook (HMAC-SHA256 signed, CSRF-exempt)
+Route::post('/webhooks/agenwebsite/awb', [AwbCallbackController::class, 'handle'])
+    ->name('webhooks.agenwebsite.awb');
 
 /*
 |--------------------------------------------------------------------------

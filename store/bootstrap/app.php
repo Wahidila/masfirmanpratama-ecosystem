@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // tapi asset di-generate http:// → browser blokir (mixed content) → CSS mati.
         $middleware->trustProxies(at: '*');
 
+        // Exempt webhook callback from CSRF — Agenwebsite sends POST with HMAC
+        // signature in header, no session cookie or CSRF token.
+        $middleware->validateCsrfTokens(except: ['webhooks/agenwebsite/*']);
+
         // Untuk guard 'admin', redirect unauthenticated ke /admin/login
         // (default Laravel pakai route('login') yang tidak terdefinisi di app ini).
         $middleware->redirectGuestsTo(function ($request) {
