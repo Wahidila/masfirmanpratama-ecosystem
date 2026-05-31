@@ -234,10 +234,10 @@
                             </p>
 
                             <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                                <x-button href="#kelas" size="lg" icon="book-open" iconPosition="right">
+                                <x-button href="#kelas" size="md" icon="book-open" iconPosition="right" class="whitespace-nowrap">
                                     Pelajari Alpha Mind Control
                                 </x-button>
-                                <x-button href="#katalog" variant="outline" size="lg" icon="library" iconPosition="left">
+                                <x-button href="#katalog" variant="outline" size="md" icon="library" iconPosition="left" class="whitespace-nowrap">
                                     Lihat Koleksi Buku
                                 </x-button>
                             </div>
