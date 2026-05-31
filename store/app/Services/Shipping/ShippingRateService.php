@@ -82,6 +82,67 @@ class ShippingRateService
         ];
     }
 
+    public function getRates(array $destination, array $cartItems): array
+    {
+        $weight = $this->calculateWeight($cartItems);
+
+        if ($weight === 0.0) {
+            return [];
+        }
+
+        $dimensions = $this->calculateDimensions($cartItems);
+
+        $params = [
+            'origin' => config('shipping.origin'),
+            'origin_zipcode' => config('shipping.origin_zipcode'),
+            'province' => $destination['province'],
+            'city' => $destination['city'],
+            'district' => $destination['district'] ?? '',
+            'zipcode' => $destination['zipcode'],
+            'weight' => (int) ceil($weight),
+            'courier' => implode('|', config('shipping.couriers')),
+            'length' => $dimensions['length'],
+            'width' => $dimensions['width'],
+            'height' => $dimensions['height'],
+        ];
+
+        try {
+            $rates = $this->agenwebsite->price($params);
+
+            if (empty($rates)) {
+                return [];
+            }
+
+            $activeCouriers = config('shipping.couriers', []);
+            $markups = config('shipping.service_markup', []);
+
+            $filtered = array_filter($rates, function ($row) use ($activeCouriers) {
+                $courier = explode('_', $row['courier'] ?? '')[0];
+
+                return in_array($courier, $activeCouriers);
+            });
+
+            if (empty($filtered)) {
+                return [];
+            }
+
+            return array_map(function ($row) use ($markups) {
+                $service = $row['service'] ?? '';
+                $markup = $markups[$service] ?? 0;
+
+                return [
+                    'courier' => $row['courier'] ?? '',
+                    'service' => $service,
+                    'label' => ($row['service_name'] ?? $service) . ' (' . ($row['etd'] ?? 'TBD') . ')',
+                    'price' => (int) ($row['price'] ?? 0) + $markup,
+                    'etd' => $row['etd'] ?? '',
+                ];
+            }, array_values($filtered));
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
     private function castDefaults(array $defaults): array
     {
         return [
