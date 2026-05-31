@@ -212,6 +212,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/ship', [OrderController::class, 'markShipped'])
             ->name('orders.ship');
 
+        Route::post('orders/{order}/generate-shipment', [OrderController::class, 'generateShipment'])
+            ->name('orders.generate-shipment');
+
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::put('settings/store-info', [SettingsController::class, 'updateStoreInfo'])
             ->name('settings.store-info.update');

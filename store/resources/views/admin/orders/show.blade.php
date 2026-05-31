@@ -58,6 +58,18 @@
         </div>
     @endif
 
+    @if (session('error'))
+        <div class="mb-6">
+            <x-admin.alert tone="danger" dismissible>{{ session('error') }}</x-admin.alert>
+        </div>
+    @endif
+
+    @if (session('info'))
+        <div class="mb-6">
+            <x-admin.alert tone="primary" dismissible>{{ session('info') }}</x-admin.alert>
+        </div>
+    @endif
+
     {{-- Status & total summary strip --}}
     <section class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
         <x-admin.card>
@@ -337,6 +349,62 @@
             <x-admin.card>
                 <h2 class="text-sm font-semibold text-slate-700 mb-3">Aksi Pengiriman</h2>
 
+                @php
+                    $fulfillmentToneMap = [
+                        'shipped' => 'secondary',
+                        'waiting_awb' => 'amber',
+                        'pending_payment' => 'amber',
+                        'failed' => 'slate',
+                    ];
+                    $fulfillmentLabel = [
+                        'shipped' => 'Terkirim',
+                        'waiting_awb' => 'Tunggu AWB',
+                        'pending_payment' => 'Bayar Ongkir',
+                        'failed' => 'Gagal',
+                    ];
+                @endphp
+
+                {{-- Fulfillment info (tampil di semua status kalau fulfillment_status terisi) --}}
+                @if ($order->fulfillment_status)
+                    <div class="mb-4 space-y-2 text-sm">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs uppercase tracking-wide text-slate-500">Status Fulfillment:</span>
+                            @php
+                                $fTone = $fulfillmentToneMap[$order->fulfillment_status] ?? 'slate';
+                                $fToneClass = match ($fTone) {
+                                    'amber' => 'bg-accent-50 text-accent-800 ring-accent-200',
+                                    'secondary' => 'bg-secondary-50 text-secondary-800 ring-secondary-200',
+                                    default => 'bg-slate-100 text-slate-700 ring-slate-200',
+                                };
+                            @endphp
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $fToneClass }}">
+                                {{ $fulfillmentLabel[$order->fulfillment_status] ?? $order->fulfillment_status }}
+                            </span>
+                        </div>
+                        @if ($order->tracking_status)
+                            <div>
+                                <span class="text-xs uppercase tracking-wide text-slate-500">Tracking:</span>
+                                <span class="ml-1 text-slate-700">{{ $order->tracking_status }}</span>
+                            </div>
+                        @endif
+                        @if ($order->shipping_resi)
+                            <div>
+                                <span class="text-xs uppercase tracking-wide text-slate-500">Resi:</span>
+                                <span class="ml-1 font-mono text-slate-800 break-all">{{ $order->shipping_resi }}</span>
+                            </div>
+                        @endif
+                        @if ($order->label_url)
+                            <div>
+                                <a href="{{ $order->label_url }}" target="_blank" rel="noopener noreferrer"
+                                   class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 underline">
+                                    <i data-lucide="external-link" class="h-3 w-3"></i>
+                                    Label Pengiriman
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+
                 @if ($order->status === 'shipped' || $order->status === 'completed')
                     {{-- Order sudah dikirim — tampilkan info resi read-only --}}
                     <div class="space-y-3 text-sm">
@@ -363,9 +431,35 @@
                         </dl>
                     </div>
                 @elseif ($canShip)
-                    {{-- Order siap kirim (status=paid) — tampilkan form input resi --}}
+                    @if ($order->shipping_courier && $order->shipping_service)
+                        {{-- Generate Resi Otomatis --}}
+                        <div class="mb-4 rounded-xl border border-primary-200 bg-primary-50/50 p-4">
+                            <h3 class="text-sm font-semibold text-primary-800 mb-2">
+                                <i data-lucide="wand" class="h-4 w-4 inline mr-1"></i>
+                                Generate Resi Otomatis
+                            </h3>
+                            <p class="text-xs text-slate-600 mb-3">
+                                Buat resi pengiriman otomatis via kurir
+                                <span class="font-medium text-slate-700">{{ $order->shipping_courier }}</span>
+                                — {{ $order->shipping_service }}.
+                            </p>
+                            <form
+                                method="POST"
+                                action="{{ route('admin.orders.generate-shipment', $order) }}"
+                            >
+                                @csrf
+                                <button type="submit"
+                                        class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
+                                    <i data-lucide="truck" class="h-4 w-4"></i>
+                                    Generate Resi Otomatis
+                                </button>
+                            </form>
+                        </div>
+                    @endif
+
+                    {{-- Order siap kirim (status=paid) — tampilkan form input resi manual --}}
                     <p class="text-xs text-slate-500 mb-3">
-                        Order sudah lunas. Isi kurir &amp; nomor resi untuk transition ke
+                        Atau isi kurir &amp; nomor resi manual untuk transition ke
                         <span class="font-medium text-slate-700">Dikirim</span>.
                     </p>
                     <form

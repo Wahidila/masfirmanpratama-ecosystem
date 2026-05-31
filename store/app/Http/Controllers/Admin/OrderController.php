@@ -8,6 +8,7 @@ use App\Events\PaymentVerified;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderPayment;
+use App\Services\Shipping\FulfillmentService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -246,6 +247,50 @@ class OrderController extends Controller
      * Default: 'paid' saja — partial_paid / pending / cancelled / refunded /
      * shipped (sudah) / completed (terlalu lanjut) di-reject 422.
      */
+    /**
+     * Generate shipment via fulfillment API (Agenwebsite).
+     * Requires order paid, + shipping_courier + shipping_service set.
+     * If already has AWB (fulfillment_status=shipped + resi), skip with info.
+     */
+    public function generateShipment(Request $request, Order $order): RedirectResponse
+    {
+        abort_if(
+            ! in_array($order->status, self::SHIPPABLE_FROM, true),
+            422,
+            'Order belum siap kirim. Status sekarang: '.$order->status,
+        );
+
+        abort_if(
+            ! $order->shipping_courier || ! $order->shipping_service,
+            422,
+            'Order belum memiliki kurir dan layanan pengiriman.',
+        );
+
+        if ($order->fulfillment_status === 'shipped' && $order->shipping_resi) {
+            return redirect()
+                ->route('admin.orders.show', $order)
+                ->with('info', 'Resi sudah tersedia: '.$order->shipping_resi.'.');
+        }
+
+        $service = app(FulfillmentService::class);
+        $result = $service->createShipment($order);
+
+        return match ($result['status']) {
+            'awb_ready' => redirect()
+                ->route('admin.orders.show', $order)
+                ->with('status', 'Resi berhasil dibuat: '.$result['tracking_number'].'.'),
+            'waiting_awb' => redirect()
+                ->route('admin.orders.show', $order)
+                ->with('status', 'Menunggu AWB dari sistem.'),
+            'pending_payment' => redirect()
+                ->route('admin.orders.show', $order)
+                ->with('info', 'Menunggu pembayaran pengiriman.'),
+            default => redirect()
+                ->route('admin.orders.show', $order)
+                ->with('error', $result['message'] ?? 'Gagal membuat resi.'),
+        };
+    }
+
     public function markShipped(Request $request, Order $order): RedirectResponse
     {
         abort_if(
