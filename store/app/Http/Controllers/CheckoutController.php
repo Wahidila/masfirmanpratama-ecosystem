@@ -101,13 +101,42 @@ class CheckoutController extends Controller
             'city' => $validated['address_city'] ?? '',
             'postal' => $validated['address_postal'] ?? '',
         ];
-        $shippingCost = $this->resolveDynamicShippingCost($shippingMethod, $address, $cart);
+
+        $shippingService = null;
+        $shippingCost = 0;
+        $shippingEtd = null;
         $shippingCourier = null;
+
+        if ($shippingMethod) {
+            $cartItems = array_map(fn ($item) => [
+                'slug' => $item['slug'] ?? '',
+                'qty' => (int) ($item['qty'] ?? 1),
+            ], $cart);
+
+            $destination = [
+                'province' => $address['province'] ?? '',
+                'city' => $address['city'] ?? '',
+                'district' => '',
+                'zipcode' => $address['postal'] ?? '',
+            ];
+
+            $rates = $this->shippingRateService->getRates($destination, $cartItems);
+
+            if (! empty($rates)) {
+                foreach ($rates as $rate) {
+                    if (($rate['service'] ?? '') === $shippingMethod) {
+                        $shippingCost = (int) ($rate['price'] ?? 0);
+                        $shippingService = $rate['service'] ?? null;
+                        $shippingEtd = $rate['etd'] ?? null;
+                        $shippingCourier = explode('_', $shippingMethod)[0];
+                        break;
+                    }
+                }
+            }
+        }
 
         if ($shippingCost === 0) {
             $shippingCost = $this->resolveShippingCost($shippingMethod);
-        } elseif ($shippingMethod !== null && $shippingMethod !== '') {
-            $shippingCourier = explode('_', $shippingMethod)[0];
         }
 
         $grandTotal = $serverSubtotal + $shippingCost;
@@ -127,6 +156,9 @@ class CheckoutController extends Controller
             $grandTotal,
             $scheme,
             $shippingCourier,
+            $shippingService,
+            $shippingCost,
+            $shippingEtd,
         ) {
             $order = Order::create([
                 'order_number' => $this->generateOrderNumber(),
@@ -143,6 +175,9 @@ class CheckoutController extends Controller
                 'status' => 'pending',
                 'ref_code' => $validated['ref_code'] ?? null,
                 'shipping_courier' => $shippingCourier,
+                'shipping_service' => $shippingService,
+                'shipping_cost' => $shippingCost,
+                'shipping_etd' => $shippingEtd,
             ]);
 
             foreach ($resolvedItems as $item) {
@@ -259,45 +294,6 @@ class CheckoutController extends Controller
         foreach ($methods as $method) {
             if (($method['code'] ?? null) === $code) {
                 return (int) ($method['price'] ?? 0);
-            }
-        }
-
-        return 0;
-    }
-
-    /**
-     * Re-validate dynamic shipping rates server-side (anti-tamper).
-     * Calls ShippingRateService::getRates() with destination and cart items,
-     * finds matching rate by service_id, returns server-computed price.
-     * Returns 0 if no match (digital-only cart or unknown service).
-     */
-    protected function resolveDynamicShippingCost(?string $shippingMethod, array $address, array $cart): int
-    {
-        if (! $shippingMethod) {
-            return 0;
-        }
-
-        $cartItems = array_map(fn ($item) => [
-            'slug' => $item['slug'] ?? '',
-            'qty' => (int) ($item['qty'] ?? 1),
-        ], $cart);
-
-        $destination = [
-            'province' => $address['province'] ?? '',
-            'city' => $address['city'] ?? '',
-            'district' => '',
-            'zipcode' => $address['postal'] ?? '',
-        ];
-
-        $rates = $this->shippingRateService->getRates($destination, $cartItems);
-
-        if (empty($rates)) {
-            return 0;
-        }
-
-        foreach ($rates as $rate) {
-            if (($rate['service'] ?? '') === $shippingMethod) {
-                return (int) ($rate['price'] ?? 0);
             }
         }
 

@@ -22,6 +22,9 @@ class Order extends Model
         'shipping_courier',
         'shipping_resi',
         'shipped_at',
+        'shipping_service',
+        'shipping_cost',
+        'shipping_etd',
     ];
 
     protected function casts(): array
@@ -29,6 +32,7 @@ class Order extends Model
         return [
             'total' => 'decimal:2',
             'shipped_at' => 'datetime',
+            'shipping_cost' => 'integer',
         ];
     }
 
