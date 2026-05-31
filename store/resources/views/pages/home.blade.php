@@ -125,110 +125,344 @@
     bodyClass="relative"
 >
     {{-- ======================================================
-       | 1. HERO
+       | 1. HERO — Full-width Slider/Carousel
        |====================================================== --}}
-    <section class="relative pt-12 pb-20 lg:pt-24 lg:pb-32 overflow-hidden bg-slate-50">
-        {{-- Animated blob background --}}
-        <div class="absolute top-0 w-full h-full overflow-hidden z-0 pointer-events-none" aria-hidden="true">
-            <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-            <div class="absolute top-[20%] right-[-10%] w-96 h-96 bg-secondary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-200"></div>
-            <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-accent-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-400"></div>
-        </div>
+    <section
+        x-data="{
+            current: 0,
+            total: 3,
+            autoplay: true,
+            autoplayInterval: 6000,
+            timer: null,
+            touchStartX: 0,
+            touchEndX: 0,
+            reducedMotion: false,
+            init() {
+                this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (this.autoplay && !this.reducedMotion) this.startAutoplay();
+            },
+            next() {
+                this.current = (this.current + 1) % this.total;
+                this.restartAutoplay();
+            },
+            prev() {
+                this.current = (this.current - 1 + this.total) % this.total;
+                this.restartAutoplay();
+            },
+            goTo(n) {
+                this.current = n;
+                this.restartAutoplay();
+            },
+            startAutoplay() {
+                if (this.reducedMotion || this.timer) return;
+                this.timer = setInterval(() => {
+                    this.current = (this.current + 1) % this.total;
+                }, this.autoplayInterval);
+            },
+            stopAutoplay() {
+                if (this.timer) { clearInterval(this.timer); this.timer = null; }
+            },
+            restartAutoplay() {
+                this.stopAutoplay();
+                if (this.autoplay && !this.reducedMotion) this.startAutoplay();
+            },
+            handleTouchStart(e) {
+                this.touchStartX = e.changedTouches[0].screenX;
+            },
+            handleTouchEnd(e) {
+                this.touchEndX = e.changedTouches[0].screenX;
+                const diff = this.touchStartX - this.touchEndX;
+                if (Math.abs(diff) > 50) {
+                    if (diff > 0) this.next();
+                    else this.prev();
+                }
+            }
+        }"
+        x-cloak
+        role="region"
+        aria-label="Hero slider"
+        aria-roledescription="carousel"
+        tabindex="0"
+        @keydown.left="prev()"
+        @keydown.right="next()"
+        @mouseenter="stopAutoplay()"
+        @mouseleave="startAutoplay()"
+        @focusin="stopAutoplay()"
+        @focusout="startAutoplay()"
+        @touchstart.passive="handleTouchStart"
+        @touchend="handleTouchEnd"
+        class="relative w-full pt-12 pb-20 lg:pt-24 lg:pb-32 overflow-hidden bg-slate-50 min-h-[600px] lg:min-h-[680px]"
+    >
+        {{-- Animated blob background (disabled when prefers-reduced-motion) --}}
+        <template x-if="!reducedMotion">
+            <div class="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none" aria-hidden="true">
+                <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                <div class="absolute top-[20%] right-[-10%] w-96 h-96 bg-secondary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-200"></div>
+                <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-accent-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-400"></div>
+            </div>
+        </template>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-                {{-- Hero copy --}}
-                <div class="text-center lg:text-left animate-fade-in-up">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-100 text-primary-700 mb-6 font-medium text-sm">
-                        <span class="flex h-2 w-2 rounded-full bg-primary-600 animate-pulse"></span>
-                        Pakar Pikiran No. 1 di Indonesia
-                    </div>
+        {{-- Slides track --}}
+        <div
+            class="relative z-10 flex w-full h-full"
+            :class="!reducedMotion ? 'transition-transform duration-700 ease-in-out' : ''"
+            :style="'transform: translateX(-' + (current * 100) + '%)'"
+        >
+            {{-- ======== SLIDE 1: Main Hero ======== --}}
+            <div
+                class="w-full flex-shrink-0 min-h-[600px] lg:min-h-[680px] flex items-center"
+                role="group"
+                aria-roledescription="slide"
+                aria-label="Slide 1 dari 3"
+                :aria-hidden="current !== 0"
+            >
+                <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+                        <div class="text-center lg:text-left animate-fade-in-up">
+                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-100 text-primary-700 mb-6 font-medium text-sm">
+                                <span class="flex h-2 w-2 rounded-full bg-primary-600 animate-pulse"></span>
+                                Pakar Pikiran No. 1 di Indonesia
+                            </div>
 
-                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
-                        Kenali Kekuatan Pikiranmu,
-                        <span class="text-gradient block mt-2 pb-2">Ubah Hidup Jadi Ajaib</span>
-                    </h1>
+                            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
+                                Kenali Kekuatan Pikiranmu,
+                                <span class="text-gradient block mt-2 pb-2">Ubah Hidup Jadi Ajaib</span>
+                            </h1>
 
-                    <p class="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                        Alpha Mind Control (AMC) adalah metode yang teruji, halal, dan logis untuk mengenali, mengontrol, dan memaksimalkan pikiran demi mewujudkan semua impianmu. Mulai perubahanmu hari ini.
-                    </p>
+                            <p class="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                                Alpha Mind Control (AMC) adalah metode yang teruji, halal, dan logis untuk mengenali, mengontrol, dan memaksimalkan pikiran demi mewujudkan semua impianmu. Mulai perubahanmu hari ini.
+                            </p>
 
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <x-button href="#kelas" size="lg" icon="book-open" iconPosition="right">
-                            Pelajari Alpha Mind Control
-                        </x-button>
-                        <x-button href="#katalog" variant="outline" size="lg" icon="library" iconPosition="left">
-                            Lihat Koleksi Buku
-                        </x-button>
-                    </div>
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                                <x-button href="#kelas" size="lg" icon="book-open" iconPosition="right">
+                                    Pelajari Alpha Mind Control
+                                </x-button>
+                                <x-button href="#katalog" variant="outline" size="lg" icon="library" iconPosition="left">
+                                    Lihat Koleksi Buku
+                                </x-button>
+                            </div>
 
-                    <div class="mt-10 flex items-center justify-center lg:justify-start gap-4">
-                        <div class="flex -space-x-4">
-                            <div class="w-10 h-10 rounded-full border-2 border-white bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">A</div>
-                            <div class="w-10 h-10 rounded-full border-2 border-white bg-secondary-100 flex items-center justify-center text-secondary-700 font-bold text-sm">B</div>
-                            <div class="w-10 h-10 rounded-full border-2 border-white bg-accent-100 flex items-center justify-center text-accent-600 font-bold text-sm">C</div>
-                            <div class="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">+2.5K</div>
-                        </div>
-                        <p class="text-sm font-medium text-slate-600">
-                            Bergabung bersama 2.550+ alumni AMC
-                        </p>
-                    </div>
-                </div>
-
-                {{-- Hero portrait --}}
-                <div class="relative lg:ml-10 mt-10 lg:mt-0 hidden lg:block">
-                    <div class="absolute inset-0 bg-gradient-to-tr from-primary-100 to-secondary-100 rounded-full blur-3xl opacity-50" aria-hidden="true"></div>
-
-                    <div class="relative w-full h-[500px] flex justify-center items-center">
-                        {{-- Main founder photo --}}
-                        <div class="relative w-80 h-96 group z-20 animate-float">
-                            <div class="absolute -inset-4 bg-gradient-to-tr from-primary-500/20 to-secondary-500/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true"></div>
-
-                            <div class="relative h-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-8 border-white/50 glass">
-                                <picture>
-                                    <source srcset="{{ asset('assets/images/firman-foto.webp') }}" type="image/webp">
-                                    <img
-                                        src="{{ asset('assets/images/firman-foto.jpeg') }}"
-                                        alt="Mas Firman Pratama — Pakar Kekuatan Pikiran"
-                                        width="320"
-                                        height="384"
-                                        loading="eager"
-                                        fetchpriority="high"
-                                        decoding="async"
-                                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                    >
-                                </picture>
-                                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-900/80 to-transparent">
-                                    <h2 class="text-xl font-bold text-white mb-1">Mas Firman Pratama</h2>
-                                    <p class="text-xs text-slate-200 font-medium tracking-wide">Pakar Kekuatan Pikiran</p>
+                            <div class="mt-10 flex items-center justify-center lg:justify-start gap-4">
+                                <div class="flex -space-x-4">
+                                    <div class="w-10 h-10 rounded-full border-2 border-white bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">A</div>
+                                    <div class="w-10 h-10 rounded-full border-2 border-white bg-secondary-100 flex items-center justify-center text-secondary-700 font-bold text-sm">B</div>
+                                    <div class="w-10 h-10 rounded-full border-2 border-white bg-accent-100 flex items-center justify-center text-accent-600 font-bold text-sm">C</div>
+                                    <div class="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">+2.5K</div>
                                 </div>
+                                <p class="text-sm font-medium text-slate-600">
+                                    Bergabung bersama 2.550+ alumni AMC
+                                </p>
                             </div>
                         </div>
 
-                        {{-- Floating accent: Expertise --}}
-                        <div class="absolute -top-6 -right-12 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float-delayed flex items-center gap-3 border border-white/50">
-                            <div class="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center shrink-0">
-                                <i data-lucide="award" class="w-5 h-5 text-accent-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Expertise</p>
-                                <p class="text-sm font-bold text-slate-800">Mindset Mastery</p>
-                            </div>
-                        </div>
+                        <div class="relative lg:ml-10 mt-10 lg:mt-0 hidden lg:block">
+                            <div class="absolute inset-0 bg-gradient-to-tr from-primary-100 to-secondary-100 rounded-full blur-3xl opacity-50" aria-hidden="true"></div>
 
-                        {{-- Floating accent: Community --}}
-                        <div class="absolute bottom-20 left-0 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float flex items-center gap-3 border border-white/50">
-                            <div class="w-10 h-10 bg-secondary-100 rounded-full flex items-center justify-center">
-                                <i data-lucide="users" class="w-5 h-5 text-secondary-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs text-slate-500 font-medium">Akses Eksklusif</p>
-                                <p class="text-sm font-bold text-slate-800">Grup Konsultasi</p>
+                            <div class="relative w-full h-[500px] flex justify-center items-center">
+                                <div class="relative w-80 h-96 group z-20 animate-float">
+                                    <div class="absolute -inset-4 bg-gradient-to-tr from-primary-500/20 to-secondary-500/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true"></div>
+
+                                    <div class="relative h-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-8 border-white/50 glass">
+                                        <picture>
+                                            <source srcset="{{ asset('assets/images/firman-foto.webp') }}" type="image/webp">
+                                            <img
+                                                src="{{ asset('assets/images/firman-foto.jpeg') }}"
+                                                alt="Mas Firman Pratama — Pakar Kekuatan Pikiran"
+                                                width="320"
+                                                height="384"
+                                                loading="eager"
+                                                fetchpriority="high"
+                                                decoding="async"
+                                                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                            >
+                                        </picture>
+                                        <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-900/80 to-transparent">
+                                            <h2 class="text-xl font-bold text-white mb-1">Mas Firman Pratama</h2>
+                                            <p class="text-xs text-slate-200 font-medium tracking-wide">Pakar Kekuatan Pikiran</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="absolute -top-6 -right-12 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float-delayed flex items-center gap-3 border border-white/50">
+                                    <div class="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center shrink-0">
+                                        <i data-lucide="award" class="w-5 h-5 text-accent-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Expertise</p>
+                                        <p class="text-sm font-bold text-slate-800">Mindset Mastery</p>
+                                    </div>
+                                </div>
+
+                                <div class="absolute bottom-20 left-0 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float flex items-center gap-3 border border-white/50">
+                                    <div class="w-10 h-10 bg-secondary-100 rounded-full flex items-center justify-center">
+                                        <i data-lucide="users" class="w-5 h-5 text-secondary-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-slate-500 font-medium">Akses Eksklusif</p>
+                                        <p class="text-sm font-bold text-slate-800">Grup Konsultasi</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {{-- ======== SLIDE 2: Kelas AMC ======== --}}
+            <div
+                class="w-full flex-shrink-0 min-h-[600px] lg:min-h-[680px] flex items-center"
+                role="group"
+                aria-roledescription="slide"
+                aria-label="Slide 2 dari 3"
+                :aria-hidden="current !== 1"
+            >
+                <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+                        <div class="text-center lg:text-left">
+                            <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
+                                Ikut Kelas Langsung
+                                <span class="text-gradient block mt-2 pb-2">Bersama Mas Firman</span>
+                            </h2>
+
+                            <p class="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                                Kelas reguler, privat, hingga platinum — bimbingan langsung dengan metode Alpha Mind Control yang telah mengubah ribuan hidup.
+                            </p>
+
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                                <x-button href="#kelas" size="lg" icon="calendar" iconPosition="right">
+                                    Lihat Jadwal Kelas
+                                </x-button>
+                                <x-button href="#kelas" variant="outline" size="lg" icon="message-circle" iconPosition="left">
+                                    Konsultasi Gratis
+                                </x-button>
+                            </div>
+                        </div>
+
+                        <div class="relative hidden lg:flex items-center justify-center">
+                            <div class="relative w-full max-w-sm space-y-5">
+                                <div class="glass rounded-2xl p-5 shadow-xl border border-white/50 flex items-center gap-4 hover-lift transition-all duration-300">
+                                    <div class="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
+                                        <i data-lucide="graduation-cap" class="w-6 h-6 text-primary-600"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-800">Bimbingan Langsung</h3>
+                                        <p class="text-xs text-slate-500">Sesi intensif dengan Mas Firman</p>
+                                    </div>
+                                </div>
+
+                                <div class="glass rounded-2xl p-5 shadow-xl border border-white/50 flex items-center gap-4 hover-lift transition-all duration-300 ml-6">
+                                    <div class="w-12 h-12 rounded-xl bg-secondary-100 flex items-center justify-center shrink-0">
+                                        <i data-lucide="users" class="w-6 h-6 text-secondary-600"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-800">Komunitas Alumni</h3>
+                                        <p class="text-xs text-slate-500">Grup diskusi & pertemuan rutin</p>
+                                    </div>
+                                </div>
+
+                                <div class="glass rounded-2xl p-5 shadow-xl border border-white/50 flex items-center gap-4 hover-lift transition-all duration-300 ml-12">
+                                    <div class="w-12 h-12 rounded-xl bg-accent-100 flex items-center justify-center shrink-0">
+                                        <i data-lucide="star" class="w-6 h-6 text-accent-600"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-800">Metode Terbukti</h3>
+                                        <p class="text-xs text-slate-500">Hasil nyata sejak 2016</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ======== SLIDE 3: Buku/Karya ======== --}}
+            <div
+                class="w-full flex-shrink-0 min-h-[600px] lg:min-h-[680px] flex items-center"
+                role="group"
+                aria-roledescription="slide"
+                aria-label="Slide 3 dari 3"
+                :aria-hidden="current !== 2"
+            >
+                <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+                        <div class="text-center lg:text-left">
+                            <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
+                                Pelajari Lewat Karya
+                                <span class="text-gradient block mt-2 pb-2">Buku Bestseller</span>
+                            </h2>
+
+                            <p class="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                                Koleksi buku bestseller Mas Firman — dari Alpha Telepathy hingga Formula AMC — panduan praktis menguasai kekuatan pikiran.
+                            </p>
+
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                                <x-button href="#katalog" size="lg" icon="library" iconPosition="right">
+                                    Lihat Koleksi Buku
+                                </x-button>
+                            </div>
+                        </div>
+
+                        <div class="relative hidden lg:flex items-center justify-center h-[480px]">
+                            <div class="relative w-64 h-[440px]">
+                                <img
+                                    src="{{ asset('assets/images/alpha-telepathy.webp') }}"
+                                    alt="Buku Alpha Telepati — Karya Mas Firman Pratama"
+                                    loading="lazy"
+                                    class="absolute bottom-0 left-0 w-48 h-[360px] -rotate-[10deg] origin-bottom-left object-cover rounded-xl shadow-xl z-10 transition-all duration-500 hover:z-50 hover:scale-105 hover:rotate-0"
+                                >
+                                <img
+                                    src="{{ asset('assets/images/10-keajaiban-pikiran.webp') }}"
+                                    alt="Buku 10 Keajaiban Pikiran — Karya Mas Firman Pratama"
+                                    loading="lazy"
+                                    class="absolute bottom-3 left-4 w-48 h-[360px] -rotate-[4deg] origin-bottom-left object-cover rounded-xl shadow-xl z-20 transition-all duration-500 hover:z-50 hover:scale-105 hover:rotate-0"
+                                >
+                                <img
+                                    src="{{ asset('assets/images/instan-hypnosis.webp') }}"
+                                    alt="Buku Instan Hypnosis — Karya Mas Firman Pratama"
+                                    loading="lazy"
+                                    class="absolute bottom-6 left-8 w-48 h-[360px] rotate-[2deg] origin-bottom-left object-cover rounded-xl shadow-xl z-30 transition-all duration-500 hover:z-50 hover:scale-105 hover:rotate-0"
+                                >
+                                <img
+                                    src="{{ asset('assets/images/formula-amc-firman-pratama.webp') }}"
+                                    alt="Buku Formula AMC — Karya Mas Firman Pratama"
+                                    loading="lazy"
+                                    class="absolute bottom-9 left-12 w-48 h-[360px] rotate-[8deg] origin-bottom-left object-cover rounded-xl shadow-xl z-40 transition-all duration-500 hover:z-50 hover:scale-105 hover:rotate-0"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Prev/Next buttons --}}
+        <button
+            @click="prev()"
+            aria-label="Slide sebelumnya"
+            class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/90 backdrop-blur shadow-lg flex items-center justify-center hover:bg-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+            <i data-lucide="chevron-left" class="w-6 h-6 text-slate-700"></i>
+        </button>
+
+        <button
+            @click="next()"
+            aria-label="Slide berikutnya"
+            class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/90 backdrop-blur shadow-lg flex items-center justify-center hover:bg-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+            <i data-lucide="chevron-right" class="w-6 h-6 text-slate-700"></i>
+        </button>
+
+        {{-- Dot indicators --}}
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+            <template x-for="(item, index) in total" :key="index">
+                <button
+                    @click="goTo(index)"
+                    :aria-label="'Ke slide ' + (index + 1)"
+                    role="button"
+                    :class="index === current ? 'w-8 bg-primary-600' : 'w-3 bg-slate-300 hover:bg-slate-400'"
+                    class="h-3 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                ></button>
+            </template>
         </div>
     </section>
 
