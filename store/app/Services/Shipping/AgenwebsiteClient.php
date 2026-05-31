@@ -97,6 +97,31 @@ class AgenwebsiteClient
         });
     }
 
+    /**
+     * Get shipping price rates. Casts price to int. Cached with short TTL.
+     *
+     * @param  array<string, mixed>  $params  Rate query parameters (origin, dest, weight, courier, etc.)
+     * @return array<int, array<string, mixed>> Array of rate rows with price cast to int.
+     */
+    public function price(array $params): array
+    {
+        $cacheKey = 'shipping.rate.'.md5(json_encode($params));
+
+        return Cache::remember($cacheKey, $this->cfg['cache_rate_ttl'], function () use ($params) {
+            $result = $this->post('shipping/price', $params);
+
+            if ($result['status'] !== 'success' || ! is_array($result['result'])) {
+                return [];
+            }
+
+            return array_map(function (array $row) {
+                $row['price'] = (int) ($row['price'] ?? 0);
+
+                return $row;
+            }, $result['result']);
+        });
+    }
+
     protected function fallbackJson(string $filename): array
     {
         $path = storage_path('app/shipping/'.$filename);
