@@ -24,7 +24,7 @@ class ProductController extends Controller
                 'badge' => $p->meta_seo['badge'] ?? null,
             ]);
 
-        $courses = Course::where('status','active')->orderBy('id')->get()->map(fn(Course $c) => [
+        $courses = Course::where('status', 'active')->orderBy('id')->get()->map(fn (Course $c) => [
             'slug' => $c->slug,
             'name' => $c->title,
             'type' => 'kelas',
@@ -80,35 +80,38 @@ class ProductController extends Controller
             ];
 
             $related = [];
-            foreach (($courseModel->related ?? []) as $relSlug) {
-                $relProduct = Product::where('slug', $relSlug)->where('status','active')->first();
-                if ($relProduct) {
-                    $related[] = [
-                        'slug' => $relProduct->slug,
-                        'type' => $relProduct->type === 'course' ? 'kelas' : 'buku',
-                        'title' => $relProduct->title,
-                        'price' => (float) $relProduct->price,
-                        'image' => $relProduct->image_path ?? 'images/placeholder.webp',
-                        'subtitle' => $relProduct->meta_seo['subtitle'] ?? '',
-                        'badge' => $relProduct->meta_seo['badge'] ?? null,
-                        'category_label' => $relProduct->meta_seo['category_label'] ?? 'Buku',
-                        'image_alt' => $relProduct->meta_seo['image_alt'] ?? $relProduct->title,
-                    ];
-                    continue;
-                }
-                $relCourse = Course::where('slug', $relSlug)->where('status','active')->first();
-                if ($relCourse) {
-                    $related[] = [
-                        'slug' => $relCourse->slug,
-                        'type' => 'kelas',
-                        'title' => $relCourse->title,
-                        'price' => (float) $relCourse->price,
-                        'image' => $relCourse->image_path ?? 'images/placeholder.webp',
-                        'subtitle' => $relCourse->subtitle ?? '',
-                        'badge' => $relCourse->badge ?? null,
-                        'category_label' => $relCourse->category_label ?? 'Kelas',
-                        'image_alt' => $relCourse->meta_seo['image_alt'] ?? $relCourse->title,
-                    ];
+            if (! empty($courseModel->related) && is_array($courseModel->related)) {
+                foreach ($courseModel->related as $relSlug) {
+                    $relProduct = Product::where('slug', $relSlug)->where('status', 'active')->first();
+                    if ($relProduct) {
+                        $related[] = [
+                            'slug' => $relProduct->slug,
+                            'type' => $relProduct->type === 'course' ? 'kelas' : 'buku',
+                            'title' => $relProduct->title,
+                            'price' => (float) $relProduct->price,
+                            'image' => $relProduct->image_path ?? 'images/placeholder.webp',
+                            'subtitle' => $relProduct->meta_seo['subtitle'] ?? '',
+                            'badge' => $relProduct->meta_seo['badge'] ?? null,
+                            'category_label' => $relProduct->meta_seo['category_label'] ?? 'Buku',
+                            'image_alt' => $relProduct->meta_seo['image_alt'] ?? $relProduct->title,
+                        ];
+
+                        continue;
+                    }
+                    $relCourse = Course::where('slug', $relSlug)->where('status', 'active')->first();
+                    if ($relCourse) {
+                        $related[] = [
+                            'slug' => $relCourse->slug,
+                            'type' => 'kelas',
+                            'title' => $relCourse->title,
+                            'price' => (float) $relCourse->price,
+                            'image' => $relCourse->image_path ?? 'images/placeholder.webp',
+                            'subtitle' => $relCourse->subtitle ?? '',
+                            'badge' => $relCourse->badge ?? null,
+                            'category_label' => $relCourse->category_label ?? 'Kelas',
+                            'image_alt' => $relCourse->meta_seo['image_alt'] ?? $relCourse->title,
+                        ];
+                    }
                 }
             }
 
