@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Shipping;
 
+use App\Models\Course;
 use App\Models\Product;
+use Database\Seeders\CourseSeeder;
 use Database\Seeders\ProductSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -44,15 +46,21 @@ class ProductShippingFieldsTest extends TestCase
         }
     }
 
-    public function test_seeded_course_products_have_is_shippable_false(): void
+    /**
+     * B1: courses are no longer in products table.
+     * CourseSeeder seeds courses into the courses table — they have no shipping fields by design.
+     */
+    public function test_seeded_courses_exist_in_courses_table_not_products(): void
     {
         $this->seed(ProductSeeder::class);
+        $this->seed(CourseSeeder::class);
 
-        $courses = Product::where('type', 'course')->get();
+        // No courses in products table
+        $coursesInProducts = Product::where('type', 'course')->get();
+        $this->assertEmpty($coursesInProducts, 'Products table should not contain courses after B1 split');
 
-        $this->assertNotEmpty($courses, 'No course products found after seeding');
-        foreach ($courses as $course) {
-            $this->assertFalse($course->is_shippable, "Course '{$course->slug}' has is_shippable = true");
-        }
+        // Course exists in courses table
+        $courses = Course::all();
+        $this->assertNotEmpty($courses, 'No courses found in courses table after CourseSeeder');
     }
 }
