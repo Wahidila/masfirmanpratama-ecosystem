@@ -28,6 +28,15 @@
     $testimonials = $product['testimonials'] ?? [];
     $ctaLabel = $product['cta_label'] ?? 'Daftar Sekarang';
     $ctaHref = $product['cta_href'] ?? route('checkout.index');
+    $alpineProduct = [
+        'slug' => $product['slug'] ?? '',
+        'name' => $title,
+        'title' => $title,
+        'price' => $price,
+        'image' => $image,
+        'category' => $categoryLabel ?? 'Kelas',
+        'is_shippable' => false,
+    ];
     $installmentAvailable = $product['installment_available'] ?? false;
 @endphp
 
@@ -393,7 +402,16 @@
                 </div>
 
                 {{-- ─── RIGHT: Sticky checkout panel (desktop) ───────────── --}}
-                <aside class="lg:col-span-4 mt-2 lg:mt-0">
+                <aside class="lg:col-span-4 mt-2 lg:mt-0" x-data="{
+                    product: {{ \Illuminate\Support\Js::from($alpineProduct) }},
+                    addToCartAndCheckout() {
+                        const store = this.$store && this.$store.cart;
+                        if (store && typeof store.add === 'function') {
+                            store.add(this.product, 1);
+                        }
+                        window.location.href = '{{ route("checkout.index") }}';
+                    }
+                }">
                     <div class="lg:sticky lg:top-28 bg-white p-7 sm:p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 hover-lift">
 
                         <div class="mb-6 flex justify-between items-start gap-3">
@@ -433,12 +451,13 @@
                             @endforeach
                         </ul>
 
-                        <a
-                            href="{{ $ctaHref }}"
+                        <button
+                            @click="addToCartAndCheckout()"
+                            type="button"
                             class="ripple block w-full text-center bg-primary-600 hover:bg-primary-700 text-white rounded-2xl py-4 font-extrabold text-lg transition-all shadow-[0_10px_30px_-5px_rgba(79,70,229,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] transform hover:-translate-y-1"
                         >
                             {{ $ctaLabel }}
-                        </a>
+                        </button>
 
                         <p class="text-xs text-slate-500 mt-4 text-center leading-relaxed font-medium">
                             100% metode logis dan ilmiah. Tidak membawa-bawa hal gaib/mistis.
@@ -467,7 +486,17 @@
 
     {{-- ─── Sticky CTA bar (mobile only) ──────────────────────────────── --}}
     <div
-        x-data="{ visible: false }"
+        x-data="{
+            visible: false,
+            product: {{ \Illuminate\Support\Js::from($alpineProduct) }},
+            addToCartAndCheckout() {
+                const store = this.$store && this.$store.cart;
+                if (store && typeof store.add === 'function') {
+                    store.add(this.product, 1);
+                }
+                window.location.href = '{{ route("checkout.index") }}';
+            }
+        }"
         x-init="window.addEventListener('scroll', () => visible = window.scrollY > 400)"
         x-show="visible"
         x-transition:enter="transition ease-out duration-200"
@@ -488,13 +517,14 @@
                     @endif
                 </div>
             </div>
-            <a
-                href="{{ $ctaHref }}"
+            <button
+                @click="addToCartAndCheckout()"
+                type="button"
                 class="ripple shrink-0 inline-flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white rounded-full px-5 py-3 font-bold text-sm shadow-lg shadow-primary-500/30 transition-colors"
             >
                 {{ $ctaLabel }}
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </a>
+            </button>
         </div>
     </div>
 </x-layouts.store>
