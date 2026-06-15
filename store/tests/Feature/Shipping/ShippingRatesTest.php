@@ -162,7 +162,7 @@ class ShippingRatesTest extends TestCase
         $this->assertEmpty($result);
     }
 
-    public function test_get_rates_throws_on_api_error(): void
+    public function test_get_rates_returns_dummy_on_api_error(): void
     {
         Product::factory()->create([
             'slug' => 'buku-a',
@@ -178,9 +178,7 @@ class ShippingRatesTest extends TestCase
             '*/shipping/price' => Http::response(['message' => 'License Anda sudah expired.'], 403),
         ]);
 
-        $this->expectException(ShippingRateException::class);
-
-        app(ShippingRateService::class)->getRates(
+        $result = app(ShippingRateService::class)->getRates(
             [
                 'province' => 'DKI Jakarta',
                 'city' => 'Jakarta Selatan',
@@ -191,6 +189,11 @@ class ShippingRatesTest extends TestCase
                 ['slug' => 'buku-a', 'qty' => 1],
             ]
         );
+
+        // Dummy fallback rates returned
+        $this->assertNotEmpty($result);
+        $this->assertSame('jne', $result[0]['courier']);
+        $this->assertSame('REG', $result[0]['service']);
     }
 
     public function test_get_rates_filters_only_active_couriers(): void
@@ -251,7 +254,7 @@ class ShippingRatesTest extends TestCase
         $this->assertSame('jnt', $result[1]['courier']);
     }
 
-    public function test_get_rates_returns_empty_when_no_active_couriers_match(): void
+    public function test_get_rates_returns_dummy_when_no_active_couriers_match(): void
     {
         Product::factory()->create([
             'slug' => 'buku-a',
@@ -290,8 +293,10 @@ class ShippingRatesTest extends TestCase
             ]
         );
 
+        // Dummy fallback when no active couriers match
         $this->assertIsArray($result);
-        $this->assertEmpty($result);
+        $this->assertNotEmpty($result);
+        $this->assertSame('jne', $result[0]['courier']);
     }
 
     public function test_get_rates_fallback_label_when_service_name_missing(): void

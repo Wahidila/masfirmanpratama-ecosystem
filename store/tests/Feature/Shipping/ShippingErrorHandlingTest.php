@@ -37,7 +37,7 @@ class ShippingErrorHandlingTest extends TestCase
         ]);
     }
 
-    public function test_rate_endpoint_returns_error_message_when_api_errors(): void
+    public function test_rate_endpoint_returns_dummy_rates_when_api_errors(): void
     {
         Log::spy();
 
@@ -57,25 +57,14 @@ class ShippingErrorHandlingTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonPath('rates', []);
-        $response->assertJsonStructure(['rates', 'error']);
-
-        $error = $response->json('error');
-        $this->assertIsString($error);
-        $this->assertNotEmpty($error);
-        $this->assertStringContainsString('Ongkir sementara tidak tersedia', $error);
-        $this->assertStringContainsString('WhatsApp', $error);
-
-        Log::shouldHaveReceived('warning')
-            ->with('Shipping rate API error', \Mockery::on(function ($context) {
-                return isset($context['api_message'])
-                    && $context['api_message'] === 'License Anda sudah expired.'
-                    && isset($context['endpoint'])
-                    && $context['endpoint'] === 'shipping/price';
-            }));
+        // Fallback dummy rates returned instead of empty
+        $rates = $response->json('rates');
+        $this->assertNotEmpty($rates);
+        $this->assertSame('jne', $rates[0]['courier']);
+        $response->assertJsonMissing(['error']);
     }
 
-    public function test_rate_endpoint_genuine_no_coverage_still_address_message(): void
+    public function test_rate_endpoint_genuine_no_coverage_returns_dummy(): void
     {
         Http::fake([
             '*/shipping/price' => Http::response([
@@ -94,7 +83,9 @@ class ShippingErrorHandlingTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonPath('rates', []);
+        // Fallback dummy rates when API returns empty data
+        $rates = $response->json('rates');
+        $this->assertNotEmpty($rates);
         $response->assertJsonMissing(['error']);
     }
 
@@ -131,7 +122,7 @@ class ShippingErrorHandlingTest extends TestCase
         $response->assertJsonMissing(['error']);
     }
 
-    public function test_checkout_submit_fails_gracefully_when_shipping_api_errors(): void
+    public function test_checkout_submit_succeeds_with_dummy_rates_when_shipping_api_errors(): void
     {
         Http::fake([
             '*/shipping/price' => Http::response([
@@ -147,20 +138,24 @@ class ShippingErrorHandlingTest extends TestCase
             'address_city' => 'Jakarta Selatan',
             'address_province' => 'DKI Jakarta',
             'address_postal' => '12110',
-            'shipping_method' => 'jne_reg',
+            'shipping_method' => 'REG',
             'payment_type' => 'lunas',
             'installment_scheme_id' => null,
             'cart_json' => json_encode([
                 ['slug' => 'buku-a', 'name' => 'Buku A', 'price' => 100_000, 'qty' => 1],
             ]),
-            'cart_total' => 100_000,
+            'cart_total' => 109_000,
             'ref_code' => null,
         ]);
 
         $response->assertRedirect();
-        $response->assertSessionHasErrors('shipping_method');
+        $response->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('orders', 0);
+        $order = Order::first();
+        $this->assertNotNull($order);
+        // Shipping cost from dummy: 1kg * 9000 = 9000
+        $this->assertSame(9000, (int) $order->shipping_cost);
+        $this->assertSame('REG', $order->shipping_courier);
     }
 
     public function test_checkout_class_only_unaffected(): void
