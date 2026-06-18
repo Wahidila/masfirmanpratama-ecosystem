@@ -8,8 +8,10 @@ use App\Models\CommissionSetting;
 use App\Models\ReferralCode;
 use App\Models\ReferralOrder;
 use App\Models\WebhookLog;
+use App\Services\Gamification\EventScoringService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Controller untuk menerima webhook dari Store.
@@ -169,6 +171,17 @@ class StoreWebhookController extends Controller
             'available_at' => $availableAt,
         ]);
 
+        // Recompute skor gamifikasi (non-blocking — gagal scoring tidak boleh gagalkan webhook)
+        try {
+            app(EventScoringService::class)->recomputeForAffiliator($affiliator);
+        } catch (\Throwable $e) {
+            Log::error('Gamifikasi scoring gagal (order-paid)', [
+                'affiliator_id' => $affiliator->id,
+                'store_order_id' => $storeOrderId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $webhookLog->update(['status' => 'processed']);
 
         return response()->json(['message' => 'OK']);
@@ -199,6 +212,18 @@ class StoreWebhookController extends Controller
         Commission::where('referral_order_id', $referralOrder->id)
             ->whereIn('status', ['cooling', 'available'])
             ->update(['status' => 'cancelled']);
+
+        // Recompute skor gamifikasi (non-blocking)
+        try {
+            $affiliator = $referralOrder->affiliator;
+            app(EventScoringService::class)->recomputeForAffiliator($affiliator);
+        } catch (\Throwable $e) {
+            Log::error('Gamifikasi scoring gagal (order-refunded)', [
+                'affiliator_id' => $referralOrder->affiliator_id,
+                'store_order_id' => $storeOrderId,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $webhookLog->update(['status' => 'processed']);
 
