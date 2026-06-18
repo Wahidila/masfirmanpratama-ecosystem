@@ -32,6 +32,7 @@ class Order extends Model
         'label_url',
         'fulfillment_payload',
         'shipped_email_sent_at',
+        'order_meta',
     ];
 
     protected function casts(): array
@@ -42,6 +43,7 @@ class Order extends Model
             'shipping_cost' => 'integer',
             'fulfillment_payload' => 'array',
             'shipped_email_sent_at' => 'datetime',
+            'order_meta' => 'array',
         ];
     }
 

@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Services\Shipping\ShippingRateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -134,6 +135,9 @@ class CheckoutController extends Controller
             ]);
         }
 
+        // Referral code: input form override, fallback ke cookie affiliate
+        $refCode = $validated['ref_code'] ?? Cookie::get('referral_code');
+
         $order = DB::transaction(function () use (
             $validated,
             $resolvedItems,
@@ -142,6 +146,7 @@ class CheckoutController extends Controller
             $shippingService,
             $shippingCost,
             $shippingEtd,
+            $refCode,
         ) {
             $order = Order::create([
                 'order_number' => $this->generateOrderNumber(),
@@ -156,7 +161,7 @@ class CheckoutController extends Controller
                 ),
                 'total' => $grandTotal,
                 'status' => 'pending',
-                'ref_code' => $validated['ref_code'] ?? null,
+                'ref_code' => $refCode ?: null,
                 'shipping_courier' => $shippingCourier,
                 'shipping_service' => $shippingService,
                 'shipping_cost' => $shippingCost,

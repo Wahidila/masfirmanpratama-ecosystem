@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Shipping;
 
-use App\Exceptions\ShippingRateException;
 use App\Models\Product;
 use App\Services\Shipping\ShippingRateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;

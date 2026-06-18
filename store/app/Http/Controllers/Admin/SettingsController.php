@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Settings;
-use App\Services\XSenderService;
 use App\Services\Shipping\AgenwebsiteClient;
+use App\Services\XSenderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -296,30 +297,30 @@ class SettingsController extends Controller
         $sender = XSenderService::normalizePhone($sender);
 
         try {
-            $response = \Illuminate\Support\Facades\Http::asForm()
+            $response = Http::asForm()
                 ->timeout(15)
                 ->post($endpoint, [
                     'api_key' => $apiKey,
                     'sender' => $sender,
                     'number' => $sender, // kirim ke diri sendiri
-                    'message' => '✅ Test koneksi XSender berhasil! (' . now()->format('d/m/Y H:i:s') . ')',
+                    'message' => '✅ Test koneksi XSender berhasil! ('.now()->format('d/m/Y H:i:s').')',
                 ]);
 
             if ($response->successful()) {
                 return response()->json([
                     'ok' => true,
-                    'message' => 'Pesan test berhasil dikirim ke ' . $sender . '.',
+                    'message' => 'Pesan test berhasil dikirim ke '.$sender.'.',
                 ]);
             }
 
             return response()->json([
                 'ok' => false,
-                'message' => 'API response: HTTP ' . $response->status() . ' — ' . mb_substr($response->body(), 0, 200),
+                'message' => 'API response: HTTP '.$response->status().' — '.mb_substr($response->body(), 0, 200),
             ]);
         } catch (\Throwable $e) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Exception: ' . $e->getMessage(),
+                'message' => 'Exception: '.$e->getMessage(),
             ]);
         }
     }

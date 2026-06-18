@@ -231,5 +231,4 @@ class CheckoutStoreTest extends TestCase
         $this->assertGreaterThan(0, OrderItem::where('order_id', $order->id)->count());
         $this->assertGreaterThan(0, OrderPayment::where('order_id', $order->id)->count());
     }
-
 }

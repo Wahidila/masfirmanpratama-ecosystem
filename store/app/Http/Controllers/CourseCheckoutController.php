@@ -12,6 +12,7 @@ use App\Services\Settings;
 use App\Services\XSenderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -67,6 +68,7 @@ class CourseCheckoutController extends Controller
             'motivation' => ['nullable', 'string', 'max:500'],
             'payment_type' => ['required', 'in:lunas,cicilan'],
             'installment_scheme_id' => ['nullable', 'required_if:payment_type,cicilan', 'integer', 'exists:installment_schemes,id'],
+            'ref_code' => ['nullable', 'string', 'max:64'],
         ], [
             'customer_name.required' => 'Nama lengkap wajib diisi.',
             'customer_email.required' => 'Email wajib diisi.',
@@ -78,14 +80,17 @@ class CourseCheckoutController extends Controller
 
         // Resolve installment scheme if cicilan
         $scheme = null;
-        if ($validated['payment_type'] === 'cicilan' && !empty($validated['installment_scheme_id'])) {
+        if ($validated['payment_type'] === 'cicilan' && ! empty($validated['installment_scheme_id'])) {
             $scheme = InstallmentScheme::active()
                 ->forCourse($course->id)
                 ->where('id', $validated['installment_scheme_id'])
                 ->firstOrFail();
         }
 
-        $order = DB::transaction(function () use ($validated, $course, $scheme) {
+        $order = DB::transaction(function () use ($validated, $course, $scheme, $request) {
+            // Referral code: input form override, fallback ke cookie affiliate
+            $refCode = $validated['ref_code'] ?? $request->cookie('referral_code');
+
             $order = Order::create([
                 'order_number' => $this->generateOrderNumber(),
                 'customer_name' => $validated['customer_name'],
@@ -94,6 +99,7 @@ class CourseCheckoutController extends Controller
                 'address' => '',
                 'total' => (int) $course->price,
                 'status' => 'pending',
+                'ref_code' => $refCode ?: null,
             ]);
 
             OrderItem::create([
@@ -108,13 +114,13 @@ class CourseCheckoutController extends Controller
             // Generate payment schedule
             $this->generatePaymentSchedule($order, (int) $course->price, $validated['payment_type'], $scheme);
 
-            // Simpan data tambahan di meta (occupation, motivation)
+            // Simpan data tambahan di order_meta (occupation, motivation)
             if (! empty($validated['occupation']) || ! empty($validated['motivation'])) {
                 $order->update([
-                    'ref_code' => json_encode([
+                    'order_meta' => [
                         'occupation' => $validated['occupation'] ?? '',
                         'motivation' => $validated['motivation'] ?? '',
-                    ]),
+                    ],
                 ]);
             }
 
@@ -210,14 +216,14 @@ class CourseCheckoutController extends Controller
         for ($attempt = 0; $attempt < 5; $attempt++) {
             $prefix = strtoupper(Str::random(3));
             $suffix = strtoupper(Str::random(6));
-            $candidate = 'COURSE-' . now()->format('Ymd') . '-' . $prefix . '-' . $suffix;
+            $candidate = 'COURSE-'.now()->format('Ymd').'-'.$prefix.'-'.$suffix;
 
             if (! Order::where('order_number', $candidate)->exists()) {
                 return $candidate;
             }
         }
 
-        return 'COURSE-' . now()->format('Ymd') . '-' . strtoupper(Str::random(10));
+        return 'COURSE-'.now()->format('Ymd').'-'.strtoupper(Str::random(10));
     }
 
     /**
@@ -243,35 +249,35 @@ class CourseCheckoutController extends Controller
         $firstPayment = $payments->first();
 
         $paymentInfoText = "💰 *Detail Pembayaran*\n"
-            . "Total: Rp " . number_format((int) $course->price, 0, ',', '.') . "\n";
+            .'Total: Rp '.number_format((int) $course->price, 0, ',', '.')."\n";
 
         if ($isCicilan) {
             $paymentInfoText .= "Metode: Cicilan ({$payments->count()}x pembayaran)\n"
-                . "DP (Bayar Sekarang): Rp " . number_format((int) $firstPayment->amount, 0, ',', '.') . "\n"
-                . "Status: Menunggu DP\n";
+                .'DP (Bayar Sekarang): Rp '.number_format((int) $firstPayment->amount, 0, ',', '.')."\n"
+                ."Status: Menunggu DP\n";
         } else {
             $paymentInfoText .= "Metode: Transfer Bank (Lunas)\n"
-                . "Status: Menunggu Pembayaran\n";
+                ."Status: Menunggu Pembayaran\n";
         }
 
         $message = "🎓 *PENDAFTARAN KELAS BERHASIL*\n\n"
-            . "Halo {$data['customer_name']},\n"
-            . "Terima kasih sudah mendaftar! Berikut detail pesanan kamu:\n\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "📋 *Detail Kelas*\n"
-            . "Kelas: {$course->title}\n"
-            . "Order ID: {$order->order_number}\n\n"
-            . $paymentInfoText . "\n"
-            . "🏦 *Rekening Pembayaran*\n"
-            . $rekeningText
-            . "\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            . "📤 *Upload Bukti Bayar:*\n"
-            . $uploadUrl . "\n\n"
-            . "⚠️ *Penting:*\n"
-            . "• Lakukan pembayaran dalam 1x24 jam.\n"
-            . "• Upload bukti transfer via link di atas.\n"
-            . "• Konfirmasi otomatis akan dikirim setelah diverifikasi.\n\n"
-            . "Terima kasih! 🙏";
+            ."Halo {$data['customer_name']},\n"
+            ."Terima kasih sudah mendaftar! Berikut detail pesanan kamu:\n\n"
+            ."━━━━━━━━━━━━━━━━━━━━\n"
+            ."📋 *Detail Kelas*\n"
+            ."Kelas: {$course->title}\n"
+            ."Order ID: {$order->order_number}\n\n"
+            .$paymentInfoText."\n"
+            ."🏦 *Rekening Pembayaran*\n"
+            .$rekeningText
+            ."\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            ."📤 *Upload Bukti Bayar:*\n"
+            .$uploadUrl."\n\n"
+            ."⚠️ *Penting:*\n"
+            ."• Lakukan pembayaran dalam 1x24 jam.\n"
+            ."• Upload bukti transfer via link di atas.\n"
+            ."• Konfirmasi otomatis akan dikirim setelah diverifikasi.\n\n"
+            .'Terima kasih! 🙏';
 
         try {
             // Record ke DB via WhatsappNotifier (akan otomatis kirim via XSender)

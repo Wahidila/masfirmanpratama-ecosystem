@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\OrderPayment;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -205,5 +204,4 @@ class CheckoutCourseTest extends TestCase
             'unit_price' => '22500000.00',
         ]);
     }
-
 }
