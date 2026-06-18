@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AffiliateEvent;
 use App\Models\AffiliateEventParticipant;
+use App\Models\AffiliateEventReward;
 use App\Models\Affiliator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -72,5 +73,40 @@ class EventController extends Controller
             ->get();
 
         return view('events.leaderboard', compact('topAffiliators'));
+    }
+
+    public function rewards(): View
+    {
+        $affiliator = Auth::guard('affiliator')->user();
+
+        $rewards = AffiliateEventReward::where('affiliator_id', $affiliator->id)
+            ->with('event')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $unclaimed = $rewards->where('is_claimed', false);
+        $claimed = $rewards->where('is_claimed', true);
+
+        return view('events.rewards', compact('unclaimed', 'claimed'));
+    }
+
+    public function claimReward(AffiliateEventReward $reward): RedirectResponse
+    {
+        $affiliator = Auth::guard('affiliator')->user();
+
+        if ($reward->affiliator_id !== $affiliator->id) {
+            abort(403);
+        }
+
+        if ($reward->is_claimed) {
+            return back()->withErrors(['reward' => 'Reward sudah diklaim.']);
+        }
+
+        $reward->update([
+            'is_claimed' => true,
+            'claimed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Reward berhasil diklaim!');
     }
 }

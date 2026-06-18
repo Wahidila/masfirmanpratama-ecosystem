@@ -96,6 +96,10 @@ Route::middleware('auth:affiliator')->group(function () {
         Route::post('/events/{event}/join', [EventController::class, 'join'])->name('events.join');
         Route::get('/leaderboard', [EventController::class, 'leaderboard'])->name('leaderboard');
 
+        // Rewards
+        Route::get('/rewards', [EventController::class, 'rewards'])->name('rewards.index');
+        Route::post('/rewards/{reward}/claim', [EventController::class, 'claimReward'])->name('rewards.claim');
+
         // Profile
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

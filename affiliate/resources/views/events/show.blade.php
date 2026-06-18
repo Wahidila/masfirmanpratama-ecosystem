@@ -29,8 +29,10 @@
                 <div class="flex items-center gap-3 p-3 bg-accent-50 rounded-xl">
                     <span class="text-lg">🏆</span>
                     <div>
-                        <p class="text-sm font-medium text-slate-700">{{ $reward['prize'] ?? '-' }}</p>
-                        <p class="text-xs text-slate-500">{{ $reward['description'] ?? '' }}</p>
+                        <p class="text-sm font-medium text-slate-700">{{ $reward['description'] ?? $reward['prize'] ?? '-' }}</p>
+                        @if(isset($reward['reward_value']))
+                        <p class="text-xs text-slate-500">{{ $reward['reward_type'] ?? 'cash' }}: Rp {{ number_format($reward['reward_value'], 0, ',', '.') }}</p>
+                        @endif
                     </div>
                 </div>
                 @endforeach

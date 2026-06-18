@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Release komisi cooling -> available setiap hari
 Schedule::command('commissions:release')->daily();
+
+// Finalisasi event yang sudah melewati end_date
+Schedule::command('events:finalize')->daily();

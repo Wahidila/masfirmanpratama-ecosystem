@@ -18,7 +18,11 @@ class AffiliateEventFactory extends Factory
             'start_date' => now()->subDays(7),
             'end_date' => now()->addDays(7),
             'rules' => ['min_orders' => 1],
-            'rewards' => ['first' => 'Rp 500.000'],
+            'rewards' => [
+                ['rank' => 1, 'reward_type' => 'cash', 'reward_value' => 500000, 'description' => 'Juara 1'],
+                ['rank' => 2, 'reward_type' => 'cash', 'reward_value' => 300000, 'description' => 'Juara 2'],
+                ['rank' => 3, 'reward_type' => 'cash', 'reward_value' => 100000, 'description' => 'Juara 3'],
+            ],
             'status' => 'active',
         ];
     }
