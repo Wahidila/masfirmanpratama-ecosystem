@@ -34,6 +34,11 @@
         <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
         Leaderboard
     </a>
+    <a href="{{ route('rewards.index') }}"
+       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('rewards.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
+        <i data-lucide="gift" class="w-5 h-5"></i>
+        Reward Saya
+    </a>
 
     <div class="pt-4 mt-4 border-t border-slate-100">
         <a href="{{ route('profile.edit') }}"

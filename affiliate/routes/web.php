@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminAffiliatorController;
 use App\Http\Controllers\Admin\AdminCommissionController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminEventController;
 use App\Http\Controllers\Admin\AdminLoginController;
 use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminWithdrawalController;
@@ -154,6 +155,15 @@ Route::prefix('admin')->group(function () {
         Route::post('/materials', [AdminMaterialController::class, 'store'])->name('admin.materials.store');
         Route::delete('/materials/{material}', [AdminMaterialController::class, 'destroy'])->name('admin.materials.destroy');
         Route::post('/materials/{material}/toggle', [AdminMaterialController::class, 'toggle'])->name('admin.materials.toggle');
+
+        // Events
+        Route::get('/events', [AdminEventController::class, 'index'])->name('admin.events.index');
+        Route::get('/events/create', [AdminEventController::class, 'create'])->name('admin.events.create');
+        Route::post('/events', [AdminEventController::class, 'store'])->name('admin.events.store');
+        Route::get('/events/{event}/edit', [AdminEventController::class, 'edit'])->name('admin.events.edit');
+        Route::put('/events/{event}', [AdminEventController::class, 'update'])->name('admin.events.update');
+        Route::delete('/events/{event}', [AdminEventController::class, 'destroy'])->name('admin.events.destroy');
+        Route::post('/events/{event}/activate', [AdminEventController::class, 'activate'])->name('admin.events.activate');
     });
 });
 
