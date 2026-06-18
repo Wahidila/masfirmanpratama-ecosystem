@@ -209,7 +209,7 @@ class EventRewardTest extends TestCase
         $this->assertEquals($originalClaimedAt->timestamp, $reward->claimed_at->timestamp);
     }
 
-    public function test_claim_bonus_commission_marks_claimed_without_creating_commission(): void
+    public function test_claim_bonus_commission_creates_available_commission(): void
     {
         $affiliator = $this->activeAffiliator();
 
@@ -229,10 +229,13 @@ class EventRewardTest extends TestCase
         $this->assertTrue($reward->is_claimed);
         $this->assertNotNull($reward->claimed_at);
 
-        // No Commission record should be created (payout deferred)
-        $this->assertDatabaseMissing('commissions', [
+        // Bonus commission langsung jadi Commission available tanpa referral_order
+        $this->assertDatabaseHas('commissions', [
             'affiliator_id' => $affiliator->id,
-            'amount' => 200000,
+            'referral_order_id' => null,
+            'amount' => 200000.00,
+            'rate_applied' => 0,
+            'status' => 'available',
         ]);
     }
 }

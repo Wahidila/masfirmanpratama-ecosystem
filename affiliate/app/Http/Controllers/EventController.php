@@ -6,8 +6,10 @@ use App\Models\AffiliateEvent;
 use App\Models\AffiliateEventParticipant;
 use App\Models\AffiliateEventReward;
 use App\Models\Affiliator;
+use App\Models\Commission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -102,10 +104,25 @@ class EventController extends Controller
             return back()->withErrors(['reward' => 'Reward sudah diklaim.']);
         }
 
-        $reward->update([
-            'is_claimed' => true,
-            'claimed_at' => now(),
-        ]);
+        DB::transaction(function () use ($reward) {
+            $reward->update([
+                'is_claimed' => true,
+                'claimed_at' => now(),
+            ]);
+
+            // Reward tipe bonus_commission langsung jadi komisi available
+            // (tanpa referral_order — referral_order_id nullable).
+            if ($reward->reward_type === 'bonus_commission') {
+                Commission::create([
+                    'affiliator_id' => $reward->affiliator_id,
+                    'referral_order_id' => null,
+                    'amount' => $reward->reward_value,
+                    'rate_applied' => 0,
+                    'status' => 'available',
+                    'available_at' => now(),
+                ]);
+            }
+        });
 
         return back()->with('success', 'Reward berhasil diklaim!');
     }
