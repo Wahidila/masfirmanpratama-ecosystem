@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\OrderRefunded;
 use App\Events\OrderShipped;
 use App\Events\PaymentRejected;
 use App\Events\PaymentVerified;
@@ -40,6 +41,12 @@ class OrderController extends Controller
      * Schema enum source-of-truth: 'paid' = lunas terverifikasi, siap kirim.
      */
     public const SHIPPABLE_FROM = ['paid'];
+
+    /**
+     * Status precondition yang valid untuk transition ke 'refunded'.
+     * Order bisa di-refund dari paid, partial_paid, shipped, atau completed.
+     */
+    public const REFUNDABLE_FROM = ['paid', 'partial_paid', 'shipped', 'completed'];
 
     public function index(Request $request): View
     {
@@ -129,6 +136,7 @@ class OrderController extends Controller
             'statuses' => self::STATUSES,
             'couriers' => self::COURIERS,
             'canShip' => in_array($order->status, self::SHIPPABLE_FROM, true),
+            'canRefund' => in_array($order->status, self::REFUNDABLE_FROM, true),
         ]);
     }
 
@@ -320,5 +328,31 @@ class OrderController extends Controller
         return redirect()
             ->route('admin.orders.show', $order)
             ->with('status', 'Resi berhasil di-input. Order ditandai sebagai dikirim.');
+    }
+
+    /**
+     * Refund order: transition status ke 'refunded', fire OrderRefunded event
+     * → DispatchAffiliateOrderRefunded listener kirim webhook ke Affiliate
+     * untuk cancel komisi yang masih cooling / available.
+     *
+     * Precondition: order.status harus salah satu dari self::REFUNDABLE_FROM.
+     */
+    public function refund(Request $request, Order $order): RedirectResponse
+    {
+        abort_if(
+            ! in_array($order->status, self::REFUNDABLE_FROM, true),
+            422,
+            'Order tidak bisa di-refund. Status sekarang: '.$order->status
+                .'. Hanya status berikut yang bisa di-refund: '.implode(', ', self::REFUNDABLE_FROM).'.',
+        );
+
+        $order->status = 'refunded';
+        $order->save();
+
+        OrderRefunded::dispatch($order);
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('status', 'Order berhasil di-refund.');
     }
 }

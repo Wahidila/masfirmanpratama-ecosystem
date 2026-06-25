@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Events\OrderRefunded;
 use App\Events\OrderShipped;
 use App\Events\PaymentRejected;
 use App\Events\PaymentSubmitted;
 use App\Events\PaymentVerified;
 use App\Listeners\DispatchAffiliateOrderPaid;
+use App\Listeners\DispatchAffiliateOrderRefunded;
 use App\Listeners\SendAdminPaymentReviewAlert;
 use App\Listeners\SendCustomerOrderShippedNotification;
 use App\Listeners\SendCustomerPaymentRejectedNotification;
@@ -39,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(PaymentSubmitted::class, SendAdminPaymentReviewAlert::class);
         Event::listen(PaymentVerified::class, SendCustomerPaymentVerifiedNotification::class);
         Event::listen(PaymentVerified::class, DispatchAffiliateOrderPaid::class);
+        Event::listen(OrderRefunded::class, DispatchAffiliateOrderRefunded::class);
         Event::listen(PaymentRejected::class, SendCustomerPaymentRejectedNotification::class);
         Event::listen(OrderShipped::class, SendCustomerOrderShippedNotification::class);
         Event::listen(OrderShipped::class, SendOrderShippedEmail::class);

@@ -192,6 +192,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InstallmentSchemeController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\WaNotificationController;
 
@@ -238,6 +239,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/generate-shipment', [OrderController::class, 'generateShipment'])
             ->name('orders.generate-shipment');
 
+        Route::post('orders/{order}/refund', [OrderController::class, 'refund'])
+            ->name('orders.refund');
+
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::put('settings/store-info', [SettingsController::class, 'updateStoreInfo'])
             ->name('settings.store-info.update');
@@ -262,5 +266,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // route name pakai dash juga biar konsisten.
         Route::get('wa-notifications', [WaNotificationController::class, 'index'])
             ->name('wa-notifications.index');
+
+        // Sales Reports (Stream A — Laporan Penjualan)
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
     });
 });
