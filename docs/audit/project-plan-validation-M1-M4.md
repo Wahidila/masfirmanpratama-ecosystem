@@ -326,23 +326,39 @@ bd2107f feat(gamification): admin event management CRUD + nav links (M4)
 
 ---
 
-## Final Verdict
+## Final Verdict — POST-REMEDIATION (26 Juni 2026)
 
-**Project MasFirmanPratama berada di 94% compliance dengan project plan (M1–M4).**
+**Project MasFirmanPratama berada di 100% compliance dengan project plan (M1–M4).**
 
-- **M1 dan M3** adalah milestone terbersih — 100% compliant, zero gaps, semua test hijau.
-- **M2** memiliki 1 gap (Laporan Penjualan not implemented). Course CRUD awalnya ditandai PARTIAL oleh agent, namun setelah verifikasi langsung oleh auditor membaca `CourseController.php` (347 lines), **Course CRUD LENGKAP 100%** — ada destroy/restore/bulk/full views.
-- **M4** (90%) — missing order-refunded dispatcher di Store side. Receiver di Affiliate side sudah ada dan tested, tapi Store tidak pernah emit event `order-refunded` saat admin refund order.
-- **Test failures** di Store adalah environmental (28 shipping tests gagal karena Agenwebsite API license expired 2026-06-01), bukan code defect. Non-shipping tests: ~380+ ALL PASS.
-- **Architecture sound** — HMAC-SHA256 webhook, timing-safe verification (`hash_equals`), idempotency by store_order_id, commission cooling 7-day mechanism, gamifikasi scoring engine — semua production-grade.
-- **Bug migration ditemukan & diperbaiki saat setup lokal** (3 bug: urutan courses migration, timestamp collision shipping meta, index name >64 char MySQL limit).
+### Remediation Results
 
-**Rekomendasi prioritas:**
-1. Implement Laporan Penjualan (Medium, 4-6h) — `Admin/ReportController` + charts + export
-2. Wire order-refunded dispatcher (Medium, 2-3h) — `OrderRefunded` event + `DispatchAffiliateOrderRefunded` listener
-3. Fix shipping test environment (Environmental, 1h) — mock AgenwebsiteClient atau set live API key
-4. Commit 3 migration bug fixes (Quick, 15min) — urutan courses, timestamp collision, index name
+| Gap | Status | Evidence |
+|-----|--------|----------|
+| M2: Laporan Penjualan | ✅ **FIXED** | `Admin/ReportController` + `SalesReportService` (8 methods) + 5 Blade views + 10 tests pass |
+| M4: order-refunded dispatcher | ✅ **FIXED** | `OrderRefunded` event + `DispatchAffiliateOrderRefunded` listener + `OrderController@refund()` + 18 tests pass |
+| Shipping test failures (28) | ✅ **FIXED** | APP_KEY added to phpunit.xml + Http::fake fixtures — 98/98 shipping tests pass |
+| Migration bug fixes (3) | ✅ **FIXED** | Committed `b2d2cbd` — courses reorder, shipping meta timestamps, index name |
+
+### Final Test Suite
+
+| App | Before | After |
+|-----|--------|-------|
+| Store | 438 tests (28 fail, 4 error) | **466/466 PASS** (1702 assertions) |
+| Affiliate | 68/68 PASS | **68/68 PASS** (191 assertions) |
+| **TOTAL** | 506 (32 fail) | **534/534 PASS** |
+
+### Commits
+- `b2d2cbd` — fix(migration): reorder courses + shipping meta timestamps + shorten index name
+- `9761c66` — docs(audit): project plan validation M1-M4 + product-development structure
+- `a4ae4f5` — feat(audit-remediation): sales reports + refund webhook + shipping test fix
+
+### Architecture Verification (QA)
+- ✅ `SalesReportService` — 8 methods: revenueSummary, dailyRevenue, monthlyRevenue, topProducts, orderStatusBreakdown, paymentSummary, csvRows, statusLabel
+- ✅ `OrderRefunded` event → 2 listeners (DispatchAffiliateOrderRefunded + WA notification)
+- ✅ `OrderController::refund()` — validates refundable status, fires event, transitions to `refunded`
+- ✅ Routes: `GET /admin/reports`, `GET /admin/reports/export`, `POST /admin/orders/{order}/refund`
+- ✅ Sidebar: "Laporan" nav item with bar-chart icon
 
 ---
 
-*Audit completed by Ultrawork Parallel Engine — 4 explore agents + 1 plan agent + oracle synthesis. Auditor verification: direct file inspection of CourseController.php (347 lines) + AdminOrderController.php (324 lines) + AffiliateWebhookClient.php (65 lines) + route inspection.*
+*Audit completed by Ultrawork Parallel Engine — 4 explore agents + 1 plan agent + oracle synthesis. Remediation executed by 3 parallel Sisyphus-Junior agents (visual-engineering + 2× quick). Post-remediation QA verified via PHP script + route inspection + full test suite.*
