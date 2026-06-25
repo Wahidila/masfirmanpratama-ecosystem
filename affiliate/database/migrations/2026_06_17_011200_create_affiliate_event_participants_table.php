@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('rank')->nullable();
             $table->json('progress')->nullable();
             $table->timestamps();
-            $table->unique(['affiliate_event_id', 'affiliator_id']);
+            $table->unique(['affiliate_event_id', 'affiliator_id'], 'event_participant_unique');
         });
     }
 
