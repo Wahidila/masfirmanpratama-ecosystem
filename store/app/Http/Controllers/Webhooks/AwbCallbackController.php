@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Webhooks;
 use App\Events\OrderShipped;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,9 +22,16 @@ class AwbCallbackController extends Controller
             ], 401);
         }
 
-        $license = config('shipping.license');
+        // License resolution: DB Settings → .env fallback (sama dengan
+        // AgenwebsiteClient::fromConfig() — kalau admin override license di
+        // /admin/settings tapi callback masih baca config saja, semua callback
+        // ditolak. Sumber harus konsisten.
+        $license = Settings::get('shipping.license', config('shipping.license'));
+        if (! is_string($license) || $license === '') {
+            $license = (string) config('shipping.license');
+        }
 
-        if (empty($license)) {
+        if ($license === '') {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid signature',
@@ -44,11 +52,32 @@ class AwbCallbackController extends Controller
         $airwaybill = $payload['airwaybill'] ?? null;
         $orderId = $payload['order_id'] ?? null;
         $referenceId = $payload['reference_id'] ?? null;
+        $orderNumber = $payload['order_number'] ?? null;
         $trackingStatus = $payload['tracking_status'] ?? null;
 
-        $order = Order::where('fulfillment_api_order_id', $orderId)
-            ->orWhere('fulfillment_reference_id', $referenceId)
-            ->first();
+        // Lookup HARUS scoped ke identifier non-null. Sebelumnya pakai
+        // `where(api_order_id,$x)->orWhere(reference_id,$y)` dengan $x/$y bisa
+        // null → query jadi `WHERE col IS NULL OR ...` yang match order acak
+        // yang juga punya null di kolom itu. order_number jadi fallback ketiga
+        // bila provider cuma kirim itu di payload.
+        if ($orderId === null && $referenceId === null && $orderNumber === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Missing order identifier',
+            ], 400);
+        }
+
+        $order = Order::where(function ($q) use ($orderId, $referenceId, $orderNumber) {
+            if ($orderId !== null) {
+                $q->orWhere('fulfillment_api_order_id', $orderId);
+            }
+            if ($referenceId !== null) {
+                $q->orWhere('fulfillment_reference_id', $referenceId);
+            }
+            if ($orderNumber !== null) {
+                $q->orWhere('order_number', $orderNumber);
+            }
+        })->first();
 
         if ($order === null) {
             return response()->json([
@@ -92,6 +121,9 @@ class AwbCallbackController extends Controller
 
             if (stripos($trackingStatus ?? '', 'deliver') !== false) {
                 $order->status = 'completed';
+                // Sebelumnya fulfillment_status stuck di 'shipped' walau paket
+                // sudah delivered → filter admin "delivered" return kosong.
+                $order->fulfillment_status = 'delivered';
             }
 
             $order->save();

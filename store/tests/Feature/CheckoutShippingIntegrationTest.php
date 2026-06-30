@@ -61,6 +61,17 @@ class CheckoutShippingIntegrationTest extends TestCase
     public function test_checkout_with_dynamic_shipping_correctly_calculates_total(): void
     {
         Http::fake([
+            '*/shipping/services' => Http::response([
+                'message' => 'OK',
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'is_premium' => 0, 'enable' => 1, 'extra_cost' => 0],
+                ],
+            ], 200),
+            '*/shipping/couriers' => Http::response([
+                'message' => 'OK',
+                'data' => [['id' => 'jne', 'title' => 'JNE', 'category' => 'domestic']],
+            ], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'Success',
                 'data' => [
@@ -88,6 +99,17 @@ class CheckoutShippingIntegrationTest extends TestCase
     public function test_server_revalidates_shipping_price_anti_tamper(): void
     {
         Http::fake([
+            '*/shipping/services' => Http::response([
+                'message' => 'OK',
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'is_premium' => 0, 'enable' => 1, 'extra_cost' => 0],
+                ],
+            ], 200),
+            '*/shipping/couriers' => Http::response([
+                'message' => 'OK',
+                'data' => [['id' => 'jne', 'title' => 'JNE', 'category' => 'domestic']],
+            ], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'Success',
                 'data' => [

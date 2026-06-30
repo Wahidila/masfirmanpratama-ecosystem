@@ -228,6 +228,7 @@ class AwbCallbackTest extends TestCase
             'fulfillment_api_order_id' => 'ORD-DELIVERED-001',
             'fulfillment_reference_id' => 'REF-DELIVERED-001',
             'status' => 'shipped',
+            'fulfillment_status' => 'shipped',
             'tracking_status' => null,
         ]);
 
@@ -250,6 +251,80 @@ class AwbCallbackTest extends TestCase
 
         $this->assertSame('delivered', $order->tracking_status);
         $this->assertSame('completed', $order->status);
+        // FIX-9: fulfillment_status sebelumnya stuck di 'shipped' walau paket
+        // sudah delivered → admin filter "delivered" return kosong.
+        $this->assertSame('delivered', $order->fulfillment_status);
+    }
+
+    public function test_lookup_with_only_order_number_works(): void
+    {
+        // FIX-5: order_number sebagai fallback ketiga selain api_order_id
+        // dan reference_id.
+        $order = Order::factory()->create([
+            'fulfillment_api_order_id' => null,
+            'fulfillment_reference_id' => null,
+            'order_number' => 'MFP-20260701-ABC123',
+            'status' => 'paid',
+            'fulfillment_status' => 'waiting_awb',
+        ]);
+
+        $payload = [
+            'status' => null,
+            'airwaybill' => 'AGN-VIA-ORDER-NUMBER',
+            'order_number' => 'MFP-20260701-ABC123',
+        ];
+
+        $response = $this->postJson(
+            route('webhooks.agenwebsite.awb'),
+            $payload,
+            $this->headersWithSignature($payload),
+        );
+
+        $response->assertOk();
+        $order->refresh();
+        $this->assertSame('AGN-VIA-ORDER-NUMBER', $order->shipping_resi);
+    }
+
+    public function test_partial_payload_does_not_match_random_null_order(): void
+    {
+        // FIX-5 inti: dulu where(api_order_id,null)->orWhere(reference_id,'REF-X')
+        // menjadikan order LAIN yang punya api_order_id=null cocok kalau
+        // reference_id juga sama-sama null. Sekarang clause hanya ditambah untuk
+        // identifier non-null.
+        Order::factory()->create([
+            'fulfillment_api_order_id' => null,
+            'fulfillment_reference_id' => null,
+            'status' => 'paid',
+        ]);
+
+        $payload = [
+            'status' => null,
+            'airwaybill' => 'AGN-SHOULD-NOT-LAND',
+            'reference_id' => 'REF-NONEXISTENT-12345',
+            // order_id sengaja tidak dikirim
+        ];
+
+        $response = $this->postJson(
+            route('webhooks.agenwebsite.awb'),
+            $payload,
+            $this->headersWithSignature($payload),
+        );
+
+        // Tidak ada order yang punya reference_id ini → 404, bukan random match.
+        $response->assertStatus(404);
+    }
+
+    public function test_payload_without_any_identifier_returns_400(): void
+    {
+        $payload = ['status' => null, 'airwaybill' => 'AGN-NOPE'];
+
+        $response = $this->postJson(
+            route('webhooks.agenwebsite.awb'),
+            $payload,
+            $this->headersWithSignature($payload),
+        );
+
+        $response->assertStatus(400);
     }
 
     public function test_status_update_with_delivered_case_insensitive(): void

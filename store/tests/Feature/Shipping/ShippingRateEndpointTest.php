@@ -32,6 +32,17 @@ class ShippingRateEndpointTest extends TestCase
     public function test_valid_payload_returns_rates(): void
     {
         Http::fake([
+            '*/shipping/services' => Http::response([
+                'message' => 'OK',
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'is_premium' => 0, 'enable' => 1, 'extra_cost' => 0],
+                ],
+            ], 200),
+            '*/shipping/couriers' => Http::response([
+                'message' => 'OK',
+                'data' => [['id' => 'jne', 'title' => 'JNE', 'category' => 'domestic']],
+            ], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'Success',
                 'data' => [
@@ -67,7 +78,9 @@ class ShippingRateEndpointTest extends TestCase
         $response = $this->postJson('/shipping/rates', []);
 
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['city', 'province', 'zipcode', 'cart_json']);
+        // zipcode sekarang OPSIONAL (city+province dari autocomplete sudah cukup
+        // untuk API). Required: city, province, cart_json.
+        $response->assertJsonValidationErrors(['city', 'province', 'cart_json']);
     }
 
     public function test_invalid_cart_json_returns_422(): void
@@ -83,9 +96,11 @@ class ShippingRateEndpointTest extends TestCase
         $response->assertJsonValidationErrors(['cart_json']);
     }
 
-    public function test_api_failure_returns_dummy_rates(): void
+    public function test_api_failure_returns_empty_with_error_message(): void
     {
         Http::fake([
+            '*/shipping/services' => Http::response(['message' => 'OK', 'data' => []], 200),
+            '*/shipping/couriers' => Http::response(['message' => 'OK', 'data' => []], 200),
             '*/shipping/price' => Http::response(['message' => 'License Anda sudah expired.'], 403),
         ]);
 
@@ -99,10 +114,9 @@ class ShippingRateEndpointTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $rates = $response->json('rates');
-        $this->assertNotEmpty($rates);
-        $this->assertSame('jne', $rates[0]['courier']);
-        $response->assertJsonMissing(['error']);
+        // Fail-closed: no fabricated prices. User-friendly error surfaces.
+        $this->assertSame([], $response->json('rates'));
+        $this->assertNotEmpty($response->json('error'));
     }
 
     public function test_route_has_csrf_protection(): void

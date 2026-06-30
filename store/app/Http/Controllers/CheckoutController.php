@@ -53,6 +53,7 @@ class CheckoutController extends Controller
             'address_line' => ['required', 'string', 'max:500'],
             'address_city' => ['nullable', 'string', 'max:120'],
             'address_province' => ['nullable', 'string', 'max:120'],
+            'address_district' => ['nullable', 'string', 'max:120'],
             'address_postal' => ['nullable', 'string', 'max:20'],
             'shipping_method' => ['nullable', 'string', 'max:50'],
             'payment_type' => ['required', 'string', 'in:lunas'],
@@ -78,6 +79,7 @@ class CheckoutController extends Controller
         $address = [
             'province' => $validated['address_province'] ?? '',
             'city' => $validated['address_city'] ?? '',
+            'district' => $validated['address_district'] ?? '',
             'postal' => $validated['address_postal'] ?? '',
         ];
 
@@ -95,7 +97,7 @@ class CheckoutController extends Controller
             $destination = [
                 'province' => $address['province'],
                 'city' => $address['city'],
-                'district' => '',
+                'district' => $address['district'],
                 'zipcode' => $address['postal'],
             ];
 
@@ -140,6 +142,7 @@ class CheckoutController extends Controller
 
         $order = DB::transaction(function () use (
             $validated,
+            $address,
             $resolvedItems,
             $grandTotal,
             $shippingCourier,
@@ -159,6 +162,10 @@ class CheckoutController extends Controller
                     $validated['address_province'] ?? null,
                     $validated['address_postal'] ?? null,
                 ),
+                'shipping_city' => $address['city'] ?: null,
+                'shipping_province' => $address['province'] ?: null,
+                'shipping_district' => $address['district'] ?: null,
+                'shipping_zipcode' => $address['postal'] ?: null,
                 'total' => $grandTotal,
                 'status' => 'pending',
                 'ref_code' => $refCode ?: null,

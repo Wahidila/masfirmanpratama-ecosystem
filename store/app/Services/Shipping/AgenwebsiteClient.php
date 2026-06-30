@@ -3,6 +3,7 @@
 namespace App\Services\Shipping;
 
 use App\Exceptions\ShippingRateException;
+use App\Services\Settings;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -14,7 +15,23 @@ class AgenwebsiteClient
 
     public static function fromConfig(): self
     {
-        return new self(config('shipping'));
+        $cfg = config('shipping');
+
+        // License + domain bisa di-override dari panel admin (Settings DB),
+        // fallback ke .env. Domain agenwebsite license-bound, jadi user_agent
+        // (yang menyertakan site_url) HARUS ikut berubah saat site_url diganti.
+        $license = Settings::get('shipping.license', $cfg['license']);
+        if (is_string($license) && $license !== '') {
+            $cfg['license'] = $license;
+        }
+
+        $siteUrl = Settings::get('shipping.site_url', $cfg['site_url']);
+        if (is_string($siteUrl) && $siteUrl !== '') {
+            $cfg['site_url'] = $siteUrl;
+            $cfg['user_agent'] = 'WordPress/'.$cfg['wordpress_version'].'; '.$siteUrl;
+        }
+
+        return new self($cfg);
     }
 
     /** Base request meniru wp_remote_post: UA WordPress + header plugin + form body. */
@@ -84,18 +101,63 @@ class AgenwebsiteClient
         });
     }
 
-    public function services(string $category = 'domestic'): array
+    /**
+     * Fetch service master, optionally filtered by category.
+     *
+     * IMPORTANT: API mengabaikan `?category=` query param dan selalu balik 44 row.
+     * Kita cache satu kali (semua kategori) lalu filter di sisi client by row.category.
+     * Kalau dulu kita pakai query, cache key per-kategori akan menyimpan row poison
+     * dari kategori lain (instant/international bocor ke domestic).
+     */
+    public function services(?string $category = null): array
     {
-        $cacheKey = 'shipping.services.'.$category;
-
-        return Cache::remember($cacheKey, $this->cfg['cache_master_ttl'], function () use ($category) {
-            $result = $this->post('shipping/services', [], ['category' => $category]);
+        $all = Cache::remember('shipping.services.all', $this->cfg['cache_master_ttl'], function () {
+            $result = $this->post('shipping/services');
 
             if ($result['status'] === 'success' && is_array($result['result']) && count($result['result']) > 0) {
                 return $result['result'];
             }
 
             return $this->fallbackJson('services.json');
+        });
+
+        if ($category === null || $category === '') {
+            return $all;
+        }
+
+        return array_values(array_filter(
+            $all,
+            fn ($row) => ($row['category'] ?? '') === $category,
+        ));
+    }
+
+    /**
+     * Autocomplete kota/kecamatan via /shipping/data. Min 3 chars (keyword pendek
+     * bikin response gemuk + noisy). Keyword by NAME only — zipcode = 0 hits.
+     *
+     * @return array<int, array{province:string, city:string, district:string}>
+     */
+    public function searchData(string $keyword): array
+    {
+        $keyword = trim($keyword);
+        if (strlen($keyword) < 3) {
+            return [];
+        }
+
+        $cacheKey = 'shipping.data.'.md5(strtolower($keyword));
+
+        return Cache::remember($cacheKey, $this->cfg['cache_master_ttl'], function () use ($keyword) {
+            $result = $this->post('shipping/data', ['keyword' => $keyword]);
+
+            if ($result['status'] !== 'success' || ! is_array($result['result'])) {
+                return [];
+            }
+
+            return array_values(array_map(fn ($r) => [
+                'province' => (string) ($r['province'] ?? ''),
+                'city' => (string) ($r['city'] ?? ''),
+                'district' => (string) ($r['district'] ?? ''),
+            ], $result['result']));
         });
     }
 
@@ -143,11 +205,6 @@ class AgenwebsiteClient
         }
 
         return [];
-    }
-
-    public function fulfillmentRates(array $params): array
-    {
-        return $this->post('shipment/rates', $params);
     }
 
     public function createShipment(array $data): array

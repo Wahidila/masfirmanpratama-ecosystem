@@ -51,18 +51,19 @@ class CheckoutPageTest extends TestCase
         $response = $this->get('/checkout');
 
         $response->assertStatus(200);
-        // Required fields per task spec (nama, email, HP, alamat)
+        // Required fields per task spec (nama, email, HP, alamat).
         $response->assertSee('id="customer_name"', false);
         $response->assertSee('id="customer_email"', false);
         $response->assertSee('id="customer_phone"', false);
         $response->assertSee('id="address_line"', false);
+        // FIX-3: city/province sekarang autocomplete dari /shipping/destinations
+        // (Agenwebsite). Hidden inputs tetap ada agar form submit valid; UI
+        // dropdown statis dengan 30 kota di-replace search box.
         $response->assertSee('id="address_city"', false);
         $response->assertSee('id="address_province"', false);
-
-        // Static city/province dropdowns
-        $response->assertSee('Surabaya', false);
-        $response->assertSee('Jawa Timur', false);
-        $response->assertSee('DKI Jakarta', false);
+        $response->assertSee('id="address_district"', false);
+        $response->assertSee('id="dest_search"', false);
+        $response->assertSee('/shipping/destinations', false);
     }
 
     public function test_checkout_page_renders_shipping_method_dropdown(): void

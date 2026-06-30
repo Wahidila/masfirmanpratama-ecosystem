@@ -15,28 +15,9 @@ class AgenwebsiteFulfillmentTest extends TestCase
         Cache::flush();
     }
 
-    public function test_fulfillment_rates_returns_array(): void
-    {
-        Http::fake([
-            '*/shipment/rates' => Http::response([
-                'message' => 'OK',
-                'data' => [
-                    ['courier' => 'jne', 'service' => 'jne_reg', 'price' => 17000],
-                ],
-            ], 200),
-        ]);
-
-        $client = app(AgenwebsiteClient::class);
-        $result = $client->fulfillmentRates([
-            'origin' => 'surabaya',
-            'destination' => 'jakarta',
-            'weight' => 1,
-        ]);
-
-        $this->assertIsArray($result);
-        $this->assertSame('success', $result['status']);
-        $this->assertIsArray($result['result']);
-    }
+    // FIX-11: fulfillmentRates() dihapus — endpoint /shipment/rates tidak ada
+    // di license set (probe live returns "Cannot POST /v2/shipment/rates" / array msg).
+    // Method itu dead code dan dihapus dari client.
 
     public function test_create_shipment_awb_ready(): void
     {

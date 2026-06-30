@@ -27,6 +27,9 @@ class FulfillmentService
         if (isset($response['label_url'])) {
             $updates['label_url'] = $response['label_url'];
         }
+        if (isset($response['payment_url'])) {
+            $updates['fulfillment_payment_url'] = $response['payment_url'];
+        }
 
         switch ($status) {
             case 'awb_ready':
@@ -58,6 +61,7 @@ class FulfillmentService
             'pending_payment' => [
                 'status' => 'pending_payment',
                 'message' => 'Shipment requires payment',
+                'payment_url' => $response['payment_url'] ?? null,
             ],
             default => [
                 'status' => 'error',
@@ -107,12 +111,25 @@ class FulfillmentService
         $maxWidth = $maxWidth ?: (int) $defaultDims['width'];
         $totalHeight = $totalHeight ?: (int) $defaultDims['height'];
 
-        $addressParts = explode(',', $order->address);
-        $street = trim($addressParts[0] ?? $order->address);
-        $city = trim($addressParts[1] ?? '');
-        $province = trim($addressParts[2] ?? '');
-
         $phone = $this->normalizePhone($order->phone);
+
+        // Prefer discrete columns (canonical via autocomplete shipping/data).
+        // Legacy fallback: parse composed address string only when those columns
+        // are NULL (pre-FIX-4 orders) — explode is unreliable when address_line
+        // contains commas, so we only use it as a last resort.
+        $city = $order->shipping_city;
+        $province = $order->shipping_province;
+        $district = $order->shipping_district;
+        $zipcode = $order->shipping_zipcode;
+        $street = $order->address;
+
+        if ($city === null && $province === null) {
+            $addressParts = array_map('trim', explode(',', (string) $order->address));
+            $street = $addressParts[0] ?? (string) $order->address;
+            $city = $addressParts[1] ?? '';
+            $province = $addressParts[2] ?? '';
+            $zipcode = $zipcode ?? ($addressParts[3] ?? '');
+        }
 
         return [
             'shipper' => [
@@ -124,8 +141,10 @@ class FulfillmentService
                 'phone' => $phone,
                 'email' => $order->email,
                 'address' => $street,
-                'city' => $city,
-                'province' => $province,
+                'city' => (string) $city,
+                'province' => (string) $province,
+                'district' => (string) ($district ?? ''),
+                'zipcode' => (string) ($zipcode ?? ''),
             ],
             'items' => $shipmentItems,
             'weight' => (int) ceil($totalWeight),

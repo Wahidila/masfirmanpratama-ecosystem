@@ -33,4 +33,8 @@ return [
 
     // Markup per service (extra_cost), key = service_id. Kosong = tanpa markup.
     'service_markup' => [],
+
+    // Tampilkan service premium di checkout domestik. Default true = samakan
+    // dengan plugin WP (tidak menyaring premium). Set false untuk sembunyikan.
+    'allow_premium' => env('SHIPPING_ALLOW_PREMIUM', true),
 ];

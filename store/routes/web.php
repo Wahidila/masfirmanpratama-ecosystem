@@ -160,6 +160,12 @@ Route::get('/track/{order_number}', [TrackController::class, 'show'])
     ->middleware('signed')
     ->name('track.show');
 
+// Autocomplete kota/kecamatan via /shipping/data (Agenwebsite).
+// Throttle agar tidak abuse cache + API ongkir.
+Route::get('/shipping/destinations', [ShippingRateController::class, 'destinations'])
+    ->middleware('throttle:60,1')
+    ->name('shipping.destinations');
+
 // Shipping rate lookup (AJAX from checkout page)
 Route::post('/shipping/rates', [ShippingRateController::class, 'rates'])
     ->middleware('throttle:30,1')
@@ -194,6 +200,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\VideoTestimonialController;
 use App\Http\Controllers\Admin\WaNotificationController;
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -226,6 +233,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->except(['show'])
             ->parameters(['courses' => 'course']);
 
+        Route::resource('video-testimonials', VideoTestimonialController::class)
+            ->except(['show'])
+            ->parameters(['video-testimonials' => 'videoTestimonial']);
+
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('orders/{order}/payments/{payment}/approve', [OrderController::class, 'approvePayment'])
@@ -249,6 +260,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('settings.bank-accounts.update');
         Route::put('settings/shipping', [SettingsController::class, 'updateShipping'])
             ->name('settings.shipping.update');
+        Route::post('settings/shipping/test', [SettingsController::class, 'testShipping'])
+            ->name('settings.shipping.test');
         Route::put('settings/whatsapp', [SettingsController::class, 'updateWhatsapp'])
             ->name('settings.whatsapp.update');
         Route::post('settings/whatsapp/test', [SettingsController::class, 'testWhatsapp'])

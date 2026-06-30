@@ -37,15 +37,15 @@
             </x-admin.form-group>
         </div>
 
-        <x-admin.form-group label="Kurir aktif" hint="Centang kurir yang ingin ditampilkan saat checkout.">
+        <x-admin.form-group label="Kurir aktif" hint="Daftar kurir di-fetch dari license Agenwebsite (cached 24 jam). Centang yang ingin tampil saat checkout.">
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                 @php $activeCouriers = old('couriers', $shippingData['couriers'] ?? []); @endphp
-                @foreach ($availableCouriers as $courier)
+                @foreach ($availableCouriers as $courierId => $courierTitle)
                     <label class="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer dark:text-gray-300">
-                        <input type="checkbox" name="couriers[]" value="{{ $courier }}"
-                            @checked(in_array($courier, $activeCouriers))
+                        <input type="checkbox" name="couriers[]" value="{{ $courierId }}"
+                            @checked(in_array($courierId, $activeCouriers))
                             class="rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700">
-                        {{ strtoupper($courier) }}
+                        {{ $courierTitle }}
                     </label>
                 @endforeach
             </div>
@@ -61,7 +61,40 @@
         <hr class="border-gray-200 dark:border-gray-800">
 
         <div>
-            <h4 class="text-sm font-semibold text-gray-800 mb-3 dark:text-white/90">Status Lisensi Agenwebsite</h4>
+            <h4 class="text-sm font-semibold text-gray-800 mb-1 dark:text-white/90">Lisensi Agenwebsite</h4>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
+                License key &amp; domain terdaftar. Kosongkan untuk pakai nilai default dari
+                <code class="text-gray-700 bg-gray-100 px-1 rounded dark:text-gray-300 dark:bg-white/[0.03]">.env</code>.
+            </p>
+
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <x-admin.form-group label="License Key (API Key)" name="license"
+                    hint="Kode lisensi dari dashboard Agenwebsite.">
+                    <input type="text" id="license" name="license" value="{{ old('license', $shippingData['license']) }}"
+                        autocomplete="off" spellcheck="false" placeholder="Masukkan license key"
+                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm font-mono text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    @error('license')<p class="mt-1 text-xs text-error-600 dark:text-error-400">{{ $message }}</p>@enderror
+                </x-admin.form-group>
+
+                <x-admin.form-group label="Domain terdaftar (site URL)" name="site_url"
+                    hint="Domain yang terdaftar di lisensi. License domain-bound — harus cocok.">
+                    <input type="url" id="site_url" name="site_url" value="{{ old('site_url', $shippingData['site_url']) }}"
+                        autocomplete="off" spellcheck="false" placeholder="https://masfirmanpratama.com"
+                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    @error('site_url')<p class="mt-1 text-xs text-error-600 dark:text-error-400">{{ $message }}</p>@enderror
+                </x-admin.form-group>
+            </div>
+
+            <div class="mb-4 mt-3 flex items-center gap-3">
+                <button type="button" id="btn-test-shipping"
+                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+                    <x-admin.icon name="info" class="h-4 w-4" />
+                    Test koneksi lisensi
+                </button>
+                <span id="shipping-test-result" class="hidden text-sm"></span>
+            </div>
+
+            <h4 class="text-sm font-semibold text-gray-800 mb-3 dark:text-white/90">Status Lisensi Saat Ini</h4>
 
             @php $lic = $shippingData['license_status']; @endphp
             @if ($lic && ($lic['status'] ?? '') === 'success')
@@ -94,9 +127,9 @@
             @endif
 
             <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Lisensi dan domain dikonfigurasi via <code class="text-gray-700 bg-gray-100 px-1 rounded dark:text-gray-300 dark:bg-white/[0.03]">.env</code>
-                (<code>AGENWEBSITE_SHIPPING_LICENSE</code>, <code>AGENWEBSITE_SHIPPING_SITE_URL</code>) —
-                tidak dapat diubah dari panel ini.
+                Status di atas dihitung dari nilai yang sedang aktif (DB bila diisi, atau
+                <code class="text-gray-700 bg-gray-100 px-1 rounded dark:text-gray-300 dark:bg-white/[0.03]">.env</code>
+                sebagai fallback). Klik <strong>Test koneksi lisensi</strong> untuk memverifikasi nilai pada form sebelum disimpan.
             </p>
         </div>
 
@@ -106,4 +139,43 @@
             </x-admin.button>
         </div>
     </form>
+
+    <script>
+        document.getElementById('btn-test-shipping')?.addEventListener('click', async function () {
+            const btn = this;
+            const result = document.getElementById('shipping-test-result');
+            const original = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Menguji...';
+            result.classList.add('hidden');
+
+            try {
+                const response = await fetch('{{ route('admin.settings.shipping.test') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        license: document.querySelector('[name="license"]').value,
+                        site_url: document.querySelector('[name="site_url"]').value,
+                    }),
+                });
+                const data = await response.json();
+
+                result.classList.remove('hidden', 'text-success-600', 'text-error-600');
+                result.classList.add(data.ok ? 'text-success-600' : 'text-error-600');
+                result.textContent = (data.ok ? '✅ ' : '❌ ') + (data.message || '');
+            } catch (e) {
+                result.classList.remove('hidden', 'text-success-600');
+                result.classList.add('text-error-600');
+                result.textContent = '❌ ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        });
+    </script>
 </x-admin.card>
