@@ -4,25 +4,18 @@
     /** @var int $cartTotal */
     /** @var int $totalTransfer */
     /** @var array<int, array{label?: string, note?: string, due_label?: string, amount?: int}> $schedule */
-
+    /** @var string $uploadUrl — signed URL ke /upload/{order} */
+    /** @var string $trackUrl — signed URL ke /track/{order} */
     /** @var array<int, array{bank: string, number: string, holder: string, logo_color?: string}> $bankAccounts */
-    $bankAccounts = \App\Services\Settings::getBankAccounts();
     /** @var array{number: string, label: string} $waAdmin */
-    $waAdmin = \App\Services\Settings::getWaAdmin();
+
+    // Fallback resolve bila view dipakai tanpa controller (defensif).
+    $bankAccounts = $bankAccounts ?? \App\Services\Settings::getBankAccounts();
+    $waAdmin = $waAdmin ?? \App\Services\Settings::getWaAdmin();
 
     $isInstallment = $paymentType === 'cicilan';
     $waText = rawurlencode("Halo Admin, saya baru saja checkout order {$order}. Mau konfirmasi pembayaran.");
     $waLink = "https://wa.me/{$waAdmin['number']}?text={$waText}";
-
-    // Payment context yang di-pass ke halaman upload bukti bayar.
-    // M2: konteks ini akan diambil dari DB (orders + order_payments) — query
-    // string ini sementara untuk M1 stateless flow.
-    $uploadQuery = array_filter([
-        'type' => $paymentType,
-        'total' => $totalTransfer > 0 ? $totalTransfer : null,
-        'n' => $isInstallment && count($schedule) > 0 ? count($schedule) : null,
-        'seq' => $isInstallment ? 0 : null, // setelah checkout selalu DP (seq=0)
-    ], fn ($v) => $v !== null && $v !== '');
 
     // Color palette per bank logo (Tailwind class names dipakai sebagai
     // string statis supaya purge tetap bisa pickup).
@@ -53,6 +46,7 @@
             orderNumber: @js($order),
             totalTransfer: @js($totalTransfer),
             paymentType: @js($paymentType),
+            clearCart: @js($clearCart ?? false),
         })"
     >
         {{-- ====================================================== --}}
@@ -107,7 +101,7 @@
                     <span x-text="copied ? 'Tersalin!' : 'Salin nomor pesanan'"></span>
                 </button>
                 <a
-                    href="{{ session('checkout.track_url') ?? route('track.show', ['order_number' => $order]) }}"
+                    href="{{ $trackUrl }}"
                     class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:text-primary-600"
                 >
                     <i data-lucide="package-search" class="h-4 w-4"></i>
@@ -273,7 +267,7 @@
         {{-- ====================================================== --}}
         <section class="mt-8 grid gap-4 sm:grid-cols-2">
             <a
-                href="{{ route('upload.show', array_merge(['order_number' => $order], $uploadQuery)) }}"
+                href="{{ $uploadUrl }}"
                 class="ripple inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-600 px-6 py-4 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
                 data-testid="cta-upload"
             >
@@ -281,7 +275,7 @@
                 Upload bukti bayar sekarang
             </a>
             <a
-                href="{{ session('checkout.track_url') ?? route('track.show', ['order_number' => $order]) }}"
+                href="{{ $trackUrl }}"
                 class="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-6 py-4 text-base font-bold text-slate-700 transition hover:border-primary-300 hover:text-primary-600"
                 data-testid="cta-track"
             >
@@ -336,6 +330,7 @@
                     orderNumber: cfg.orderNumber || '',
                     totalTransfer: Number(cfg.totalTransfer) || 0,
                     paymentType: cfg.paymentType || 'lunas',
+                    clearCart: cfg.clearCart === true,
 
                     // UI state
                     copied: false,
@@ -344,6 +339,14 @@
                     _bankTimer: null,
 
                     init() {
+                        // Reset cart tepat setelah checkout (sinyal one-time dari server).
+                        // Order sudah masuk DB → item cart "dikonsumsi" jadi order. Tidak
+                        // jalan saat refresh/share-link (clearCart=false), jadi cart yang
+                        // baru diisi user tidak ikut terhapus.
+                        if (this.clearCart && this.$store && this.$store.cart) {
+                            this.$store.cart.clear();
+                        }
+
                         // Re-run lucide setelah icon-nama berubah dari `copy` → `check`.
                         this.$watch('copied', () => this.$nextTick(() => window.lucide && window.lucide.createIcons()));
                         this.$watch('bankCopied', () => this.$nextTick(() => window.lucide && window.lucide.createIcons()));

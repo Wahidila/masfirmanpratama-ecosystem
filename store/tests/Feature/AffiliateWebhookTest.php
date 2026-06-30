@@ -290,6 +290,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 185_000,
             'status' => 'active',
             'type' => 'book',
+            'is_shippable' => false,
         ]);
 
         $response = $this->withCookie('referral_code', 'AFFILIATE99')
@@ -323,6 +324,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 185_000,
             'status' => 'active',
             'type' => 'book',
+            'is_shippable' => false,
         ]);
 
         $response = $this->withCookie('referral_code', 'COOKIE_CODE')

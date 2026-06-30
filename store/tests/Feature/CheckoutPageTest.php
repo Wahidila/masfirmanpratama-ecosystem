@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Order;
+use App\Models\OrderPayment;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -56,14 +58,22 @@ class CheckoutPageTest extends TestCase
         $response->assertSee('id="customer_email"', false);
         $response->assertSee('id="customer_phone"', false);
         $response->assertSee('id="address_line"', false);
-        // FIX-3: city/province sekarang autocomplete dari /shipping/destinations
-        // (Agenwebsite). Hidden inputs tetap ada agar form submit valid; UI
-        // dropdown statis dengan 30 kota di-replace search box.
-        $response->assertSee('id="address_city"', false);
+
+        // Form alamat terstruktur sesuai kebutuhan plugin Agenwebsite:
+        // Provinsi (dropdown kanonik) → autocomplete Kota/Kecamatan (API) →
+        // Desa/Kelurahan → Kode Pos → Detail Alamat.
         $response->assertSee('id="address_province"', false);
-        $response->assertSee('id="address_district"', false);
         $response->assertSee('id="dest_search"', false);
         $response->assertSee('/shipping/destinations', false);
+        $response->assertSee('id="address_city"', false);
+        $response->assertSee('id="address_district"', false);
+        $response->assertSee('id="address_village"', false);
+        $response->assertSee('id="address_postal"', false);
+
+        // Dropdown provinsi pakai penamaan kanonik API.
+        $response->assertSee('Daerah Istimewa Yogyakarta', false);
+        $response->assertSee('Nanggroe Aceh Darussalam', false);
+        $response->assertSee('Jawa Timur', false);
     }
 
     public function test_checkout_page_renders_shipping_method_dropdown(): void
@@ -127,9 +137,9 @@ class CheckoutPageTest extends TestCase
         $response->assertDontSee('action="checkout-success.html"', false);
     }
 
-    // ─── POST /checkout (M1 stub) ───────────────────────────────────────────
+    // ─── POST /checkout → halaman success ───────────────────────────────────
 
-    public function test_checkout_post_redirects_to_upload_signed_url(): void
+    public function test_checkout_post_redirects_to_success_page(): void
     {
         $response = $this->post('/checkout', [
             'customer_name' => 'Budi Santoso',
@@ -138,7 +148,6 @@ class CheckoutPageTest extends TestCase
             'address_line' => 'Jl. Mawar No. 12 RT 03 RW 04',
             'address_city' => 'Surabaya',
             'address_province' => 'Jawa Timur',
-            'shipping_method' => 'REG',
             'payment_type' => 'lunas',
             'cart_json' => json_encode([
                 ['slug' => 'kelas-amc-reguler', 'qty' => 1, 'price' => 4_500_000],
@@ -146,31 +155,58 @@ class CheckoutPageTest extends TestCase
             'cart_total' => 4_500_000,
         ]);
 
+        // Sekarang redirect ke halaman "Order berhasil dibuat" (bukan langsung upload).
         $response->assertStatus(302);
-        // M2: redirects to /upload/{order_number} signed URL with MFP- prefix.
-        $response->assertRedirectContains('/upload/MFP-');
-        $this->assertStringContainsString('signature=', $response->headers->get('Location'));
+        $response->assertRedirectContains('/checkout/success/MFP-');
+    }
+
+    /**
+     * Seed Order + payments untuk test halaman success (DB-backed via firstOrFail).
+     */
+    private function seedOrder(string $orderNumber, int $total, int $paymentCount = 1): Order
+    {
+        $order = Order::create([
+            'order_number' => $orderNumber,
+            'customer_name' => 'Budi Santoso',
+            'phone' => '081234567890',
+            'email' => 'budi@example.com',
+            'address' => 'Jl. Mawar No. 12, Surabaya, Jawa Timur',
+            'total' => $total,
+            'status' => 'pending',
+        ]);
+
+        $per = (int) floor($total / $paymentCount);
+        for ($i = 0; $i < $paymentCount; $i++) {
+            OrderPayment::create([
+                'order_id' => $order->id,
+                'amount' => $i === $paymentCount - 1 ? $total - $per * ($paymentCount - 1) : $per,
+                'method' => 'transfer',
+                'status' => 'pending',
+            ]);
+        }
+
+        return $order;
     }
 
     public function test_checkout_success_page_shows_order_number(): void
     {
+        $this->seedOrder('MFP-20260516-ABC123', 4_500_000);
+
         $response = $this->get('/checkout/success/MFP-20260516-ABC123');
 
         $response->assertStatus(200);
         $response->assertSee('MFP-20260516-ABC123', false);
-        // Order number rendered in the prominent slot with copy button.
         $response->assertSee('data-testid="order-number"', false);
         $response->assertSee('Salin nomor pesanan', false);
     }
 
-    // ─── Checkout success page (port checkout-success.html) ─────────────────
-
     public function test_checkout_success_page_uses_store_layout_assets(): void
     {
+        $this->seedOrder('MFP-20260516-ABC123', 4_500_000);
+
         $response = $this->get('/checkout/success/MFP-20260516-ABC123');
 
         $response->assertStatus(200);
-        // Layout chrome
         $response->assertSee('Order berhasil dibuat', false);
         $response->assertSee('csrf-token', false);
         $response->assertSeeInOrder(['/build/assets/app-', '.css'], false);
@@ -180,32 +216,25 @@ class CheckoutPageTest extends TestCase
 
     public function test_checkout_success_page_renders_dummy_bank_accounts_from_config(): void
     {
+        $this->seedOrder('MFP-20260516-ABC123', 4_500_000);
+
         $response = $this->get('/checkout/success/MFP-20260516-ABC123');
 
         $response->assertStatus(200);
-        // 2 dummy bank accounts dari config/store.php
         $response->assertSee('BCA', false);
         $response->assertSee('Mandiri', false);
         $response->assertSee('PT. Dummy AMC', false);
-        // Format nomor rekening (dash-separated)
         $response->assertSee('1234-5678-9012', false);
         $response->assertSee('0987-6543-2109', false);
-        // Card markers
         $response->assertSee('data-testid="bank-account"', false);
     }
 
-    public function test_checkout_success_page_renders_lunas_total_when_payment_type_lunas(): void
+    public function test_checkout_success_page_renders_lunas_total(): void
     {
-        // M1 stub flow: POST /checkout → flash payload → redirect ke /checkout/success/{order}
-        // → page baca session payload. M2 flow: POST /checkout → redirect ke /upload signed URL,
-        // success page no longer in main flow but masih ke-register sebagai legacy view.
-        // Test direct GET dengan session payload simulasi (cara M1 success page baca data).
-        $response = $this->withSession([
-            'checkout.payload' => [
-                'payment_type' => 'lunas',
-                'cart_total' => 4525000,
-            ],
-        ])->get('/checkout/success/MFP-20260516-LUNAS1');
+        // Book selalu lunas → 1 payment = total. Total transfer = total order.
+        $this->seedOrder('MFP-20260516-LUNAS1', 4_525_000, 1);
+
+        $response = $this->get('/checkout/success/MFP-20260516-LUNAS1');
 
         $response->assertStatus(200);
         $response->assertSee('Total Transfer (Lunas)', false);
@@ -213,54 +242,52 @@ class CheckoutPageTest extends TestCase
         $response->assertDontSee('Total Transfer (Down Payment)', false);
     }
 
-    public function test_checkout_success_page_renders_dp_total_and_schedule_when_cicilan(): void
+    public function test_checkout_success_page_shows_dp_total_when_order_has_multiple_payments(): void
     {
-        $schedule = json_encode([
-            ['label' => 'Down Payment', 'note' => 'Bayar sekarang (30% dari total)', 'due_label' => 'Hari ini', 'amount' => 1357500],
-            ['label' => 'Cicilan ke-1 dari 2', 'note' => '', 'due_label' => '16 Jun 2026', 'amount' => 1583750],
-            ['label' => 'Cicilan ke-2 dari 2', 'note' => 'Cicilan terakhir', 'due_label' => '16 Jul 2026', 'amount' => 1583750],
-        ]);
+        // Order dgn >1 payment (mis. dari flow kelas) → success page generik
+        // menampilkan DP (payment pertama). Book tidak menghasilkan ini, tapi
+        // view harus benar bila order punya cicilan.
+        $order = $this->seedOrder('MFP-20260516-CIC123', 4_500_000, 3); // 3 payment: 1.5jt each
+        $first = $order->payments()->orderBy('id')->first();
 
-        $response = $this->withSession([
-            'checkout.payload' => [
-                'payment_type' => 'cicilan',
-                'cart_total' => 4525000,
-                'schedule_json' => $schedule,
-            ],
-        ])->get('/checkout/success/MFP-20260516-CIC123');
+        $response = $this->get('/checkout/success/MFP-20260516-CIC123');
 
         $response->assertStatus(200);
         $response->assertSee('Total Transfer (Down Payment)', false);
-        $response->assertSee('Rp 1.357.500', false);
-        $response->assertSee('Jadwal Pembayaran', false);
-        $response->assertSee('Cicilan ke-1 dari 2', false);
-        $response->assertSee('Cicilan ke-2 dari 2', false);
-        $response->assertSee('16 Jul 2026', false);
-        $response->assertSee('Rp 1.583.750', false);
+        $response->assertSee('Rp '.number_format((int) $first->amount, 0, ',', '.'), false);
     }
 
-    public function test_checkout_success_page_links_to_upload_and_track(): void
+    public function test_checkout_success_page_links_to_signed_upload_and_track(): void
     {
+        $this->seedOrder('MFP-20260516-ABC123', 4_500_000);
+
         $response = $this->get('/checkout/success/MFP-20260516-ABC123');
 
         $response->assertStatus(200);
-        // Upload CTA wired to upload route — query string carries M1 payment
-        // context (type/total/n/seq) so upload page can pre-fill, so we check
-        // the path-only prefix rather than a fully literal href.
-        $response->assertSee('href="'.url('/upload/MFP-20260516-ABC123'), false);
+        // Tombol upload + track HARUS pakai signed URL (bukan unsigned route).
+        $response->assertSee('data-testid="cta-upload"', false);
         $response->assertSee('Upload bukti bayar sekarang', false);
-        $response->assertSee('href="'.url('/track/MFP-20260516-ABC123').'"', false);
+        $response->assertSee('/upload/MFP-20260516-ABC123?', false);
+        $response->assertSee('/track/MFP-20260516-ABC123?', false);
+        $response->assertSee('signature=', false);
         $response->assertSee('Track order', false);
     }
 
     public function test_checkout_success_page_renders_wa_admin_link(): void
     {
+        $this->seedOrder('MFP-20260516-ABC123', 4_500_000);
+
         $response = $this->get('/checkout/success/MFP-20260516-ABC123');
 
         $response->assertStatus(200);
         $waNumber = config('store.wa_admin.number');
         $response->assertSee('https://wa.me/'.$waNumber, false);
         $response->assertSee('Chat admin di WhatsApp', false);
+    }
+
+    public function test_checkout_success_page_404_for_unknown_order(): void
+    {
+        $this->get('/checkout/success/MFP-99999999-NOPE99')->assertStatus(404);
     }
 
     // ─── Cart link integrity (regression) ───────────────────────────────────

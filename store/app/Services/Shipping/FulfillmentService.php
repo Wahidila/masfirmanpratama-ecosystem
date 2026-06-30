@@ -120,6 +120,7 @@ class FulfillmentService
         $city = $order->shipping_city;
         $province = $order->shipping_province;
         $district = $order->shipping_district;
+        $village = $order->shipping_village;
         $zipcode = $order->shipping_zipcode;
         $street = $order->address;
 
@@ -144,6 +145,7 @@ class FulfillmentService
                 'city' => (string) $city,
                 'province' => (string) $province,
                 'district' => (string) ($district ?? ''),
+                'village' => (string) ($village ?? ''),
                 'zipcode' => (string) ($zipcode ?? ''),
             ],
             'items' => $shipmentItems,

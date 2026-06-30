@@ -96,7 +96,7 @@ class CheckoutShippingIntegrationTest extends TestCase
         $this->assertSame('jne', $order->shipping_courier);
     }
 
-    public function test_server_revalidates_shipping_price_anti_tamper(): void
+    public function test_server_total_is_authoritative_over_client_cart_total(): void
     {
         Http::fake([
             '*/shipping/services' => Http::response([
@@ -124,13 +124,42 @@ class CheckoutShippingIntegrationTest extends TestCase
             ], 200),
         ]);
 
-        // Client sends cart_total WITHOUT shipping cost.
-        // Server recalculates: subtotal 185.000 + API shipping 17.000 = 202.000.
-        // Divergence: |185.000 − 202.000| = 17.000 > max(1000, 202.000×1%) → reject.
+        // Client kirim cart_total tanpa ongkir (185.000), tapi server otoritatif:
+        // subtotal 185.000 (harga DB) + ongkir API 17.000 = 202.000. Order DIBUAT
+        // dengan total server (cart client yang "stale"/kurang TIDAK memblokir
+        // checkout — itu yang dulu bikin false-reject "Total cart berbeda").
+        // Customer tetap bayar total server yang tampil di halaman upload.
         $this->post('/checkout', $this->validPayload([
             'shipping_method' => 'jne_reg',
             'cart_total' => 185_000,
-        ]))->assertSessionHasErrors('cart_total');
+        ]))->assertSessionHasNoErrors();
+
+        $order = Order::first();
+        $this->assertNotNull($order);
+        $this->assertSame('202000.00', $order->total);
+        $this->assertSame(17000, (int) $order->shipping_cost);
+    }
+
+    public function test_grossly_underpaid_total_is_rejected(): void
+    {
+        // cart_total jauh di bawah server (< 50%) → indikasi korupsi/tamper → tolak.
+        $this->post('/checkout', $this->validPayload([
+            'shipping_method' => '',
+            'cart_total' => 1,
+        ]))->assertSessionHasErrors();
+
+        $this->assertNull(Order::first());
+    }
+
+    public function test_physical_cart_requires_shipping_method(): void
+    {
+        // Cart berisi buku fisik tanpa metode pengiriman → ditolak dengan pesan
+        // jelas (bukan "Total cart berbeda" yang membingungkan).
+        $this->post('/checkout', $this->validPayload([
+            'shipping_method' => '',
+        ]))->assertSessionHasErrors('shipping_method');
+
+        $this->assertNull(Order::first());
     }
 
     public function test_digital_cart_works_without_shipping(): void
@@ -156,5 +185,56 @@ class CheckoutShippingIntegrationTest extends TestCase
         $order = Order::first();
         $this->assertSame('4500000.00', $order->total);
         $this->assertNull($order->shipping_courier);
+    }
+
+    public function test_structured_address_persists_discrete_columns_and_village(): void
+    {
+        Http::fake([
+            '*/shipping/services' => Http::response([
+                'message' => 'OK',
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'is_premium' => 0, 'enable' => 1, 'extra_cost' => 0],
+                ],
+            ], 200),
+            '*/shipping/couriers' => Http::response([
+                'message' => 'OK',
+                'data' => [['id' => 'jne', 'title' => 'JNE', 'category' => 'domestic']],
+            ], 200),
+            '*/shipping/price' => Http::response([
+                'message' => 'Success',
+                'data' => [
+                    ['courier' => 'jne', 'service' => 'jne_reg', 'service_name' => 'REG',
+                        'price' => '17000', 'etd' => '1-2 days'],
+                ],
+            ], 200),
+        ]);
+
+        $this->post('/checkout', $this->validPayload([
+            'address_line' => 'Jl. Merdeka No. 12, RT 03/RW 04',
+            'address_province' => 'Jawa Barat',
+            'address_city' => 'Bandung',
+            'address_district' => 'Coblong',
+            'address_village' => 'Dago',
+            'address_postal' => '40135',
+            'shipping_method' => 'jne_reg',
+            'cart_total' => 185_000 + 17_000,
+        ]));
+
+        $order = Order::first();
+        $this->assertNotNull($order);
+
+        // Kolom diskrit tersimpan (dipakai ongkir + fulfillment).
+        $this->assertSame('Jawa Barat', $order->shipping_province);
+        $this->assertSame('Bandung', $order->shipping_city);
+        $this->assertSame('Coblong', $order->shipping_district);
+        $this->assertSame('Dago', $order->shipping_village);
+        $this->assertSame('40135', $order->shipping_zipcode);
+
+        // Alamat lengkap terangkai terstruktur: jalan, desa, kecamatan, kota, prov, kodepos.
+        $this->assertSame(
+            'Jl. Merdeka No. 12, RT 03/RW 04, Dago, Coblong, Bandung, Jawa Barat, 40135',
+            $order->address,
+        );
     }
 }

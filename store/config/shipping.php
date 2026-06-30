@@ -37,4 +37,46 @@ return [
     // Tampilkan service premium di checkout domestik. Default true = samakan
     // dengan plugin WP (tidak menyaring premium). Set false untuk sembunyikan.
     'allow_premium' => env('SHIPPING_ALLOW_PREMIUM', true),
+
+    // Daftar provinsi tujuan — penamaan KANONIK sesuai API Agenwebsite
+    // (legacy 34 provinsi, mis. "Nanggroe Aceh Darussalam", "Daerah Istimewa
+    // Yogyakarta"). Dipakai dropdown provinsi di checkout untuk memfilter
+    // autocomplete kota/kecamatan. Provinsi yang dikirim ke API tetap diambil
+    // dari hasil pilih autocomplete (kanonik), dropdown hanya filter + struktur.
+    'destination_provinces' => [
+        'Nanggroe Aceh Darussalam',
+        'Sumatera Utara',
+        'Sumatera Barat',
+        'Riau',
+        'Kepulauan Riau',
+        'Jambi',
+        'Sumatera Selatan',
+        'Bangka Belitung',
+        'Bengkulu',
+        'Lampung',
+        'DKI Jakarta',
+        'Banten',
+        'Jawa Barat',
+        'Jawa Tengah',
+        'Daerah Istimewa Yogyakarta',
+        'Jawa Timur',
+        'Bali',
+        'Nusa Tenggara Barat',
+        'Nusa Tenggara Timur',
+        'Kalimantan Barat',
+        'Kalimantan Tengah',
+        'Kalimantan Selatan',
+        'Kalimantan Timur',
+        'Kalimantan Utara',
+        'Sulawesi Utara',
+        'Gorontalo',
+        'Sulawesi Tengah',
+        'Sulawesi Barat',
+        'Sulawesi Selatan',
+        'Sulawesi Tenggara',
+        'Maluku',
+        'Maluku Utara',
+        'Papua',
+        'Papua Barat',
+    ],
 ];

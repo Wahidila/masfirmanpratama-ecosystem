@@ -19,6 +19,7 @@ class Order extends Model
         'shipping_city',
         'shipping_province',
         'shipping_district',
+        'shipping_village',
         'shipping_zipcode',
         'total',
         'status',

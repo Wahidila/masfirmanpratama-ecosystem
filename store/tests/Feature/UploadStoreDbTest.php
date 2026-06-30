@@ -269,7 +269,7 @@ class UploadStoreDbTest extends TestCase
 
     public function test_full_checkout_to_upload_flow_end_to_end(): void
     {
-        // E2E: customer checkout → redirected ke signed URL → upload bukti
+        // E2E: checkout → halaman success → klik signed upload → upload bukti.
         $product = Product::where('slug', 'kelas-amc-reguler')->first();
 
         $checkoutResponse = $this->post('/checkout', [
@@ -283,15 +283,20 @@ class UploadStoreDbTest extends TestCase
             'cart_total' => 4_500_000,
         ]);
 
+        // Redirect ke halaman success dulu.
         $location = $checkoutResponse->headers->get('Location');
-        $this->assertStringContainsString('/upload/MFP-', $location);
-
-        // Extract order_number dari URL
-        preg_match('#/upload/(MFP-\d{8}-[A-F0-9]{6})#', $location, $matches);
+        $this->assertStringContainsString('/checkout/success/MFP-', $location);
+        preg_match('#/checkout/success/(MFP-\d{8}-[A-Z0-9]+)#', $location, $matches);
         $orderNumber = $matches[1];
 
-        // Visit signed URL — should render real order
-        $this->get($location)->assertOk()->assertSee($orderNumber);
+        // Success page render + ekstrak signed upload URL dari tombol.
+        $success = $this->get($location)->assertOk()->assertSee('Order berhasil dibuat', false);
+        preg_match('/href="([^"]*\/upload\/'.preg_quote($orderNumber, '/').'[^"]*)"/', $success->getContent(), $m);
+        $this->assertNotEmpty($m, 'Signed upload URL harus ada di success page');
+        $uploadUrl = html_entity_decode($m[1]);
+
+        // Visit signed upload URL — render real order.
+        $this->get($uploadUrl)->assertOk()->assertSee($orderNumber);
 
         // Upload bukti
         $file = UploadedFile::fake()->image('bukti-e2e.jpg');

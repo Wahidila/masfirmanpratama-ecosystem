@@ -65,45 +65,11 @@ Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.s
 /*
  * GET /checkout/success/{order}
  * --------------------------------------------------------------------------
- * Membaca payload yang di-flash di POST /checkout (M1 stub) supaya view
- * tahu total transfer (DP atau lunas) tanpa harus refetch dari DB.
- *
- * M2: ganti closure ini dengan CheckoutController@success → fetch order
- *     dari `orders` + `order_payments`, hitung total transfer dari
- *     schema cicilan yang tersimpan, dan render dengan data DB-driven.
+ * Halaman "Order berhasil dibuat" — DB-backed (fetch Order by order_number),
+ * jadi tahan refresh & share-link. Signed upload/track URL di-generate di
+ * controller. Lihat CheckoutController::success().
  */
-Route::get('/checkout/success/{order}', function (string $order) {
-    /** @var array<string, mixed> $payload */
-    $payload = (array) session('checkout.payload', []);
-
-    $paymentType = in_array(($payload['payment_type'] ?? null), ['lunas', 'cicilan'], true)
-        ? $payload['payment_type']
-        : 'lunas';
-
-    $cartTotal = (int) ($payload['cart_total'] ?? 0);
-
-    // schedule_json di-serialize dari Alpine; row 0 = DP saat cicilan.
-    $schedule = [];
-    if (! empty($payload['schedule_json']) && is_string($payload['schedule_json'])) {
-        $decoded = json_decode($payload['schedule_json'], true);
-        if (is_array($decoded)) {
-            $schedule = $decoded;
-        }
-    }
-
-    $totalTransfer = $cartTotal;
-    if ($paymentType === 'cicilan' && isset($schedule[0]['amount'])) {
-        $totalTransfer = (int) $schedule[0]['amount'];
-    }
-
-    return view('pages.checkout.success', [
-        'order' => $order,
-        'paymentType' => $paymentType,
-        'cartTotal' => $cartTotal,
-        'totalTransfer' => $totalTransfer,
-        'schedule' => $schedule,
-    ]);
-})
+Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])
     ->where('order', '[A-Za-z0-9\-]+')
     ->name('checkout.success');
 
@@ -116,8 +82,8 @@ Route::get('/checkout/success/{order}', function (string $order) {
  * compat dengan prototype + signed URL dari checkout).
  *
  * Token-protect (task t_8a063559): require Laravel signed middleware. URL
- * generated di CheckoutController::store via URL::temporarySignedRoute.
- * TTL configurable via config('checkout.upload_url_ttl_seconds') default 7d.
+ * generated di CheckoutController::success() via URL::temporarySignedRoute.
+ * TTL configurable via config('checkout.upload_url_ttl_days') default 7d.
  */
 Route::get('/upload/{order_number}', [UploadController::class, 'show'])
     ->where('order_number', '[A-Za-z0-9\\-]+')
