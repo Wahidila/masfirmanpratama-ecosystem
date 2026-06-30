@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderPayment;
 use App\Models\Product;
+use App\Models\VideoTestimonial;
 use Carbon\Carbon;
 use Illuminate\View\View;
 
@@ -23,6 +24,7 @@ class DashboardController extends Controller
             'orders_total' => Order::count(),
             'payments_to_verify' => OrderPayment::where('status', 'pending')->count(),
             'products_active' => Product::where('status', 'active')->count(),
+            'video_testimonials_homepage' => VideoTestimonial::visibleOnHomepage()->count(),
         ];
 
         $recentOrders = Order::latest()->limit(5)->get();

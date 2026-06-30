@@ -58,6 +58,12 @@
             hint="status=active" />
 
         <x-admin.metric-card
+            title="Video Testimoni"
+            :value="$stats['video_testimonials_homepage']"
+            icon="product"
+            hint="Tampil di homepage" />
+
+        <x-admin.metric-card
             title="Revenue"
             value="Rp {{ number_format($revenueTotal, 0, ',', '.') }}"
             icon="revenue"

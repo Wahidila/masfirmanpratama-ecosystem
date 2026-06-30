@@ -117,6 +117,70 @@
             'initial' => 'E',
         ],
     ];
+
+    $fallbackVideoTestimonials = [
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/27-1.mp4', 'poster' => null, 'title' => 'Dari AMC Saya Sadar Hidup Ini Indah, Enak dan Menyenangkan', 'name' => 'Ria Handayani', 'role' => 'Alumni AMC'],
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/bener-28-2.mp4', 'poster' => null, 'title' => 'Kita Bisa Mencapai Apapun dengan Kekuatan Pikiran', 'name' => 'Fitria', 'role' => 'Alumni AMC'],
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/bener-1.mp4', 'poster' => null, 'title' => 'AMC Adalah Ilmu yang Sangat Mind Blowing', 'name' => 'Edi', 'role' => 'Alumni AMC'],
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/27-3.mp4', 'poster' => null, 'title' => 'AMC Adalah Ilmu yang "Daging" Banget', 'name' => 'Ane', 'role' => 'Alumni AMC'],
+    ];
+    $videoTestimonials = ! empty($videoTestimonials ?? []) ? $videoTestimonials : $fallbackVideoTestimonials;
+
+    $journeyStats = [
+        [
+            'value' => '2,550+',
+            'label' => 'Peserta yang sudah belajar bersama Mas Firman dan merasakan Keajaiban',
+            'icon' => 'users',
+        ],
+        [
+            'value' => '12+',
+            'label' => 'Tahun Berpengalaman membantu masalah Banyak orang',
+            'icon' => 'badge-check',
+        ],
+        [
+            'value' => '125+',
+            'label' => 'Artikel tentang Keajaiban Pikiran yang sudah ditulis Mas Firman',
+            'icon' => 'newspaper',
+        ],
+        [
+            'value' => '1,000+',
+            'label' => 'Video Mas Firman di Channel Youtube Cahaya Kehidupan',
+            'icon' => 'youtube',
+        ],
+    ];
+
+    $lifeProblems = [
+        [
+            'title' => 'Bisnis Terasa Lesu',
+            'body' => 'Sudah melakukan berbagai usaha berbagai ilmu penjualan tapi bisnis masih sepi saja.',
+            'icon' => 'trending-down',
+        ],
+        [
+            'title' => 'Hutang Menumpuk',
+            'body' => 'Hutang terus menumpuk dan tidak kunjung lunas padahal sudah berusaha kesana kemari.',
+            'icon' => 'wallet',
+        ],
+        [
+            'title' => 'Susah Naik Jabatan',
+            'body' => 'Sudah rajin bekerja bertahun-tahun, rajin absen tapi susah untuk naik jabatan malah dicuekin atasan.',
+            'icon' => 'briefcase-business',
+        ],
+        [
+            'title' => 'Hidup Terasa Stagnan',
+            'body' => 'Usia bertambah tetapi hidup masih biasa saja, belum punya rumah dan belum ada mobil.',
+            'icon' => 'circle-pause',
+        ],
+        [
+            'title' => 'Anak Susah Menurut',
+            'body' => 'Sering memarahi anak, tapi anak malah semakin susah menurut dan malas belajar.',
+            'icon' => 'heart-handshake',
+        ],
+        [
+            'title' => 'Pasangan Pergi',
+            'body' => 'Orang yang anda cintai tiba-tiba berubah. Anda ingin membuat sesorang suka kepada anda?',
+            'icon' => 'heart-crack',
+        ],
+    ];
 @endphp
 
 <x-layouts.store
@@ -554,6 +618,91 @@
     </section>
 
     {{-- ==============================================================
+       | JOURNEY + PROBLEM SECTIONS
+       |============================================================== --}}
+    <section class="py-20 lg:py-24 bg-slate-950 text-white relative overflow-hidden" aria-labelledby="journey-heading">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.14),transparent_34%)]" aria-hidden="true"></div>
+        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" aria-hidden="true"></div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl mb-12 lg:mb-14">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-300 uppercase mb-4">
+                    Jejak Perubahan
+                </p>
+                <h2 id="journey-heading" class="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-5">
+                    Perjalanan Hidup Menjadi Solusi Bagi Manusia
+                </h2>
+                <p class="text-lg text-slate-300 leading-relaxed">
+                    Dari kelas, artikel, sampai video pembelajaran, Mas Firman terus membagikan Formula AMC untuk membantu lebih banyak orang menemukan jalan perubahan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+                @foreach ($journeyStats as $stat)
+                    <div class="group rounded-2xl border border-white/10 bg-white/[0.06] p-6 lg:p-7 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.09] hover:border-accent-300/40">
+                        <div class="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-accent-300 ring-1 ring-white/10">
+                            <i data-lucide="{{ $stat['icon'] }}" class="h-6 w-6"></i>
+                        </div>
+                        <div class="text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
+                            {{ $stat['value'] }}
+                        </div>
+                        <p class="text-sm leading-relaxed text-slate-300">
+                            {{ $stat['label'] }}
+                        </p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 lg:py-24 bg-white border-t border-slate-100" aria-labelledby="problems-heading">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-4">
+                    Saatnya Berubah
+                </p>
+                <h2 id="problems-heading" class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 leading-tight">
+                    Anda Punya Masalah Seperti ini ?
+                </h2>
+                <p class="text-lg text-slate-600">
+                    Jika salah satu kondisi ini terasa dekat dengan hidup anda sekarang, Formula AMC bisa menjadi jalan praktis untuk mulai membalik keadaan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                @foreach ($lifeProblems as $problem)
+                    <article class="group rounded-2xl border border-slate-100 bg-slate-50 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:bg-white hover:shadow-lg">
+                        <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 transition-colors group-hover:bg-primary-600 group-hover:text-white">
+                            <i data-lucide="{{ $problem['icon'] }}" class="h-6 w-6"></i>
+                        </div>
+                        <h3 class="text-xl font-extrabold text-slate-900 mb-3">
+                            {{ $problem['title'] }}
+                        </h3>
+                        <p class="text-slate-600 leading-relaxed mb-5">
+                            {{ $problem['body'] }}
+                        </p>
+                        <p class="font-bold text-primary-700">
+                            Maka anda butuh Formula AMC
+                        </p>
+                    </article>
+                @endforeach
+            </div>
+
+            <div class="text-center">
+                <a
+                    href="https://wa.me/6281230633464?text=Halo,%20saya%20tertarik%20untuk%20mendaftar%20Kelas%20AMC%20"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="ripple inline-flex items-center justify-center gap-2 rounded-full bg-accent-500 px-7 py-4 text-base md:text-lg font-extrabold text-white shadow-lg shadow-accent-500/30 transition-all hover:-translate-y-1 hover:bg-accent-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2"
+                >
+                    <i data-lucide="message-circle" class="h-5 w-5"></i>
+                    Saya Mau Mengubah Hidup #DisiniJalannya
+                </a>
+            </div>
+        </div>
+    </section>
+
+    {{-- ==============================================================
        | 2. BENEFIT AMC (4 cards)
        |============================================================== --}}
     <section id="benefit" class="py-20 lg:py-24 bg-white border-t border-slate-100">
@@ -731,7 +880,59 @@
     </section>
 
     {{-- ======================================================
-       | 5. TESTIMONI — static grid
+       | 5. TESTIMONI VIDEO — hosted cards
+       |====================================================== --}}
+    <section id="testimoni-video" class="py-20 lg:py-24 bg-white border-t border-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-4">
+                    Testimoni Peserta AMC
+                </p>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 leading-tight">
+                    Sebagian Kecil Kisah Nyata dari <span class="text-gradient">Peserta Kelas AMC</span>
+                </h2>
+                <p class="text-lg text-slate-600">
+                    Dengarkan langsung pengalaman alumni yang sudah mempraktikkan Formula AMC dan merasakan perubahan dalam hidupnya.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                @foreach ($videoTestimonials as $videoTestimonial)
+                    <article class="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-primary-200">
+                        <div class="relative bg-slate-950 aspect-[9/16] overflow-hidden">
+                            <video
+                                class="h-full w-full object-cover"
+                                src="{{ $videoTestimonial['video'] }}"
+                                @if(! empty($videoTestimonial['poster'])) poster="{{ $videoTestimonial['poster'] }}" @endif
+                                controls
+                                preload="metadata"
+                                playsinline
+                                controlsList="nodownload"
+                                aria-label="Video testimoni {{ $videoTestimonial['name'] }}"
+                            ></video>
+                        </div>
+                        <div class="p-5">
+                            <h3 class="text-base font-extrabold leading-snug text-slate-900 mb-3">
+                                {{ $videoTestimonial['title'] }}
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-extrabold text-primary-700">
+                                    {{ mb_substr($videoTestimonial['name'], 0, 1) }}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-900">{{ $videoTestimonial['name'] }}</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-primary-600">{{ $videoTestimonial['role'] ?? 'Alumni AMC' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    {{-- ======================================================
+       | 6. TESTIMONI — static grid
        |====================================================== --}}
     <section id="testimoni" class="py-20 lg:py-24 bg-slate-50 relative overflow-hidden">
         <div class="absolute right-0 top-0 w-1/3 h-full bg-primary-50 rounded-l-full blur-3xl -z-10" aria-hidden="true"></div>

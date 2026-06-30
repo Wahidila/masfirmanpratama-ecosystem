@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Product;
+use App\Models\VideoTestimonial;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -50,6 +51,19 @@ class HomeController extends Controller
                 ];
             })->all();
 
-        return view('pages.home', compact('products', 'welcomeBooks', 'classFormats'));
+        $videoTestimonials = VideoTestimonial::visibleOnHomepage()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (VideoTestimonial $testimonial) => [
+                'video' => $testimonial->video_url,
+                'poster' => $testimonial->poster_url,
+                'title' => $testimonial->title,
+                'name' => $testimonial->participant_name,
+                'role' => $testimonial->role ?: 'Alumni AMC',
+            ])
+            ->all();
+
+        return view('pages.home', compact('products', 'welcomeBooks', 'classFormats', 'videoTestimonials'));
     }
 }
