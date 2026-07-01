@@ -198,9 +198,24 @@
                                         @endif
                                     </div>
                                     @if ($payment->proof_path)
-                                        <div class="text-xs">
-                                            <span class="text-gray-500 dark:text-gray-400">Bukti:</span>
-                                            <span class="font-mono text-gray-700 dark:text-gray-300">{{ basename($payment->proof_path) }}</span>
+                                        @php $proofUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($payment->proof_path); @endphp
+                                        <div class="shrink-0 text-center">
+                                            <div class="text-xs text-gray-500 mb-1 dark:text-gray-400">Bukti Bayar</div>
+                                            <a href="{{ $proofUrl }}" target="_blank" rel="noopener noreferrer"
+                                               class="group block"
+                                               title="Klik untuk lihat foto bukti bayar ukuran penuh">
+                                                <img src="{{ $proofUrl }}" alt="Bukti bayar {{ $order->order_number }}"
+                                                     loading="lazy"
+                                                     class="h-24 w-24 rounded-lg object-cover ring-1 ring-gray-200 transition group-hover:ring-2 group-hover:ring-brand-400 dark:ring-gray-700">
+                                                <span class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-500 group-hover:text-brand-600 dark:text-brand-400">
+                                                    <i data-lucide="external-link" class="h-3 w-3"></i>
+                                                    Lihat / unduh
+                                                </span>
+                                            </a>
+                                        </div>
+                                    @else
+                                        <div class="shrink-0 text-xs italic text-gray-400 dark:text-gray-500">
+                                            Belum upload bukti
                                         </div>
                                     @endif
                                 </div>
@@ -346,12 +361,87 @@
                         @endif
                     </dl>
                 @else
-                    <h2 class="text-sm font-semibold text-gray-700 mb-3 dark:text-gray-300">Pengiriman</h2>
+                    <h2 class="text-sm font-semibold text-gray-700 mb-3 dark:text-gray-300">Alamat Pengiriman</h2>
                     @if ($order->address)
                         <p class="text-sm text-gray-700 whitespace-pre-line dark:text-gray-300">{{ $order->address }}</p>
                     @else
                         <p class="text-sm italic text-gray-500 dark:text-gray-400">Alamat belum diisi.</p>
                     @endif
+
+                    {{-- Alamat terstruktur (kolom diskrit — dipakai kurir & tarif) --}}
+                    @if ($order->shipping_city || $order->shipping_province)
+                        <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                            @if ($order->shipping_province)
+                                <div>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Provinsi</dt>
+                                    <dd class="mt-0.5 text-gray-700 dark:text-gray-300">{{ $order->shipping_province }}</dd>
+                                </div>
+                            @endif
+                            @if ($order->shipping_city)
+                                <div>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kota/Kab.</dt>
+                                    <dd class="mt-0.5 text-gray-700 dark:text-gray-300">{{ $order->shipping_city }}</dd>
+                                </div>
+                            @endif
+                            @if ($order->shipping_district)
+                                <div>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kecamatan</dt>
+                                    <dd class="mt-0.5 text-gray-700 dark:text-gray-300">{{ $order->shipping_district }}</dd>
+                                </div>
+                            @endif
+                            @if ($order->shipping_village)
+                                <div>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Desa/Kel.</dt>
+                                    <dd class="mt-0.5 text-gray-700 dark:text-gray-300">{{ $order->shipping_village }}</dd>
+                                </div>
+                            @endif
+                            @if ($order->shipping_zipcode)
+                                <div>
+                                    <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kode Pos</dt>
+                                    <dd class="mt-0.5 font-mono text-gray-700 dark:text-gray-300">{{ $order->shipping_zipcode }}</dd>
+                                </div>
+                            @endif
+                        </dl>
+                    @endif
+
+                    {{-- Metode pengiriman + ongkir yang dipilih customer --}}
+                    @if ($order->shipping_courier || $order->shipping_cost)
+                        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                            <dt class="text-xs uppercase tracking-wide text-gray-500 mb-2 dark:text-gray-400">Pengiriman Dipilih</dt>
+                            <dl class="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                                <div>
+                                    <dt class="text-xs text-gray-500 dark:text-gray-400">Kurir / Layanan</dt>
+                                    <dd class="mt-0.5 font-medium text-gray-800 dark:text-white/90">
+                                        {{ strtoupper($order->shipping_courier ?? '—') }}
+                                        @if ($order->shipping_service)
+                                            <span class="font-normal text-gray-500 dark:text-gray-400">· {{ $order->shipping_service }}</span>
+                                        @endif
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs text-gray-500 dark:text-gray-400">Ongkir</dt>
+                                    <dd class="mt-0.5 font-medium text-gray-800 dark:text-white/90">Rp {{ number_format((float) $order->shipping_cost, 0, ',', '.') }}</dd>
+                                </div>
+                                @if ($order->shipping_etd)
+                                    <div>
+                                        <dt class="text-xs text-gray-500 dark:text-gray-400">Estimasi</dt>
+                                        <dd class="mt-0.5 text-gray-700 dark:text-gray-300">{{ $order->shipping_etd }}</dd>
+                                    </div>
+                                @endif
+                            </dl>
+                        </div>
+                    @endif
+
+                    {{-- Link ke halaman tracking yang dilihat customer --}}
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <a href="{{ \Illuminate\Support\Facades\URL::signedRoute('track.show', ['order_number' => $order->order_number]) }}"
+                           target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center gap-1 text-xs font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400">
+                            <i data-lucide="map-pin" class="h-3 w-3"></i>
+                            Lihat halaman tracking customer
+                        </a>
+                    </div>
+
                     @if ($order->ref_code)
                         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                             <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kode Referral</dt>
@@ -575,6 +665,61 @@
                 </div>
             </x-admin.card>
             @endif
+
+            {{-- Riwayat notifikasi WhatsApp --}}
+            <x-admin.card :padded="false">
+                <div class="border-b border-gray-200 px-5 py-3 flex items-center justify-between dark:border-gray-800">
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Notifikasi WhatsApp</h2>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $order->waNotifications->count() }} pesan</span>
+                </div>
+                @php
+                    $waLabel = [
+                        'customer_order_created' => 'Pesanan dibuat',
+                        'customer_payment_received' => 'Bukti diterima',
+                        'customer_payment_verified' => 'Pembayaran diverifikasi',
+                        'customer_payment_rejected' => 'Pembayaran ditolak',
+                        'customer_order_shipped' => 'Pesanan dikirim',
+                        'customer_order_completed' => 'Pesanan selesai',
+                        'admin_payment_review_alert' => 'Alert admin (bukti baru)',
+                        'course_registration_success' => 'Pendaftaran kelas',
+                    ];
+                    $waTone = [
+                        'sent' => 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
+                        'queued' => 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
+                        'failed' => 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
+                    ];
+                    $waStatusLabel = ['sent' => 'Terkirim', 'queued' => 'Antre', 'failed' => 'Gagal'];
+                @endphp
+                @if ($order->waNotifications->isEmpty())
+                    <div class="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Belum ada notifikasi WhatsApp terkirim untuk order ini.
+                    </div>
+                @else
+                    <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+                        @foreach ($order->waNotifications as $notif)
+                            <li class="px-5 py-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-sm font-medium text-gray-800 dark:text-white/90">
+                                        {{ $waLabel[$notif->template] ?? $notif->template }}
+                                    </span>
+                                    <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $waTone[$notif->status] ?? 'bg-gray-50 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400' }}">
+                                        {{ $waStatusLabel[$notif->status] ?? $notif->status }}
+                                    </span>
+                                </div>
+                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    Ke {{ $notif->recipient }}
+                                    @if ($notif->sent_at)
+                                        · {{ $notif->sent_at->format('d M Y H:i') }}
+                                    @endif
+                                </div>
+                                @if ($notif->status === 'failed' && $notif->error)
+                                    <div class="mt-1 text-xs text-error-600 dark:text-error-400">{{ $notif->error }}</div>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </x-admin.card>
         </div>
     </div>
 @endsection

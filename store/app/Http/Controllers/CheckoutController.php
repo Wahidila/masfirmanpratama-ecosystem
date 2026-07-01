@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\OrderCreated;
 use App\Exceptions\ShippingRateException;
 use App\Models\Course;
 use App\Models\Order;
@@ -214,6 +215,10 @@ class CheckoutController extends Controller
 
             return $order;
         });
+
+        // WA konfirmasi ke pembeli (nomor order + total + link upload bukti).
+        // Dispatch SETELAH transaksi commit supaya listener baca state final.
+        OrderCreated::dispatch($order->fresh());
 
         // Arahkan ke halaman "Order berhasil dibuat" dulu (bukan langsung ke
         // form upload). Di sana customer lihat nomor order + rekening + total,

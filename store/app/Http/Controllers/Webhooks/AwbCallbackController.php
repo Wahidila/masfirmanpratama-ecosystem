@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Events\OrderCompleted;
 use App\Events\OrderShipped;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -119,7 +120,9 @@ class AwbCallbackController extends Controller
         if ($status === 'status_update') {
             $order->tracking_status = strtolower($trackingStatus ?? '');
 
+            $justCompleted = false;
             if (stripos($trackingStatus ?? '', 'deliver') !== false) {
+                $justCompleted = $order->status !== 'completed';
                 $order->status = 'completed';
                 // Sebelumnya fulfillment_status stuck di 'shipped' walau paket
                 // sudah delivered → filter admin "delivered" return kosong.
@@ -127,6 +130,11 @@ class AwbCallbackController extends Controller
             }
 
             $order->save();
+
+            // WA terima kasih ke pembeli — hanya sekali saat transisi ke completed.
+            if ($justCompleted) {
+                OrderCompleted::dispatch($order->fresh());
+            }
 
             return response()->json([
                 'success' => true,

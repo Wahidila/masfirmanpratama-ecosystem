@@ -96,6 +96,12 @@ class WhatsappNotifier
         $templates = [
             'admin_payment_review_alert' => "🔔 *Pembayaran Baru*\n\nOrder: {order_number}\nNama: {customer_name}\nTotal: Rp {amount}\n\nSegera verifikasi pembayaran di dashboard admin.",
 
+            'customer_order_created' => "🛍️ *Pesanan Diterima*\n\nHalo {customer_name},\nPesanan *{order_number}* berhasil dibuat.\nTotal: Rp {amount}\n\nSilakan transfer ke rekening yang tertera, lalu upload bukti bayar di sini:\n{upload_url}\n\nKami tunggu ya, terima kasih! 🙏",
+
+            'customer_payment_received' => "📤 *Bukti Bayar Diterima*\n\nHalo {customer_name},\nBukti pembayaran untuk order *{order_number}* sudah kami terima dan sedang diverifikasi tim kami (maks. 1×24 jam kerja).\n\nKamu akan dapat notifikasi lagi begitu pembayaran dikonfirmasi. Terima kasih! 🙏",
+
+            'customer_order_completed' => "🎉 *Pesanan Selesai*\n\nHalo {customer_name},\nOrder *{order_number}* sudah selesai. Terima kasih sudah berbelanja di Firman Pratama! 🙏\n\nSemoga bermanfaat. Kalau berkenan, ceritakan pengalamanmu ke kami ya. 🌟",
+
             'customer_payment_verified' => "✅ *Pembayaran Dikonfirmasi*\n\nHalo {customer_name},\nPembayaran untuk order *{order_number}* sudah diverifikasi.\n\nPesanan kamu sedang diproses. Terima kasih! 🙏",
 
             'customer_payment_rejected' => "❌ *Pembayaran Ditolak*\n\nHalo {customer_name},\nPembayaran untuk order *{order_number}* tidak dapat diverifikasi.\nAlasan: {reason}\n\nSilakan upload ulang bukti pembayaran yang valid.",

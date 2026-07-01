@@ -114,6 +114,7 @@ class OrderController extends Controller
             'items.course',
             'payments' => fn ($q) => $q->orderBy('created_at'),
             'payments.verifier',
+            'waNotifications' => fn ($q) => $q->orderBy('id'),
         ]);
 
         $totalPaid = (float) $order->payments

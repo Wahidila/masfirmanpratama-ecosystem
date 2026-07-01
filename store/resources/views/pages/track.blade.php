@@ -73,12 +73,33 @@
             'dot' => 'bg-violet-500',
             'icon' => 'package',
         ],
+        'shipped' => [
+            'label' => 'Sedang Dikirim',
+            'desc' => 'Pesanan sudah diserahkan ke kurir. Lacak dengan nomor resi di bawah.',
+            'badge' => 'bg-blue-50 text-blue-700 ring-blue-200',
+            'dot' => 'bg-blue-500',
+            'icon' => 'truck',
+        ],
         'completed' => [
             'label' => 'Pesanan Selesai',
             'desc' => 'Pesanan sudah selesai. Terima kasih sudah berbelanja di Firman Pratama.',
             'badge' => 'bg-secondary-50 text-secondary-700 ring-secondary-200',
             'dot' => 'bg-secondary-500',
             'icon' => 'check-circle-2',
+        ],
+        'cancelled' => [
+            'label' => 'Pesanan Dibatalkan',
+            'desc' => 'Pesanan ini dibatalkan. Hubungi admin bila ini keliru.',
+            'badge' => 'bg-rose-50 text-rose-700 ring-rose-200',
+            'dot' => 'bg-rose-500',
+            'icon' => 'x-circle',
+        ],
+        'refunded' => [
+            'label' => 'Dana Dikembalikan',
+            'desc' => 'Pembayaran pesanan ini sudah direfund.',
+            'badge' => 'bg-slate-100 text-slate-700 ring-slate-300',
+            'dot' => 'bg-slate-500',
+            'icon' => 'rotate-ccw',
         ],
     ];
 
@@ -270,45 +291,131 @@
     }
 
     /*
-    | Real-DB override (task t_34ed789d): kalau $dbOrder ada dan udah punya
-    | shipping_resi, pakai data DB nimpa dummy heuristic. Status track juga
-    | override ke 'processing' supaya timeline maju ke step 'shipped'.
+    |--------------------------------------------------------------------------
+    | Real-DB derivation
+    |--------------------------------------------------------------------------
+    | Kalau order ADA di DB → SEMUA data (status, timeline, pembayaran, item,
+    | pengiriman) di-derive dari order asli, bukan dummy suffix. Dummy di atas
+    | hanya fallback saat order tidak ditemukan (URL demo/QA).
     */
-    if ($dbOrder && $dbOrder->shipping_resi) {
-        $courierLabel = match ($dbOrder->shipping_courier) {
-            'JNE' => 'JNE Reguler',
-            'JNT' => 'J&T Express',
-            'SiCepat' => 'SiCepat Reguler',
-            'Pos' => 'Pos Indonesia',
-            default => $dbOrder->shipping_courier ?? 'Kurir',
+    if ($dbOrder) {
+        $dbOrder->loadMissing([
+            'payments' => fn ($q) => $q->orderBy('id'),
+            'items.product',
+            'items.course',
+        ]);
+
+        $payments = $dbOrder->payments;
+        $paymentCount = $payments->count();
+        $hasProof = $payments->contains(fn ($p) => ! empty($p->proof_path));
+        $isInstallment = $paymentCount > 1;
+
+        // Status bucket dari status order + ada/tidaknya bukti bayar.
+        $statusBucket = match ($dbOrder->status) {
+            'pending' => $hasProof ? 'waiting_confirmation' : 'unpaid',
+            'partial_paid' => 'partial_paid',
+            'paid' => 'paid',
+            'shipped' => 'shipped',
+            'completed' => 'completed',
+            'cancelled' => 'cancelled',
+            'refunded' => 'refunded',
+            default => 'unpaid',
         };
-        $trackingUrl = match ($dbOrder->shipping_courier) {
-            'JNE' => 'https://www.jne.co.id/id/tracking/trace/awb/'.$dbOrder->shipping_resi,
-            'JNT' => 'https://www.jet.co.id/track/'.$dbOrder->shipping_resi,
-            'SiCepat' => 'https://www.sicepat.com/checkAwb/'.$dbOrder->shipping_resi,
-            'Pos' => 'https://www.posindonesia.co.id/id/tracking?awb='.$dbOrder->shipping_resi,
-            default => null,
+
+        // Pointer timeline (0 = terminal cancelled/refunded → semua step netral).
+        $stepPointer = match ($statusBucket) {
+            'unpaid' => 1,
+            'waiting_confirmation' => 2,
+            'paid', 'partial_paid' => 3,
+            'shipped' => 5,
+            'completed' => 6,
+            default => 0,
         };
-        $shippedAt = $dbOrder->shipped_at ? \Illuminate\Support\Carbon::parse($dbOrder->shipped_at) : $anchor->copy();
-        $shipment = [
-            'courier_label' => $courierLabel,
-            'resi' => $dbOrder->shipping_resi,
-            'tracking_url' => $trackingUrl,
-            'shipped_at' => $shippedAt,
-            'eta_label' => $dbOrder->status === 'completed'
-                ? 'Diterima'
-                : 'Dalam perjalanan',
+
+        // Tanggal real per step (fallback ke created_at supaya tidak pernah null).
+        $created = \Illuminate\Support\Carbon::parse($dbOrder->created_at);
+        $updatedAt = \Illuminate\Support\Carbon::parse($dbOrder->updated_at);
+        $firstProof = $payments->first(fn ($p) => ! empty($p->proof_path));
+        $uploadedAt = $firstProof && $firstProof->paid_at
+            ? \Illuminate\Support\Carbon::parse($firstProof->paid_at)
+            : $created;
+        $shippedAt = $dbOrder->shipped_at ? \Illuminate\Support\Carbon::parse($dbOrder->shipped_at) : null;
+        $stepDates = [
+            1 => $created,
+            2 => $uploadedAt,
+            3 => $uploadedAt,
+            4 => $shippedAt ?? $updatedAt,
+            5 => $shippedAt ?? $updatedAt,
+            6 => $updatedAt,
         ];
-        // Geser timeline pointer ke step 5 (shipped) — atau 6 kalau completed.
-        if ($dbOrder->status === 'shipped') {
-            $stepPointer = 5;
-            $statusBucket = 'processing'; // visual: shipped block aktif
-        } elseif ($dbOrder->status === 'completed') {
-            $stepPointer = 6;
-            $statusBucket = 'completed';
+
+        // Item pesanan dari DB.
+        $orderItems = $dbOrder->items->map(function ($item) {
+            $entity = $item->product ?? $item->course;
+            $isPhysical = $item->product ? (bool) $item->product->is_shippable : false;
+
+            return [
+                'name' => $entity->title ?? 'Item',
+                'category' => $item->product ? 'Buku' : 'Kelas',
+                'qty' => (int) $item->qty,
+                'price' => (int) $item->unit_price,
+                'image' => asset($entity->image_path ?? 'images/placeholder.webp'),
+                'physical' => $isPhysical,
+            ];
+        })->values()->all();
+        $itemsSubtotal = (int) $dbOrder->items->sum(fn ($i) => (int) $i->subtotal);
+        $shippingCost = (int) ($dbOrder->shipping_cost ?? 0);
+        $grandTotal = (int) $dbOrder->total;
+        $hasPhysicalShipping = collect($orderItems)->contains(fn ($i) => $i['physical']);
+
+        // Riwayat pembayaran dari DB.
+        $paymentHistory = $payments->values()->map(function ($p, $idx) use ($paymentCount) {
+            $label = $paymentCount <= 1
+                ? 'Pembayaran Lunas'
+                : ($idx === 0 ? 'Down Payment' : 'Cicilan ke-'.$idx.' dari '.($paymentCount - 1));
+            $tone = match ($p->status) {
+                'verified' => 'confirmed',
+                'rejected' => 'rejected',
+                default => 'pending',
+            };
+
+            return [
+                'sequence' => $idx + 1,
+                'label' => $label,
+                'amount' => (int) $p->amount,
+                'uploaded_at' => $p->paid_at ? \Illuminate\Support\Carbon::parse($p->paid_at) : null,
+                'status' => $tone,
+                'proof_url' => $p->proof_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($p->proof_path) : null,
+                'note' => $p->rejection_reason,
+            ];
+        })->all();
+
+        // Pengiriman dari DB (hanya setelah resi terbit).
+        $shipment = null;
+        if ($dbOrder->shipping_resi) {
+            $courierKey = strtolower(trim((string) $dbOrder->shipping_courier));
+            $courierLabels = [
+                'jne' => 'JNE', 'jnt' => 'J&T Express', 'j&t' => 'J&T Express',
+                'sicepat' => 'SiCepat', 'pos' => 'Pos Indonesia', 'tiki' => 'TIKI',
+                'anteraja' => 'AnterAja', 'spx' => 'SPX', 'lion' => 'Lion Parcel',
+                'paxel' => 'Paxel', 'gosend' => 'GoSend', 'jtc' => 'J&T Cargo',
+            ];
+            $courierTrackUrls = [
+                'jne' => 'https://www.jne.co.id/id/tracking/trace/awb/',
+                'jnt' => 'https://www.jet.co.id/track/',
+                'sicepat' => 'https://www.sicepat.com/checkAwb/',
+                'pos' => 'https://www.posindonesia.co.id/id/tracking?awb=',
+            ];
+            $shipment = [
+                'courier_label' => $courierLabels[$courierKey] ?? ($dbOrder->shipping_courier ?: 'Kurir'),
+                'resi' => $dbOrder->shipping_resi,
+                'tracking_url' => isset($courierTrackUrls[$courierKey]) ? $courierTrackUrls[$courierKey].$dbOrder->shipping_resi : null,
+                'shipped_at' => $shippedAt ?? $updatedAt,
+                'eta_label' => $dbOrder->status === 'completed'
+                    ? 'Diterima'
+                    : ($dbOrder->shipping_etd ? 'Estimasi '.$dbOrder->shipping_etd : 'Dalam perjalanan'),
+            ];
         }
-        $hasPhysicalShipping = true;
-        $meta = $statusMeta[$statusBucket];
     }
 
     /*

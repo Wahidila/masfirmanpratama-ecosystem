@@ -7,8 +7,10 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
 use App\Models\Product;
+use App\Models\WaNotification;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class OrderShowTest extends TestCase
@@ -111,6 +113,79 @@ class OrderShowTest extends TestCase
         $response->assertSee('Menunggu');
         $response->assertSeeText('600.000');
         $response->assertSeeText('400.000');
+    }
+
+    public function test_payment_proof_renders_as_clickable_image_link(): void
+    {
+        $order = Order::factory()->create();
+        OrderPayment::factory()->create([
+            'order_id' => $order->id,
+            'amount' => 165000,
+            'status' => 'pending',
+            'proof_path' => 'payment-proofs/'.$order->order_number.'/12-abc123.jpg',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order));
+
+        $response->assertStatus(200);
+        // Bukti bayar TAMPIL sebagai foto (img) + link ke file, bukan cuma teks nama file.
+        $proofUrl = Storage::disk('public')->url('payment-proofs/'.$order->order_number.'/12-abc123.jpg');
+        $response->assertSee('<img src="'.$proofUrl.'"', false);
+        $response->assertSee('href="'.$proofUrl.'"', false);
+        $response->assertSee('Lihat / unduh', false);
+    }
+
+    public function test_shows_structured_shipping_address_and_courier(): void
+    {
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-20260701-SHIP99',
+            'shipping_province' => 'Jawa Timur',
+            'shipping_city' => 'Malang',
+            'shipping_district' => 'Kalipare',
+            'shipping_village' => 'Arjowilangun',
+            'shipping_zipcode' => '65166',
+            'shipping_courier' => 'jne',
+            'shipping_service' => 'jne_reg',
+            'shipping_cost' => 15000,
+            'shipping_etd' => '2-3 days',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order));
+
+        $response->assertStatus(200);
+        $response->assertSee('Jawa Timur', false);
+        $response->assertSee('Malang', false);
+        $response->assertSee('Kalipare', false);
+        $response->assertSee('Arjowilangun', false);
+        $response->assertSee('65166', false);
+        $response->assertSee('JNE', false);
+        $response->assertSee('jne_reg', false);
+        $response->assertSeeText('15.000');
+        $response->assertSee('Lihat halaman tracking customer', false);
+    }
+
+    public function test_shows_whatsapp_notification_history(): void
+    {
+        $order = Order::factory()->create();
+        WaNotification::create([
+            'order_id' => $order->id,
+            'recipient' => '628123456789',
+            'template' => 'customer_order_created',
+            'payload_json' => ['order_number' => $order->order_number],
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order));
+
+        $response->assertStatus(200);
+        $response->assertSee('Notifikasi WhatsApp', false);
+        $response->assertSee('Pesanan dibuat', false);
+        $response->assertSee('Terkirim', false);
+        $response->assertSee('628123456789', false);
     }
 
     public function test_calculates_total_paid_and_remaining(): void

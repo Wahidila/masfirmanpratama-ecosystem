@@ -204,4 +204,29 @@ class SettingsTest extends TestCase
         $this->assertSame('Custom MFP Name', $info['name']);
         $this->assertSame('Surabaya', $info['city']);
     }
+
+    public function test_whatsapp_tab_saves_admin_alert_number(): void
+    {
+        $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.settings.whatsapp.update'), [
+                'xsender_api_key' => 'KEY123',
+                'xsender_sender' => '6285111201722',
+                'wa_admin_number' => '081234000111', // format 0.. → dinormalisasi ke 62..
+            ])
+            ->assertRedirect(route('admin.settings.index', ['tab' => 'whatsapp']));
+
+        // Nomor admin ter-normalisasi & tersimpan → alert admin tidak lagi ke placeholder.
+        $this->assertSame('6281234000111', Settings::getWaAdmin()['number']);
+    }
+
+    public function test_whatsapp_tab_prefills_admin_number(): void
+    {
+        Settings::set('wa_admin', ['number' => '6285111201722', 'label' => 'Admin'], 'array');
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.settings.index', ['tab' => 'whatsapp']))
+            ->assertStatus(200)
+            ->assertSee('name="wa_admin_number"', false)
+            ->assertSee('value="6285111201722"', false);
+    }
 }

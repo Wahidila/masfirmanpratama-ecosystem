@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Events\OrderCompleted;
+use App\Events\OrderCreated;
 use App\Events\OrderShipped;
 use App\Events\PaymentRejected;
 use App\Events\PaymentSubmitted;
@@ -198,6 +200,104 @@ class WaNotificationStubTest extends TestCase
         $this->assertSame('JNE', $row->payload_json['shipping_courier']);
         $this->assertSame('JNE998877665544', $row->payload_json['shipping_resi']);
         $this->assertNotNull($row->payload_json['shipped_at']);
+    }
+
+    public function test_order_created_event_queues_customer_notif_with_upload_link(): void
+    {
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-NEW01',
+            'phone' => '628999111222',
+            'total' => 165000,
+        ]);
+
+        event(new OrderCreated($order));
+
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'recipient' => '628999111222',
+            'template' => 'customer_order_created',
+            'status' => 'queued',
+        ]);
+
+        $row = WaNotification::where('template', 'customer_order_created')->first();
+        $this->assertStringContainsString('/upload/MFP-WA-NEW01', $row->payload_json['upload_url']);
+        $this->assertStringContainsString('signature=', $row->payload_json['upload_url']);
+        $this->assertSame('165.000', $row->payload_json['amount']);
+    }
+
+    public function test_payment_submitted_also_queues_customer_received_notif(): void
+    {
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-RCV01',
+            'phone' => '628999111222',
+        ]);
+        $payment = OrderPayment::factory()->create([
+            'order_id' => $order->id,
+            'amount' => 165000,
+            'status' => 'pending',
+        ]);
+
+        event(new PaymentSubmitted($order, $payment, 0));
+
+        // Dua notif: alert admin + konfirmasi ke pembeli.
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'template' => 'admin_payment_review_alert',
+        ]);
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'recipient' => '628999111222',
+            'template' => 'customer_payment_received',
+            'status' => 'queued',
+        ]);
+    }
+
+    public function test_order_completed_event_queues_customer_thankyou(): void
+    {
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-DONE1',
+            'phone' => '628999111222',
+            'status' => 'completed',
+        ]);
+
+        event(new OrderCompleted($order));
+
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'recipient' => '628999111222',
+            'template' => 'customer_order_completed',
+            'status' => 'queued',
+        ]);
+    }
+
+    public function test_delivered_awb_callback_dispatches_order_completed(): void
+    {
+        config(['shipping.license' => 'test-license-key']);
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-DLVR1',
+            'phone' => '628999111222',
+            'status' => 'shipped',
+            'fulfillment_api_order_id' => 'ORD-DLVR-1',
+            'fulfillment_reference_id' => 'REF-DLVR-1',
+        ]);
+
+        $payload = [
+            'status' => 'status_update',
+            'order_id' => 'ORD-DLVR-1',
+            'reference_id' => 'REF-DLVR-1',
+            'tracking_status' => 'DELIVERED',
+        ];
+        $signature = hash('sha256', 'test-license-key'.json_encode($payload));
+
+        $this->postJson(route('webhooks.agenwebsite.awb'), $payload, ['AW-Signature' => $signature])
+            ->assertOk();
+
+        // Order completed + WA terima kasih ke pembeli ter-queue.
+        $this->assertSame('completed', $order->fresh()->status);
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'template' => 'customer_order_completed',
+        ]);
     }
 
     public function test_listener_skips_when_recipient_empty(): void

@@ -366,10 +366,13 @@ class SettingsController extends Controller
      */
     protected function getWhatsappData(): array
     {
+        $waAdmin = Settings::getWaAdmin();
+
         return [
             'api_key' => Settings::get('xsender.api_key', config('services.xsender.api_key')),
             'sender' => Settings::get('xsender.sender', config('services.xsender.sender')),
             'endpoint' => Settings::get('xsender.endpoint', config('services.xsender.endpoint', 'https://xsender.id/id/send-message')),
+            'admin_number' => $waAdmin['number'] ?? '',
         ];
     }
 
@@ -382,6 +385,7 @@ class SettingsController extends Controller
             'xsender_api_key' => ['required', 'string', 'max:255'],
             'xsender_sender' => ['required', 'string', 'max:30'],
             'xsender_endpoint' => ['nullable', 'url', 'max:255'],
+            'wa_admin_number' => ['nullable', 'string', 'max:30'],
         ], [
             'xsender_api_key.required' => 'API Key XSender wajib diisi.',
             'xsender_sender.required' => 'Nomor WhatsApp XSender wajib diisi.',
@@ -393,6 +397,16 @@ class SettingsController extends Controller
 
         if (! empty($data['xsender_endpoint'])) {
             Settings::set('xsender.endpoint', $data['xsender_endpoint'], 'string');
+        }
+
+        // Nomor WA admin = penerima alert (mis. "bukti bayar baru"). Kalau kosong,
+        // fallback ke config placeholder yang TIDAK terdaftar di WA → alert gagal.
+        if (! empty($data['wa_admin_number'])) {
+            $current = Settings::getWaAdmin();
+            Settings::set('wa_admin', [
+                'number' => XSenderService::normalizePhone($data['wa_admin_number']),
+                'label' => $current['label'] ?? 'Admin',
+            ], 'array');
         }
 
         return redirect()
