@@ -7,7 +7,12 @@
 <div {{ $attributes->class(['overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]']) }}>
     <div class="overflow-x-auto custom-scrollbar">
         <table class="min-w-full">
-            @if (! empty($columns))
+            @isset($head)
+                {{-- Custom header row(s) — mis. checkbox select-all + header sortable. --}}
+                <thead>
+                    {{ $head }}
+                </thead>
+            @elseif (! empty($columns))
                 <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-800">
                         @foreach ($columns as $col)

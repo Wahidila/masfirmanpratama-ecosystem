@@ -106,7 +106,7 @@ class WhatsappNotifier
 
             'customer_payment_rejected' => "❌ *Pembayaran Ditolak*\n\nHalo {customer_name},\nPembayaran untuk order *{order_number}* tidak dapat diverifikasi.\nAlasan: {reason}\n\nSilakan upload ulang bukti pembayaran yang valid.",
 
-            'customer_order_shipped' => "📦 *Pesanan Dikirim*\n\nHalo {customer_name},\nOrder *{order_number}* sudah dikirim!\n\nKurir: {courier}\nResi: {tracking_number}\n\nLacak pesananmu di halaman tracking. Terima kasih! 🙏",
+            'customer_order_shipped' => "📦 *Pesanan Dikirim*\n\nHalo {customer_name},\nOrder *{order_number}* sudah dikirim!\n\nKurir: {courier}\nResi: {tracking_number}\n\nLacak paket kamu di sini:\n{track_url}\n\nTerima kasih! 🙏",
 
             'course_registration_success' => "🎓 *PENDAFTARAN KELAS BERHASIL*\n\nHalo {customer_name},\nTerima kasih sudah mendaftar!\n\nKelas: {course_title}\nOrder ID: {order_number}\nTotal: Rp {amount}\n\nDetail pembayaran dan rekening sudah dikirim. Lakukan transfer dalam 1x24 jam. 🙏",
         ];

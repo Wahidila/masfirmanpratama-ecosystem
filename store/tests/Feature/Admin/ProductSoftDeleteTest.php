@@ -208,4 +208,43 @@ class ProductSoftDeleteTest extends TestCase
 
         $response->assertRedirect(route('admin.login'));
     }
+
+    /**
+     * REGRESSION: form "Hapus" per-baris DULU bersarang di dalam
+     * <form id="bulk-form"> (nested <form> = HTML invalid) sehingga klik "Hapus"
+     * malah men-submit bulk form ke products.bulk (tanpa action/ids) — bukan
+     * DELETE ke products.destroy. Bulk form kini ditutup SEBELUM tabel; checkbox
+     * baris terhubung via atribut form="bulk-form".
+     */
+    public function test_index_delete_form_is_not_nested_inside_bulk_form(): void
+    {
+        $product = Product::factory()->create(['title' => 'Buku Hapus UI']);
+
+        $html = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.products.index'))
+            ->assertOk()
+            ->getContent();
+
+        // Checkbox baris terhubung ke bulk form via atribut form, bukan nesting.
+        $this->assertStringContainsString('name="ids[]"', $html);
+        $this->assertStringContainsString('form="bulk-form"', $html);
+
+        // Form DELETE per-baris ada.
+        $destroyAction = route('admin.products.destroy', $product);
+        $this->assertStringContainsString('action="'.$destroyAction.'"', $html);
+
+        // KUNCI: <form id="bulk-form"> harus ditutup SEBELUM form destroy muncul.
+        $bulkOpen = strpos($html, 'id="bulk-form"');
+        $this->assertNotFalse($bulkOpen);
+        $bulkClose = strpos($html, '</form>', $bulkOpen);
+        $destroyPos = strpos($html, 'action="'.$destroyAction.'"');
+
+        $this->assertNotFalse($bulkClose);
+        $this->assertNotFalse($destroyPos);
+        $this->assertLessThan(
+            $destroyPos,
+            $bulkClose,
+            'Form Hapus per-baris tidak boleh bersarang di dalam <form id="bulk-form">.'
+        );
+    }
 }

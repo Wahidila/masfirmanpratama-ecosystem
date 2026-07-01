@@ -184,6 +184,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::post('products/bulk', [AdminProductController::class, 'bulk'])->name('products.bulk');
+        Route::patch('products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])
+            ->name('products.toggle-status');
         Route::post('products/{product}/restore', [AdminProductController::class, 'restore'])
             ->withTrashed()
             ->name('products.restore');
@@ -213,8 +215,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/ship', [OrderController::class, 'markShipped'])
             ->name('orders.ship');
 
-        Route::post('orders/{order}/generate-shipment', [OrderController::class, 'generateShipment'])
-            ->name('orders.generate-shipment');
+        // Cek non-blocking apakah resi manual sudah terdeteksi di sistem kurir
+        // (opsi B) — tidak memvalidasi/menolak input, hanya indikator + refresh
+        // tracking_status untuk order manual yang tak dapat callback AWB.
+        Route::post('orders/{order}/check-resi', [OrderController::class, 'checkResi'])
+            ->name('orders.check-resi');
 
         Route::post('orders/{order}/refund', [OrderController::class, 'refund'])
             ->name('orders.refund');

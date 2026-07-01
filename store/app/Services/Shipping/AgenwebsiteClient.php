@@ -5,6 +5,7 @@ namespace App\Services\Shipping;
 use App\Exceptions\ShippingRateException;
 use App\Services\Settings;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -77,10 +78,48 @@ class AgenwebsiteClient
 
         $json = $resp->json() ?? [];
         if ($resp->successful()) {
-            return ['status' => 'success', 'message' => $json['message'] ?? 'OK', 'result' => $json['data'] ?? null];
+            return [
+                'status' => 'success',
+                'message' => $this->stringifyMessage($json['message'] ?? null, 'OK'),
+                'result' => $json['data'] ?? null,
+            ];
         }
 
-        return ['status' => 'error', 'message' => $json['message'] ?? 'Gagal terhubung dengan Agenwebsite', 'result' => null];
+        return [
+            'status' => 'error',
+            'message' => $this->stringifyMessage(
+                $json['message'] ?? null,
+                'Gagal terhubung dengan Agenwebsite',
+                $json['errors'] ?? null,
+            ),
+            'result' => null,
+        ];
+    }
+
+    /**
+     * Normalisasi field `message` dari API menjadi string.
+     *
+     * API bisa membalas message non-string — mis. validation bag ala Laravel:
+     * {"message": {...}} atau {"message": "...", "errors": {"field": ["..."]}}.
+     * Kalau array itu bocor ke Blade {{ session('error') }} → htmlspecialchars()
+     * kena array → 500. Prefer isi `errors` bag (lebih deskriptif), lalu flatten
+     * message array, terakhir fallback default. Selalu balik string.
+     */
+    protected function stringifyMessage(mixed $message, string $default, mixed $errors = null): string
+    {
+        if (is_string($message) && trim($message) !== '') {
+            return $message;
+        }
+
+        if (is_array($errors) && $errors !== []) {
+            return implode(' ', array_map('strval', Arr::flatten($errors)));
+        }
+
+        if (is_array($message) && $message !== []) {
+            return implode(' ', array_map('strval', Arr::flatten($message)));
+        }
+
+        return $default;
     }
 
     public function activateLicense(): array
@@ -256,21 +295,50 @@ class AgenwebsiteClient
         return $this->post('shipment/eligibility', $data);
     }
 
-    public function tracking(string $awb, string $courier): array
+    /**
+     * Ambil riwayat tracking paket.
+     *
+     * @param  string|null  $verification  5 digit terakhir no HP penerima. WAJIB
+     *                                     dikirim (paritas plugin: class-ajax.php) — tanpa ini API tracking bisa
+     *                                     menolak/mengembalikan kosong.
+     * @return array<int, array<string, mixed>> Daftar row history (date, description, ...).
+     */
+    public function tracking(string $awb, string $courier, ?string $verification = null): array
     {
-        $cacheKey = 'shipping.tracking.'.md5($awb.'|'.$courier);
+        $cacheKey = 'shipping.tracking.'.md5($awb.'|'.$courier.'|'.(string) $verification);
+        $ttl = (int) ($this->cfg['cache_tracking_ttl'] ?? config('shipping.cache_tracking_ttl', 300));
 
-        return Cache::remember($cacheKey, 900, function () use ($awb, $courier) {
-            $response = $this->post('shipping/tracking', [
-                'awb' => $awb,
-                'courier' => $courier,
-            ]);
+        return Cache::remember($cacheKey, $ttl, function () use ($awb, $courier, $verification) {
+            $body = ['awb' => $awb, 'courier' => $courier];
+            if ($verification !== null && $verification !== '') {
+                $body['verification'] = $verification;
+            }
 
-            if ($response['status'] !== 'success' || ! is_array($response['result'])) {
+            $response = $this->post('shipping/tracking', $body);
+
+            if ($response['status'] !== 'success') {
+                Log::warning('Shipping tracking API error', [
+                    'awb' => $awb,
+                    'courier' => $courier,
+                    'api_message' => $response['message'] ?? null,
+                ]);
+
                 return [];
             }
 
-            return $response['result'];
+            $result = $response['result'];
+
+            // Bentuk API asli: result = { header:{...}, history:[ {date, description}, ... ] }.
+            // Fallback: bila result sudah berupa list row langsung, pakai apa adanya.
+            if (is_array($result) && isset($result['history']) && is_array($result['history'])) {
+                return array_values($result['history']);
+            }
+
+            if (is_array($result) && array_is_list($result)) {
+                return $result;
+            }
+
+            return [];
         });
     }
 }

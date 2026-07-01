@@ -7,13 +7,17 @@ use App\Events\OrderShipped;
 use App\Events\PaymentRejected;
 use App\Events\PaymentVerified;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\TrackController;
 use App\Models\Order;
 use App\Models\OrderPayment;
-use App\Services\Shipping\FulfillmentService;
+use App\Services\Settings;
+use App\Services\Shipping\AgenwebsiteClient;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -30,11 +34,6 @@ class OrderController extends Controller
         'cancelled',
         'refunded',
     ];
-
-    /**
-     * Kurir yang didukung untuk input resi.
-     */
-    public const COURIERS = ['JNE', 'JNT', 'SiCepat', 'Pos', 'Other'];
 
     /**
      * Status precondition yang valid untuk transition ke 'shipped'.
@@ -135,7 +134,7 @@ class OrderController extends Controller
             'totalRejected' => $totalRejected,
             'remaining' => $remaining,
             'statuses' => self::STATUSES,
-            'couriers' => self::COURIERS,
+            'couriers' => $this->courierOptions($order),
             'canShip' => in_array($order->status, self::SHIPPABLE_FROM, true),
             'canRefund' => in_array($order->status, self::REFUNDABLE_FROM, true),
         ]);
@@ -257,50 +256,6 @@ class OrderController extends Controller
      * Default: 'paid' saja — partial_paid / pending / cancelled / refunded /
      * shipped (sudah) / completed (terlalu lanjut) di-reject 422.
      */
-    /**
-     * Generate shipment via fulfillment API (Agenwebsite).
-     * Requires order paid, + shipping_courier + shipping_service set.
-     * If already has AWB (fulfillment_status=shipped + resi), skip with info.
-     */
-    public function generateShipment(Request $request, Order $order): RedirectResponse
-    {
-        abort_if(
-            ! in_array($order->status, self::SHIPPABLE_FROM, true),
-            422,
-            'Order belum siap kirim. Status sekarang: '.$order->status,
-        );
-
-        abort_if(
-            ! $order->shipping_courier || ! $order->shipping_service,
-            422,
-            'Order belum memiliki kurir dan layanan pengiriman.',
-        );
-
-        if ($order->fulfillment_status === 'shipped' && $order->shipping_resi) {
-            return redirect()
-                ->route('admin.orders.show', $order)
-                ->with('info', 'Resi sudah tersedia: '.$order->shipping_resi.'.');
-        }
-
-        $service = app(FulfillmentService::class);
-        $result = $service->createShipment($order);
-
-        return match ($result['status']) {
-            'awb_ready' => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('status', 'Resi berhasil dibuat: '.$result['tracking_number'].'.'),
-            'waiting_awb' => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('status', 'Menunggu AWB dari sistem.'),
-            'pending_payment' => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('info', 'Menunggu pembayaran pengiriman.'),
-            default => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('error', $result['message'] ?? 'Gagal membuat resi.'),
-        };
-    }
-
     public function markShipped(Request $request, Order $order): RedirectResponse
     {
         abort_if(
@@ -311,7 +266,7 @@ class OrderController extends Controller
         );
 
         $validated = $request->validate([
-            'shipping_courier' => ['required', 'string', 'in:'.implode(',', self::COURIERS)],
+            'shipping_courier' => ['required', 'string', Rule::in(array_keys($this->courierOptions($order)))],
             'shipping_resi' => ['required', 'string', 'min:4', 'max:64'],
         ]);
 
@@ -329,6 +284,100 @@ class OrderController extends Controller
         return redirect()
             ->route('admin.orders.show', $order)
             ->with('status', 'Resi berhasil di-input. Order ditandai sebagai dikirim.');
+    }
+
+    /**
+     * Opsi B (non-blocking): cek apakah resi manual sudah terdeteksi di sistem
+     * kurir lewat endpoint tracking Agenwebsite. TIDAK menolak/mengubah resi —
+     * hanya indikator terdeteksi/belum + refresh tracking_status (order manual
+     * tak dapat callback AWB, jadi ini satu-satunya cara status trackingnya ke-update).
+     *
+     * Catatan: API tidak punya validator resi khusus; "belum terdeteksi" bisa
+     * berarti resi salah ATAU benar tapi belum discan kurir — makanya jangan
+     * dijadikan hard-block.
+     */
+    public function checkResi(Order $order): JsonResponse
+    {
+        if (! $order->shipping_resi || ! $order->shipping_courier) {
+            return response()->json([
+                'ok' => false,
+                'detected' => false,
+                'message' => 'Order belum memiliki kurir & nomor resi.',
+            ], 422);
+        }
+
+        try {
+            $history = AgenwebsiteClient::fromConfig()->tracking(
+                $order->shipping_resi,
+                strtolower(trim((string) $order->shipping_courier)),
+                TrackController::phoneVerification($order->phone),
+            );
+        } catch (\Throwable) {
+            $history = [];
+        }
+
+        $history = is_array($history) ? array_values($history) : [];
+        $detected = $history !== [];
+
+        $latestStatus = null;
+        if ($detected) {
+            $last = $history[count($history) - 1];
+            $latestStatus = is_array($last)
+                ? ($last['status'] ?? $last['desc'] ?? $last['description'] ?? null)
+                : null;
+
+            // Simpan status terbaru → tampil di detail admin & halaman tracking customer.
+            if (is_string($latestStatus) && $latestStatus !== '') {
+                $order->forceFill(['tracking_status' => $latestStatus])->save();
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'detected' => $detected,
+            'status' => $latestStatus,
+            'history_count' => count($history),
+            'message' => $detected
+                ? 'Resi terdeteksi di sistem kurir.'
+                : 'Resi belum terdeteksi di sistem kurir — kemungkinan belum discan. Coba lagi nanti.',
+        ]);
+    }
+
+    /**
+     * Opsi kurir untuk dropdown "Tandai Dikirim", SINKRON dengan kurir aktif
+     * (Settings 'shipping.couriers', fallback config('shipping.couriers')).
+     * Nilai = courier_id (mis. 'jne') supaya konsisten dengan yang disimpan saat
+     * customer checkout & dipakai halaman tracking; label dari config
+     * 'shipping.courier_labels' (id tak dikenal → strtoupper).
+     *
+     * Kurir yang SUDAH tersimpan di order (pilihan customer) selalu disertakan
+     * walau tidak lagi aktif — supaya bisa jadi default terpilih & tetap valid
+     * saat form disubmit.
+     *
+     * @return array<string, string> [courier_id => label]
+     */
+    protected function courierOptions(Order $order): array
+    {
+        $active = Settings::get('shipping.couriers', config('shipping.couriers', []));
+        $active = is_array($active) ? $active : [];
+        $labels = (array) config('shipping.courier_labels', []);
+
+        $options = [];
+        foreach ($active as $id) {
+            $id = (string) $id;
+            if ($id === '') {
+                continue;
+            }
+            $options[$id] = $labels[$id] ?? strtoupper($id);
+        }
+
+        // Kurir pilihan customer harus selalu ada sebagai opsi (default select).
+        $current = trim((string) ($order->shipping_courier ?? ''));
+        if ($current !== '' && ! isset($options[$current])) {
+            $options[$current] = $labels[$current] ?? strtoupper($current);
+        }
+
+        return $options;
     }
 
     /**

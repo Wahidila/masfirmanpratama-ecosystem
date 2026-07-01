@@ -23,13 +23,34 @@ return [
     // Kurir domestik yang diaktifkan (interseksi dgn service API)
     'couriers' => ['jne', 'jnt', 'sicepat', 'anteraja', 'pos'],
 
+    // Label tampilan per courier_id (dipakai dropdown admin "Tandai Dikirim").
+    // Sumber daftar kurir = 'couriers' di atas / Settings 'shipping.couriers';
+    // map ini hanya untuk label. id tak dikenal → fallback strtoupper(id).
+    // Selaras dengan SettingsController::AVAILABLE_COURIERS (kurir yang bisa
+    // diaktifkan admin di tab Shipping). id di luar map ini tetap tampil dgn
+    // label strtoupper(id).
+    'courier_labels' => [
+        'jne' => 'JNE',
+        'jnt' => 'J&T Express',
+        'sicepat' => 'SiCepat',
+        'anteraja' => 'AnterAja',
+        'pos' => 'POS Indonesia',
+        'tiki' => 'TIKI',
+        'spx' => 'Shopee Express',
+        'lion' => 'Lion Parcel',
+        'paxel' => 'Paxel',
+    ],
+
     // Berat & dimensi default produk (kg & cm) bila produk tak punya data
     'default_weight_kg' => 1,
     'default_dimensions_cm' => ['length' => 10, 'width' => 10, 'height' => 5],
 
-    // Cache TTL (detik): master data couriers/services 24 jam; rate harga pendek
+    // Cache TTL (detik): master data couriers/services 24 jam; rate harga pendek.
     'cache_master_ttl' => 86400,
     'cache_rate_ttl' => 1800,
+    // Tracking history: pendek supaya /track terasa realtime tanpa spam API.
+    // Turunkan (mis. 60) untuk lebih fresh, naikkan untuk hemat kuota API.
+    'cache_tracking_ttl' => env('SHIPPING_TRACKING_TTL', 300),
 
     // Markup per service (extra_cost), key = service_id. Kosong = tanpa markup.
     'service_markup' => [],

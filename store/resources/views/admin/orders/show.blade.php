@@ -35,7 +35,7 @@
 
     @if (session('error'))
         <div class="mb-6">
-            <x-admin.alert tone="danger" dismissible>{{ session('error') }}</x-admin.alert>
+            <x-admin.alert tone="danger" dismissible>{{ is_array(session('error')) ? implode(' ', \Illuminate\Support\Arr::flatten(session('error'))) : session('error') }}</x-admin.alert>
         </div>
     @endif
 
@@ -513,44 +513,79 @@
                         <dl class="grid grid-cols-2 gap-3">
                             <div>
                                 <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kurir</dt>
-                                <dd class="mt-0.5 font-medium text-gray-800 dark:text-white/90">{{ $order->shipping_courier ?? '—' }}</dd>
+                                <dd class="mt-0.5 font-medium text-gray-800 dark:text-white/90">{{ ($couriers[$order->shipping_courier] ?? null) ?: ($order->shipping_courier ?? '—') }}</dd>
                             </div>
                             <div>
                                 <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Nomor Resi</dt>
                                 <dd class="mt-0.5 font-mono text-gray-800 break-all dark:text-white/90">{{ $order->shipping_resi ?? '—' }}</dd>
                             </div>
                         </dl>
+
+                        @if ($order->shipping_resi && $order->shipping_courier)
+                            {{-- Opsi B: cek non-blocking apakah resi terdeteksi di sistem kurir --}}
+                            <div class="pt-1">
+                                <button
+                                    type="button"
+                                    id="btn-check-resi"
+                                    data-url="{{ route('admin.orders.check-resi', $order) }}"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-white/[0.03]"
+                                >
+                                    <i data-lucide="radar" class="h-4 w-4"></i>
+                                    Cek status resi di kurir
+                                </button>
+                                <div id="resi-check-result" class="mt-2 hidden rounded-lg border px-3 py-2 text-xs"></div>
+                                <p class="mt-1 text-[11px] leading-snug text-gray-400">
+                                    Non-blocking: resi baru bisa "belum terdeteksi" karena belum discan kurir.
+                                </p>
+                            </div>
+
+                            <script>
+                                (function () {
+                                    const btn = document.getElementById('btn-check-resi');
+                                    if (!btn) return;
+                                    btn.addEventListener('click', async function () {
+                                        const box = document.getElementById('resi-check-result');
+                                        const original = btn.innerHTML;
+                                        btn.disabled = true;
+                                        btn.innerHTML = 'Mengecek…';
+                                        box.className = 'mt-2 hidden rounded-lg border px-3 py-2 text-xs';
+                                        try {
+                                            const res = await fetch(btn.dataset.url, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                                    'Accept': 'application/json',
+                                                },
+                                            });
+                                            const data = await res.json();
+                                            box.classList.remove('hidden');
+                                            if (data.detected) {
+                                                box.classList.add('border-success-200', 'bg-success-50', 'text-success-700');
+                                                box.innerHTML = '✅ ' + data.message + (data.status ? ('<br><span class="font-medium">Status terakhir:</span> ' + data.status) : '');
+                                            } else {
+                                                box.classList.add('border-warning-200', 'bg-warning-50', 'text-warning-700');
+                                                box.innerHTML = '⚠️ ' + (data.message || 'Resi belum terdeteksi.');
+                                            }
+                                        } catch (e) {
+                                            box.classList.remove('hidden');
+                                            box.classList.add('border-error-200', 'bg-error-50', 'text-error-700');
+                                            box.textContent = 'Gagal mengecek resi. Coba lagi.';
+                                        } finally {
+                                            btn.disabled = false;
+                                            btn.innerHTML = original;
+                                            if (window.lucide) lucide.createIcons();
+                                        }
+                                    });
+                                })();
+                            </script>
+                        @endif
                     </div>
                 @elseif ($canShip)
-                    @if ($order->shipping_courier && $order->shipping_service)
-                        {{-- Generate Resi Otomatis --}}
-                        <div class="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-500/30 dark:bg-brand-500/15">
-                            <h3 class="text-sm font-semibold text-brand-700 mb-2 dark:text-brand-400">
-                                <i data-lucide="wand" class="h-4 w-4 inline mr-1"></i>
-                                Generate Resi Otomatis
-                            </h3>
-                            <p class="text-xs text-gray-600 mb-3 dark:text-gray-400">
-                                Buat resi pengiriman otomatis via kurir
-                                <span class="font-medium text-gray-700 dark:text-gray-300">{{ $order->shipping_courier }}</span>
-                                — {{ $order->shipping_service }}.
-                            </p>
-                            <form
-                                method="POST"
-                                action="{{ route('admin.orders.generate-shipment', $order) }}"
-                            >
-                                @csrf
-                                <button type="submit"
-                                        class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10">
-                                    <i data-lucide="truck" class="h-4 w-4"></i>
-                                    Generate Resi Otomatis
-                                </button>
-                            </form>
-                        </div>
-                    @endif
-
-                    {{-- Order siap kirim (status=paid) — tampilkan form input resi manual --}}
+                    {{-- Order siap kirim (status=paid) — input kurir & nomor resi manual.
+                         Resi diinput manual oleh admin (fitur generate resi otomatis
+                         dinonaktifkan; butuh handshake rates/signed_key + saldo wallet). --}}
                     <p class="text-xs text-gray-500 mb-3 dark:text-gray-400">
-                        Atau isi kurir &amp; nomor resi manual untuk transition ke
+                        Isi kurir &amp; nomor resi untuk menandai order ini sebagai
                         <span class="font-medium text-gray-700 dark:text-gray-300">Dikirim</span>.
                     </p>
                     <form
@@ -570,9 +605,10 @@
                                 required
                                 class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('shipping_courier') border-error-400 @enderror"
                             >
+                                @php $selectedCourier = (string) old('shipping_courier', $order->shipping_courier); @endphp
                                 <option value="">— Pilih kurir —</option>
-                                @foreach ($couriers as $c)
-                                    <option value="{{ $c }}" @selected(old('shipping_courier') === $c)>{{ $c }}</option>
+                                @foreach ($couriers as $courierId => $courierLabel)
+                                    <option value="{{ $courierId }}" @selected($selectedCourier === (string) $courierId)>{{ $courierLabel }}</option>
                                 @endforeach
                             </select>
                             @error('shipping_courier')

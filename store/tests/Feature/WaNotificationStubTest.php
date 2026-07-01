@@ -14,6 +14,7 @@ use App\Models\OrderPayment;
 use App\Models\WaNotification;
 use App\Services\Settings;
 use App\Services\WhatsappNotifier;
+use App\Services\XSenderService;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -373,7 +374,7 @@ class WaNotificationStubTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNE',
+                'shipping_courier' => 'jne',
                 'shipping_resi' => 'JNE12345678',
             ])
             ->assertRedirect(route('admin.orders.show', $order));
@@ -383,6 +384,52 @@ class WaNotificationStubTest extends TestCase
             'template' => 'customer_order_shipped',
             'status' => 'queued',
         ]);
+
+        // Payload HARUS berisi data real dengan kunci yang cocok placeholder
+        // template ({courier}, {tracking_number}, {track_url}) — bukan placeholder.
+        $payload = WaNotification::where('order_id', $order->id)
+            ->where('template', 'customer_order_shipped')
+            ->value('payload_json');
+
+        $this->assertSame('JNE', $payload['courier']); // label dari courier_id 'jne'
+        $this->assertSame('JNE12345678', $payload['tracking_number']);
+        $this->assertArrayHasKey('track_url', $payload);
+        $this->assertStringContainsString('/track', $payload['track_url']);
+    }
+
+    public function test_order_shipped_message_has_dynamic_courier_resi_and_track_link(): void
+    {
+        // Tangkap pesan yang benar-benar dibangun & dikirim ke gateway.
+        $captured = null;
+        $this->mock(XSenderService::class, function ($mock) use (&$captured) {
+            $mock->shouldReceive('send')->andReturnUsing(function ($to, $msg) use (&$captured) {
+                $captured = $msg;
+
+                return ['ok' => true, 'status' => 1, 'body' => 'sent'];
+            });
+        });
+
+        $order = Order::factory()->create([
+            'phone' => '628999111222',
+            'customer_name' => 'WAHIDILA SP',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.ship', $order), [
+                'shipping_courier' => 'jne',
+                'shipping_resi' => 'JNE0099887766',
+            ])
+            ->assertRedirect();
+
+        $this->assertNotNull($captured, 'Pesan WA harus terbentuk & terkirim.');
+        // Nilai DINAMIS, bukan literal placeholder.
+        $this->assertStringContainsString('Kurir: JNE', $captured);
+        $this->assertStringContainsString('Resi: JNE0099887766', $captured);
+        $this->assertStringContainsString('/track', $captured); // link tracking ada
+        $this->assertStringNotContainsString('{courier}', $captured);
+        $this->assertStringNotContainsString('{tracking_number}', $captured);
+        $this->assertStringNotContainsString('{track_url}', $captured);
     }
 
     public function test_customer_upload_proof_dispatches_payment_submitted_event(): void

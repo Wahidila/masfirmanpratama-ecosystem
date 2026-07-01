@@ -41,7 +41,11 @@ class TrackController extends Controller
 
             if ($slug !== null) {
                 $client = AgenwebsiteClient::fromConfig();
-                $trackingHistory = $client->tracking($order->shipping_resi, $slug);
+                $trackingHistory = $client->tracking(
+                    $order->shipping_resi,
+                    $slug,
+                    self::phoneVerification($order->phone),
+                );
             }
         }
 
@@ -50,5 +54,16 @@ class TrackController extends Controller
             'dbOrder' => $order,
             'trackingHistory' => $trackingHistory,
         ]);
+    }
+
+    /**
+     * 5 digit terakhir no HP penerima (angka saja) — dipakai API tracking sebagai
+     * verifikasi. Null bila tak ada nomor.
+     */
+    public static function phoneVerification(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+
+        return $digits !== '' ? substr($digits, -5) : null;
     }
 }

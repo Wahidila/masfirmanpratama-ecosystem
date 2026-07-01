@@ -35,7 +35,7 @@ class OrderShipTest extends TestCase
         $order = Order::factory()->create(['status' => 'paid']);
 
         $this->post(route('admin.orders.ship', $order), [
-            'shipping_courier' => 'JNE',
+            'shipping_courier' => 'jne',
             'shipping_resi' => 'JNE1234567890',
         ])
             ->assertRedirect(route('admin.login'));
@@ -56,7 +56,7 @@ class OrderShipTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNE',
+                'shipping_courier' => 'jne',
                 'shipping_resi' => 'JNE1234567890',
             ])
             ->assertRedirect(route('admin.orders.show', $order))
@@ -65,7 +65,7 @@ class OrderShipTest extends TestCase
         $order->refresh();
 
         $this->assertSame('shipped', $order->status);
-        $this->assertSame('JNE', $order->shipping_courier);
+        $this->assertSame('jne', $order->shipping_courier);
         $this->assertSame('JNE1234567890', $order->shipping_resi);
         $this->assertNotNull($order->shipped_at);
 
@@ -81,7 +81,7 @@ class OrderShipTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNT',
+                'shipping_courier' => 'jnt',
                 'shipping_resi' => '  JNT-RESI-9988  ',
             ])
             ->assertRedirect();
@@ -99,7 +99,7 @@ class OrderShipTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNE',
+                'shipping_courier' => 'jne',
                 'shipping_resi' => 'JNE1234567890',
             ])
             ->assertStatus(422);
@@ -143,14 +143,14 @@ class OrderShipTest extends TestCase
         // Missing resi
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNE',
+                'shipping_courier' => 'jne',
             ])
             ->assertSessionHasErrors('shipping_resi');
 
         // Resi too short
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNE',
+                'shipping_courier' => 'jne',
                 'shipping_resi' => 'ABC',
             ])
             ->assertSessionHasErrors('shipping_resi');
@@ -165,15 +165,16 @@ class OrderShipTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNE',
+                'shipping_courier' => 'jne',
                 'shipping_resi' => str_repeat('X', 65), // > 64
             ])
             ->assertSessionHasErrors('shipping_resi');
     }
 
-    public function test_ship_supports_all_courier_options(): void
+    public function test_ship_supports_all_active_courier_options(): void
     {
-        foreach (['JNE', 'JNT', 'SiCepat', 'Pos', 'Other'] as $courier) {
+        // Sinkron dengan kurir aktif (config shipping.couriers).
+        foreach (['jne', 'jnt', 'sicepat', 'anteraja', 'pos'] as $courier) {
             $order = Order::factory()->create(['status' => 'paid']);
 
             $this->actingAs($this->admin, 'admin')
@@ -187,6 +188,52 @@ class OrderShipTest extends TestCase
             $this->assertSame('shipped', $order->status);
             $this->assertSame($courier, $order->shipping_courier);
         }
+    }
+
+    public function test_ship_form_syncs_active_couriers_and_preselects_customer_choice(): void
+    {
+        // Customer memilih SiCepat saat checkout → dropdown harus default ke sicepat.
+        $order = Order::factory()->create([
+            'status' => 'paid',
+            'shipping_courier' => 'sicepat',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order))
+            ->assertOk();
+
+        // Opsi kurir sinkron dgn kurir aktif (value = courier_id, label dari config).
+        $response->assertSee('value="jne"', false);
+        $response->assertSee('value="anteraja"', false);
+        $response->assertSee('>SiCepat</option>', false);
+
+        // Default terpilih = kurir pilihan customer.
+        $response->assertSee('value="sicepat" selected', false);
+    }
+
+    public function test_ship_form_includes_stored_courier_even_if_not_active(): void
+    {
+        // Order lama dgn kurir yang sudah dinonaktifkan tetap bisa dipilih & valid.
+        $order = Order::factory()->create([
+            'status' => 'paid',
+            'shipping_courier' => 'tiki',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order))
+            ->assertOk()
+            ->assertSee('value="tiki" selected', false);
+
+        // Dan submit dengan kurir tsb tidak ditolak validasi.
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.ship', $order), [
+                'shipping_courier' => 'tiki',
+                'shipping_resi' => 'TIKI-556677',
+            ])
+            ->assertRedirect(route('admin.orders.show', $order))
+            ->assertSessionHas('status');
+
+        $this->assertSame('tiki', $order->fresh()->shipping_courier);
     }
 
     public function test_show_page_renders_input_resi_form_when_paid(): void
@@ -206,7 +253,7 @@ class OrderShipTest extends TestCase
     {
         $order = Order::factory()->create([
             'status' => 'shipped',
-            'shipping_courier' => 'SiCepat',
+            'shipping_courier' => 'sicepat',
             'shipping_resi' => 'SC-99887766',
             'shipped_at' => now(),
         ]);
@@ -215,7 +262,7 @@ class OrderShipTest extends TestCase
             ->get(route('admin.orders.show', $order))
             ->assertOk()
             ->assertSee('Sudah Dikirim')
-            ->assertSee('SiCepat')
+            ->assertSee('SiCepat') // label dari courier_id 'sicepat'
             ->assertSee('SC-99887766')
             ->assertDontSee('Tandai Dikirim');
     }
