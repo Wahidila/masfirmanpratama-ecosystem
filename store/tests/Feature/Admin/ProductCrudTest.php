@@ -229,6 +229,28 @@ class ProductCrudTest extends TestCase
             ->assertSee('Old Title');
     }
 
+    public function test_create_form_renders_redesigned_layout(): void
+    {
+        $html = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.products.create'))
+            ->assertOk()
+            ->getContent();
+
+        // Sidebar "Publikasi" + sticky action bar + section utama.
+        $this->assertStringContainsString('Publikasi', $html);
+        $this->assertStringContainsString('sticky bottom-0', $html);
+        $this->assertStringContainsString('Spesifikasi buku', $html);
+
+        // Status dikirim lewat hidden input (segmented control), bukan <select name=status>.
+        $this->assertStringContainsString('name="status"', $html);
+        $this->assertStringNotContainsString('<select id="status"', $html);
+
+        // Weight-dedup: 'berat' TIDAK lagi jadi default spec (agar tak bentrok weight_kg).
+        // defaultKeys di-JS-encode; pastikan 'berat' tak muncul sbg default key.
+        $this->assertStringContainsString('penulis', $html);
+        $this->assertStringNotContainsString('"berat"', $html);
+    }
+
     public function test_update_changes_fields(): void
     {
         $product = Product::factory()->create([

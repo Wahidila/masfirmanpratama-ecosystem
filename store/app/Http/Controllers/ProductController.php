@@ -68,6 +68,7 @@ class ProductController extends Controller
                 'description' => is_string($productModel->description) ? [$productModel->description] : ($productModel->description ?? ($configProduct['description'] ?? [])),
                 'original_price' => $productModel->meta_seo['original_price'] ?? ($configProduct['original_price'] ?? null),
                 'specs' => is_array($productModel->specs) ? $productModel->specs : ($configProduct['specs'] ?? []),
+                'stock' => $productModel->stock,
             ]);
         } else {
             // Config-only fallback (DB not seeded, e.g. test env)
