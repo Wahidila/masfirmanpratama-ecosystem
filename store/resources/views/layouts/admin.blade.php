@@ -18,6 +18,20 @@
     {{-- Admin JS (Alpine + stores via Vite) --}}
     @vite(['resources/js/admin.js'])
 
+    {{-- Lucide icons (dipakai icon-picker & tombol dinamis). Pin versi sama dgn store. --}}
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" defer></script>
+    <script>
+        (function () {
+            const renderIcons = () => window.lucide && window.lucide.createIcons();
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderIcons);
+            } else {
+                renderIcons();
+            }
+            document.addEventListener('alpine:initialized', renderIcons);
+        })();
+    </script>
+
     {{-- x-cloak --}}
     <style>[x-cloak] { display: none !important; }</style>
 

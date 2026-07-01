@@ -63,6 +63,55 @@ class CourseManagementTest extends TestCase
             ->assertSee('Identitas kelas');
     }
 
+    public function test_create_form_uses_redesigned_two_column_layout(): void
+    {
+        $html = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.courses.create'))
+            ->assertOk()
+            ->getContent();
+
+        // Sidebar Publikasi + save bar lengket + layout 2 kolom (samakan dgn form produk).
+        $this->assertStringContainsString('Publikasi', $html);
+        $this->assertStringContainsString('sticky bottom-0', $html);
+        $this->assertStringContainsString('lg:grid-cols-3', $html);
+        // Status dikirim lewat hidden input (segmented control), bukan <select>.
+        $this->assertStringContainsString('name="status"', $html);
+        $this->assertStringNotContainsString('<select id="status"', $html);
+    }
+
+    public function test_create_form_uses_visual_icon_picker(): void
+    {
+        $html = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.courses.create'))
+            ->assertOk()
+            ->getContent();
+
+        // Icon picker (Alpine + daftar Lucide) menggantikan input teks nama ikon.
+        $this->assertStringContainsString('iconPicker(', $html);
+        $this->assertStringContainsString('MFP_ICON_LIST', $html);
+        // Hidden input tetap membawa nama ikon ke server (kontrak controller sama).
+        $this->assertStringContainsString('name="badge_icon"', $html);
+        $this->assertStringContainsString('name="card_icon"', $html);
+        // Input teks lama untuk badge_icon sudah tidak ada.
+        $this->assertStringNotContainsString('id="badge_icon"', $html);
+    }
+
+    public function test_create_form_uses_visual_color_picker(): void
+    {
+        $html = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.courses.create'))
+            ->assertOk()
+            ->getContent();
+
+        // Color picker (swatch) menggantikan input teks class Tailwind.
+        $this->assertStringContainsString('colorPicker(', $html);
+        // Hidden input tetap membawa kelas warna ke server.
+        $this->assertStringContainsString('name="card_icon_color"', $html);
+        // Input teks lama sudah tidak ada.
+        $this->assertStringNotContainsString('id="card_icon_color"', $html);
+        $this->assertStringNotContainsString('class Tailwind', $html);
+    }
+
     public function test_admin_can_create_course(): void
     {
         $payload = $this->validPayload([

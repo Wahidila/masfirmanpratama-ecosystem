@@ -194,6 +194,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->parameters(['products' => 'product']);
 
         Route::post('courses/bulk', [AdminCourseController::class, 'bulk'])->name('courses.bulk');
+        Route::patch('courses/{course}/toggle-status', [AdminCourseController::class, 'toggleStatus'])
+            ->name('courses.toggle-status');
         Route::post('courses/{course}/restore', [AdminCourseController::class, 'restore'])
             ->withTrashed()
             ->name('courses.restore');
