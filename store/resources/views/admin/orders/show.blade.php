@@ -499,17 +499,32 @@
                 @if ($order->status === 'shipped' || $order->status === 'completed')
                     {{-- Order sudah dikirim — tampilkan info resi read-only --}}
                     <div class="space-y-3 text-sm">
-                        <div class="rounded-xl bg-success-50 border border-success-200 p-3 dark:bg-success-500/15 dark:border-success-500/30">
-                            <div class="flex items-center gap-2 text-success-700 font-semibold dark:text-success-500">
-                                <i data-lucide="truck" class="h-4 w-4"></i>
-                                <span>Sudah Dikirim</span>
-                            </div>
-                            @if ($order->shipped_at)
+                        @if ($order->status === 'completed')
+                            <div class="rounded-xl bg-success-50 border border-success-200 p-3 dark:bg-success-500/15 dark:border-success-500/30">
+                                <div class="flex items-center gap-2 text-success-700 font-semibold dark:text-success-500">
+                                    <i data-lucide="check-circle" class="h-4 w-4"></i>
+                                    <span>Order Selesai</span>
+                                </div>
                                 <p class="mt-1 text-xs text-success-600 dark:text-success-400">
-                                    {{ \Illuminate\Support\Carbon::parse($order->shipped_at)->translatedFormat('d M Y, H:i') }}
+                                    Paket sudah diterima pembeli — siklus order ditutup.
+                                    @if (data_get($order->order_meta, 'completed_manually'))
+                                        (ditandai manual oleh admin)
+                                    @endif
                                 </p>
-                            @endif
-                        </div>
+                            </div>
+                        @else
+                            <div class="rounded-xl bg-success-50 border border-success-200 p-3 dark:bg-success-500/15 dark:border-success-500/30">
+                                <div class="flex items-center gap-2 text-success-700 font-semibold dark:text-success-500">
+                                    <i data-lucide="truck" class="h-4 w-4"></i>
+                                    <span>Sudah Dikirim</span>
+                                </div>
+                                @if ($order->shipped_at)
+                                    <p class="mt-1 text-xs text-success-600 dark:text-success-400">
+                                        {{ \Illuminate\Support\Carbon::parse($order->shipped_at)->translatedFormat('d M Y, H:i') }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endif
                         <dl class="grid grid-cols-2 gap-3">
                             <div>
                                 <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kurir</dt>
@@ -520,6 +535,25 @@
                                 <dd class="mt-0.5 font-mono text-gray-800 break-all dark:text-white/90">{{ $order->shipping_resi ?? '—' }}</dd>
                             </div>
                         </dl>
+
+                        @if ($order->status === 'shipped')
+                            {{-- Tutup siklus manual: 'shipped' → 'completed'. Perlu untuk alur
+                                 resi-manual yang tak dapat callback AWB 'delivered'. --}}
+                            <form method="POST" action="{{ route('admin.orders.complete', $order) }}"
+                                  onsubmit="return confirm('Konfirmasi: tandai order ini SELESAI? Notifikasi WhatsApp terima kasih akan dikirim ke pembeli.');">
+                                @csrf
+                                <button
+                                    type="submit"
+                                    class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-success-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-success-600 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+                                >
+                                    <i data-lucide="check-circle" class="h-4 w-4"></i>
+                                    Tandai Selesai
+                                </button>
+                                <p class="mt-1 text-[11px] leading-snug text-gray-400">
+                                    Gunakan setelah paket dipastikan diterima pembeli. Atau cek resi di bawah — kalau kurir sudah "delivered", order otomatis selesai.
+                                </p>
+                            </form>
+                        @endif
 
                         @if ($order->shipping_resi && $order->shipping_courier)
                             {{-- Opsi B: cek non-blocking apakah resi terdeteksi di sistem kurir --}}
@@ -559,6 +593,14 @@
                                             });
                                             const data = await res.json();
                                             box.classList.remove('hidden');
+                                            if (data.completed) {
+                                                // Kurir sudah delivered → order otomatis selesai.
+                                                // Reload supaya status & tombol di UI ikut ter-update.
+                                                box.classList.add('border-success-200', 'bg-success-50', 'text-success-700');
+                                                box.innerHTML = '🎉 ' + data.message + ' Memuat ulang…';
+                                                setTimeout(function () { window.location.reload(); }, 1200);
+                                                return;
+                                            }
                                             if (data.detected) {
                                                 box.classList.add('border-success-200', 'bg-success-50', 'text-success-700');
                                                 box.innerHTML = '✅ ' + data.message + (data.status ? ('<br><span class="font-medium">Status terakhir:</span> ' + data.status) : '');
@@ -751,6 +793,23 @@
                                 @if ($notif->status === 'failed' && $notif->error)
                                     <div class="mt-1 text-xs text-error-600 dark:text-error-400">{{ $notif->error }}</div>
                                 @endif
+
+                                {{-- Kirim ulang manual (mitigasi gagal kirim). Tersedia untuk semua
+                                     status: gagal/antre jelas, "terkirim" pun kalau customer bilang
+                                     tak menerima. --}}
+                                <div class="mt-2">
+                                    <form method="POST" action="{{ route('admin.wa-notifications.resend', $notif) }}"
+                                          onsubmit="return confirm('Kirim ulang notifikasi WhatsApp ini ke {{ $notif->recipient }}?');">
+                                        @csrf
+                                        <button
+                                            type="submit"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-white/[0.03]"
+                                        >
+                                            <i data-lucide="send" class="h-3.5 w-3.5"></i>
+                                            Kirim ulang
+                                        </button>
+                                    </form>
+                                </div>
                             </li>
                         @endforeach
                     </ul>

@@ -120,16 +120,19 @@ class AwbCallbackController extends Controller
         if ($status === 'status_update') {
             $order->tracking_status = strtolower($trackingStatus ?? '');
 
+            // Paket delivered → transisi ke completed (fulfillment 'delivered').
+            // Order::markCompleted() sekaligus mem-persist tracking_status yang
+            // sudah diset di atas (save-nya menyertakan semua atribut dirty).
             $justCompleted = false;
             if (stripos($trackingStatus ?? '', 'deliver') !== false) {
-                $justCompleted = $order->status !== 'completed';
-                $order->status = 'completed';
-                // Sebelumnya fulfillment_status stuck di 'shipped' walau paket
-                // sudah delivered → filter admin "delivered" return kosong.
-                $order->fulfillment_status = 'delivered';
+                $justCompleted = $order->markCompleted();
             }
 
-            $order->save();
+            // markCompleted() hanya save saat benar-benar transisi; kalau tidak
+            // delivered (atau sudah completed) kita tetap perlu persist tracking_status.
+            if (! $justCompleted) {
+                $order->save();
+            }
 
             // WA terima kasih ke pembeli — hanya sekali saat transisi ke completed.
             if ($justCompleted) {

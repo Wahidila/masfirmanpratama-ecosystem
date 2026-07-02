@@ -217,6 +217,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/ship', [OrderController::class, 'markShipped'])
             ->name('orders.ship');
 
+        // Tandai order 'shipped' → 'completed' manual (alur resi-manual tak dapat
+        // callback AWB 'delivered', jadi admin tutup siklus sendiri).
+        Route::post('orders/{order}/complete', [OrderController::class, 'markCompleted'])
+            ->name('orders.complete');
+
         // Cek non-blocking apakah resi manual sudah terdeteksi di sistem kurir
         // (opsi B) — tidak memvalidasi/menolak input, hanya indikator + refresh
         // tracking_status untuk order manual yang tak dapat callback AWB.
@@ -252,6 +257,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // route name pakai dash juga biar konsisten.
         Route::get('wa-notifications', [WaNotificationController::class, 'index'])
             ->name('wa-notifications.index');
+
+        // Kirim ulang manual satu notifikasi (mitigasi gagal kirim) — dipicu dari
+        // section Notifikasi WhatsApp di detail order.
+        Route::post('wa-notifications/{notification}/resend', [WaNotificationController::class, 'resend'])
+            ->name('wa-notifications.resend');
 
         // Sales Reports (Stream A — Laporan Penjualan)
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\OrderCompleted;
 use App\Events\OrderRefunded;
 use App\Events\OrderShipped;
 use App\Events\PaymentRejected;
@@ -46,6 +47,14 @@ class OrderController extends Controller
      * Order bisa di-refund dari paid, partial_paid, shipped, atau completed.
      */
     public const REFUNDABLE_FROM = ['paid', 'partial_paid', 'shipped', 'completed'];
+
+    /**
+     * Status precondition yang valid untuk transition ke 'completed'.
+     * Hanya order yang sudah 'shipped' yang bisa ditandai selesai (paket harus
+     * dikirim dulu). Untuk alur resi-manual yang tak dapat callback AWB, ini
+     * jalan admin menutup siklus order secara eksplisit.
+     */
+    public const COMPLETABLE_FROM = ['shipped'];
 
     public function index(Request $request): View
     {
@@ -291,6 +300,50 @@ class OrderController extends Controller
     }
 
     /**
+     * Tandai order 'shipped' → 'completed' secara manual oleh admin.
+     *
+     * Alasan: sejak resi diinput manual (auto-shipment mati), order tak menerima
+     * callback AWB 'delivered' → tanpa aksi ini order macet di 'shipped' selamanya.
+     * Tombol ini menutup siklus + memicu OrderCompleted (WA terima kasih ke pembeli).
+     *
+     * Precondition: status harus salah satu dari self::COMPLETABLE_FROM ('shipped').
+     * pending / paid (belum kirim) / completed (sudah) / cancelled / refunded → 422.
+     */
+    public function markCompleted(Request $request, Order $order): RedirectResponse
+    {
+        abort_if(
+            ! in_array($order->status, self::COMPLETABLE_FROM, true),
+            422,
+            'Order belum bisa diselesaikan. Status sekarang: '.$order->status
+                .'. Hanya status berikut yang bisa diselesaikan: '.implode(', ', self::COMPLETABLE_FROM).'.',
+        );
+
+        $justCompleted = false;
+
+        DB::transaction(function () use ($order, $request, &$justCompleted) {
+            // Audit jejak penyelesaian manual di order_meta (tanpa perlu kolom baru).
+            $meta = $order->order_meta ?? [];
+            $meta['completed_at'] = now()->toIso8601String();
+            $meta['completed_by'] = $request->user('admin')?->id;
+            $meta['completed_manually'] = true;
+            $order->order_meta = $meta;
+
+            // markCompleted() mem-persist status, fulfillment_status, + order_meta
+            // di atas sekaligus (save menyertakan semua atribut dirty).
+            $justCompleted = $order->markCompleted();
+        });
+
+        // WA terima kasih ke pembeli — hanya sekali saat transisi ke completed.
+        if ($justCompleted) {
+            OrderCompleted::dispatch($order->fresh());
+        }
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('status', 'Order ditandai selesai. Notifikasi WhatsApp terima kasih dikirim ke pembeli.');
+    }
+
+    /**
      * Opsi B (non-blocking): cek apakah resi manual sudah terdeteksi di sistem
      * kurir lewat endpoint tracking Agenwebsite. TIDAK menolak/mengubah resi —
      * hanya indikator terdeteksi/belum + refresh tracking_status (order manual
@@ -336,14 +389,30 @@ class OrderController extends Controller
             }
         }
 
+        // Auto-complete: kalau order masih 'shipped' dan status kurir sudah
+        // "delivered", tutup siklus otomatis (sama seperti webhook AWB, tapi untuk
+        // resi manual yang tak dapat callback). Guard COMPLETABLE_FROM cegah
+        // transisi dari status yang tak valid.
+        $autoCompleted = false;
+        if (in_array($order->status, self::COMPLETABLE_FROM, true)
+            && stripos((string) $latestStatus, 'deliver') !== false) {
+            $autoCompleted = $order->markCompleted();
+            if ($autoCompleted) {
+                OrderCompleted::dispatch($order->fresh());
+            }
+        }
+
         return response()->json([
             'ok' => true,
             'detected' => $detected,
             'status' => $latestStatus,
+            'completed' => $autoCompleted,
             'history_count' => count($history),
-            'message' => $detected
-                ? 'Resi terdeteksi di sistem kurir.'
-                : 'Resi belum terdeteksi di sistem kurir — kemungkinan belum discan. Coba lagi nanti.',
+            'message' => $autoCompleted
+                ? 'Resi terdeteksi DELIVERED — order otomatis ditandai selesai.'
+                : ($detected
+                    ? 'Resi terdeteksi di sistem kurir.'
+                    : 'Resi belum terdeteksi di sistem kurir — kemungkinan belum discan. Coba lagi nanti.'),
         ]);
     }
 

@@ -10,7 +10,9 @@ use App\Events\PaymentSubmitted;
 use App\Events\PaymentVerified;
 use App\Models\Admin;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderPayment;
+use App\Models\Product;
 use App\Models\WaNotification;
 use App\Services\Settings;
 use App\Services\WhatsappNotifier;
@@ -251,6 +253,13 @@ class WaNotificationStubTest extends TestCase
             'template' => 'customer_payment_received',
             'status' => 'queued',
         ]);
+
+        // Link track order ikut dikirim ke pembeli (signed, menunjuk order ini).
+        $payload = WaNotification::where('order_id', $order->id)
+            ->where('template', 'customer_payment_received')
+            ->value('payload_json');
+        $this->assertArrayHasKey('track_url', $payload);
+        $this->assertStringContainsString('/track/MFP-WA-RCV01', $payload['track_url']);
     }
 
     public function test_order_completed_event_queues_customer_thankyou(): void
@@ -430,6 +439,62 @@ class WaNotificationStubTest extends TestCase
         $this->assertStringNotContainsString('{courier}', $captured);
         $this->assertStringNotContainsString('{tracking_number}', $captured);
         $this->assertStringNotContainsString('{track_url}', $captured);
+    }
+
+    public function test_order_created_message_lists_products_and_courier(): void
+    {
+        // Tangkap pesan "Pesanan Diterima" yang benar-benar dikirim ke gateway.
+        $captured = null;
+        $this->mock(XSenderService::class, function ($mock) use (&$captured) {
+            $mock->shouldReceive('send')->andReturnUsing(function ($to, $msg) use (&$captured) {
+                $captured = $msg;
+
+                return ['ok' => true, 'status' => 1, 'body' => 'sent'];
+            });
+        });
+
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-CREATE1',
+            'phone' => '628999111222',
+            'customer_name' => 'WAHIDILA SP',
+            'total' => 210_000,
+            'shipping_courier' => 'jne',
+            'shipping_service' => 'REG',
+        ]);
+
+        $book = Product::factory()->create(['title' => 'Kitab Kunci Penarik Rezeki']);
+        $second = Product::factory()->create(['title' => 'Buku Doa Harian']);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $book->id,
+            'qty' => 2,
+            'unit_price' => 90_000,
+            'subtotal' => 180_000,
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $second->id,
+            'qty' => 1,
+            'unit_price' => 30_000,
+            'subtotal' => 30_000,
+        ]);
+
+        event(new OrderCreated($order->fresh()));
+
+        $this->assertNotNull($captured, 'Pesan WA harus terbentuk & terkirim.');
+        // Detail tiap produk: nama + qty + subtotal.
+        $this->assertStringContainsString('Kitab Kunci Penarik Rezeki', $captured);
+        $this->assertStringContainsString('(2×)', $captured);
+        $this->assertStringContainsString('Buku Doa Harian', $captured);
+        $this->assertStringContainsString('(1×)', $captured);
+        // Kurir dinamis (label + layanan), bukan id mentah.
+        $this->assertStringContainsString('Kurir: JNE — REG', $captured);
+        $this->assertStringNotContainsString('Kurir: jne', $captured);
+        // Total tetap ada.
+        $this->assertStringContainsString('Rp 210.000', $captured);
+        // Tidak ada placeholder tersisa.
+        $this->assertStringNotContainsString('{items}', $captured);
+        $this->assertStringNotContainsString('{courier}', $captured);
     }
 
     public function test_customer_upload_proof_dispatches_payment_submitted_event(): void

@@ -130,4 +130,74 @@ class CheckResiTest extends TestCase
             ->assertOk()
             ->assertJson(['ok' => true, 'detected' => false]);
     }
+
+    /**
+     * Auto-complete: status kurir "delivered" → order 'shipped' otomatis ditutup
+     * ke 'completed' (setara webhook AWB, tapi untuk resi manual yang tak dapat
+     * callback). WA terima kasih ke pembeli ikut ter-queue.
+     */
+    public function test_auto_completes_when_courier_reports_delivered(): void
+    {
+        Http::fake([
+            '*/shipping/tracking' => Http::response([
+                'data' => [
+                    'history' => [
+                        ['date' => '2026-07-01 09:00', 'description' => 'Dalam pengiriman'],
+                        ['date' => '2026-07-02 14:00', 'description' => 'DELIVERED - diterima ybs'],
+                    ],
+                ],
+                'message' => 'OK',
+            ], 200),
+        ]);
+
+        $order = Order::factory()->create([
+            'status' => 'shipped',
+            'phone' => '628123456789',
+            'shipping_courier' => 'jne',
+            'shipping_resi' => 'JNE-DLVR-1',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.check-resi', $order))
+            ->assertOk()
+            ->assertJson(['ok' => true, 'detected' => true, 'completed' => true]);
+
+        $fresh = $order->fresh();
+        $this->assertSame('completed', $fresh->status);
+        $this->assertSame('delivered', $fresh->fulfillment_status);
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'template' => 'customer_order_completed',
+        ]);
+    }
+
+    /** Status kurir belum delivered → hanya refresh tracking, TIDAK menyelesaikan. */
+    public function test_does_not_complete_when_not_delivered(): void
+    {
+        Http::fake([
+            '*/shipping/tracking' => Http::response([
+                'data' => ['history' => [
+                    ['date' => '2026-07-01 09:00', 'description' => 'Dalam pengiriman'],
+                ]],
+                'message' => 'OK',
+            ], 200),
+        ]);
+
+        $order = Order::factory()->create([
+            'status' => 'shipped',
+            'shipping_courier' => 'jne',
+            'shipping_resi' => 'JNE-ONWAY-1',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.check-resi', $order))
+            ->assertOk()
+            ->assertJson(['completed' => false]);
+
+        $this->assertSame('shipped', $order->fresh()->status);
+        $this->assertDatabaseMissing('wa_notifications', [
+            'order_id' => $order->id,
+            'template' => 'customer_order_completed',
+        ]);
+    }
 }

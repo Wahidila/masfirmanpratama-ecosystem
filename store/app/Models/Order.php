@@ -53,6 +53,26 @@ class Order extends Model
         ];
     }
 
+    /**
+     * Transisi order ke 'completed' + fulfillment 'delivered'. Idempotent:
+     * mengembalikan true HANYA saat benar-benar baru transisi (bukan sudah
+     * completed sebelumnya) supaya caller bisa men-dispatch OrderCompleted
+     * tepat sekali. Sumber tunggal transisi selesai — dipakai bersama oleh
+     * webhook AWB, tombol admin "Tandai Selesai", dan cek-resi otomatis.
+     */
+    public function markCompleted(): bool
+    {
+        if ($this->status === 'completed') {
+            return false;
+        }
+
+        $this->status = 'completed';
+        $this->fulfillment_status = 'delivered';
+        $this->save();
+
+        return true;
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
