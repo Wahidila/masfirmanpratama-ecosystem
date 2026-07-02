@@ -92,31 +92,46 @@ class WxrImporter
     {
         $wpChannel = $channel->children($this->ns['wp'] ?? '');
 
-        // Collect first so we can resolve parents by slug in a second pass.
+        // slug => [wp_term_id, name, parent_slug, description]. Prefer channel-level
+        // <wp:category> blocks (carry term_id + hierarchy); fall back to per-item
+        // <category domain="category"> tags for exports that omit channel term defs.
         $rows = [];
         foreach ($wpChannel->category ?? [] as $cat) {
             $c = $cat->children($this->ns['wp'] ?? '');
-            $rows[] = [
+            $slug = (string) $c->category_nicename;
+            if ($slug === '') {
+                continue;
+            }
+            $rows[$slug] = [
                 'wp_term_id' => (int) $c->term_id,
-                'slug' => (string) $c->category_nicename,
                 'name' => (string) $c->cat_name,
                 'parent_slug' => (string) $c->category_parent,
                 'description' => (string) $c->category_description,
             ];
         }
 
-        foreach ($rows as $row) {
-            if ($row['slug'] === '') {
-                continue;
+        foreach ($channel->item as $item) {
+            foreach ($item->category as $c) {
+                if ((string) $c['domain'] !== 'category') {
+                    continue;
+                }
+                $slug = (string) $c['nicename'];
+                if ($slug === '' || isset($rows[$slug])) {
+                    continue;
+                }
+                $rows[$slug] = ['wp_term_id' => 0, 'name' => trim((string) $c) ?: $slug, 'parent_slug' => '', 'description' => ''];
             }
+        }
+
+        foreach ($rows as $slug => $row) {
             $this->summary['categories']++;
 
             if ($this->dryRun) {
                 continue;
             }
 
-            $category = BlogCategory::firstOrNew(['slug' => $row['slug']]);
-            $category->name = $row['name'] ?: Str::title(str_replace('-', ' ', $row['slug']));
+            $category = BlogCategory::firstOrNew(['slug' => $slug]);
+            $category->name = $row['name'] ?: Str::title(str_replace('-', ' ', $slug));
             $category->description = $row['description'] ?: $category->description;
             $category->wp_term_id = $row['wp_term_id'] ?: $category->wp_term_id;
             $category->save();
@@ -126,13 +141,13 @@ class WxrImporter
             }
         }
 
-        // Second pass: resolve parents by slug.
+        // Second pass: resolve parents by slug (channel-defined hierarchy only).
         if (! $this->dryRun) {
-            foreach ($rows as $row) {
-                if ($row['parent_slug'] === '' || $row['slug'] === '') {
+            foreach ($rows as $slug => $row) {
+                if ($row['parent_slug'] === '') {
                     continue;
                 }
-                $child = BlogCategory::where('slug', $row['slug'])->first();
+                $child = BlogCategory::where('slug', $slug)->first();
                 $parent = BlogCategory::where('slug', $row['parent_slug'])->first();
                 if ($child && $parent && $child->id !== $parent->id) {
                     $child->parent_id = $parent->id;
@@ -146,12 +161,32 @@ class WxrImporter
     {
         $wpChannel = $channel->children($this->ns['wp'] ?? '');
 
+        // slug => [name, wp_term_id]; union of channel <wp:tag> and per-item
+        // <category domain="post_tag"> tags.
+        $rows = [];
         foreach ($wpChannel->tag ?? [] as $tag) {
             $t = $tag->children($this->ns['wp'] ?? '');
             $slug = (string) $t->tag_slug;
             if ($slug === '') {
                 continue;
             }
+            $rows[$slug] = ['name' => (string) $t->tag_name, 'wp_term_id' => (int) $t->term_id ?: null];
+        }
+
+        foreach ($channel->item as $item) {
+            foreach ($item->category as $c) {
+                if ((string) $c['domain'] !== 'post_tag') {
+                    continue;
+                }
+                $slug = (string) $c['nicename'];
+                if ($slug === '' || isset($rows[$slug])) {
+                    continue;
+                }
+                $rows[$slug] = ['name' => trim((string) $c) ?: $slug, 'wp_term_id' => null];
+            }
+        }
+
+        foreach ($rows as $slug => $row) {
             $this->summary['tags']++;
 
             if ($this->dryRun) {
@@ -160,7 +195,7 @@ class WxrImporter
 
             BlogTag::firstOrCreate(
                 ['slug' => $slug],
-                ['name' => (string) $t->tag_name ?: Str::title(str_replace('-', ' ', $slug)), 'wp_term_id' => (int) $t->term_id ?: null],
+                ['name' => $row['name'] ?: Str::title(str_replace('-', ' ', $slug)), 'wp_term_id' => $row['wp_term_id']],
             );
         }
     }

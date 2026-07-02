@@ -140,4 +140,55 @@ class WxrImporterTest extends TestCase
         $this->expectException(\RuntimeException::class);
         (new WxrImporter)->import(base_path('composer.json'));
     }
+
+    public function test_inline_only_taxonomy_is_imported(): void
+    {
+        // Real WordPress exports often omit channel-level <wp:category>/<wp:tag>
+        // term definitions and only carry taxonomy inline on each <item>.
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/"
+    xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+    <title>Inline</title>
+    <wp:wxr_version>1.2</wp:wxr_version>
+    <item>
+        <title><![CDATA[Inline Post]]></title>
+        <link>https://old.example/inline-post/</link>
+        <content:encoded><![CDATA[<p>Body.</p>]]></content:encoded>
+        <wp:post_id>501</wp:post_id>
+        <wp:post_date><![CDATA[2026-04-01 09:00:00]]></wp:post_date>
+        <wp:post_date_gmt><![CDATA[2026-04-01 02:00:00]]></wp:post_date_gmt>
+        <wp:post_name><![CDATA[inline-post]]></wp:post_name>
+        <wp:status><![CDATA[publish]]></wp:status>
+        <wp:post_type><![CDATA[post]]></wp:post_type>
+        <category domain="category" nicename="kekayaan"><![CDATA[Kekayaan]]></category>
+        <category domain="post_tag" nicename="rezeki"><![CDATA[Rezeki]]></category>
+        <category domain="post_tag" nicename="mindset"><![CDATA[Mindset]]></category>
+    </item>
+</channel>
+</rss>
+XML;
+        $path = base_path('storage/framework/testing/inline-wxr.xml');
+        @mkdir(dirname($path), 0777, true);
+        file_put_contents($path, $xml);
+
+        $result = (new WxrImporter)->import($path);
+
+        $this->assertSame(1, BlogCategory::where('slug', 'kekayaan')->count());
+        $this->assertSame(2, BlogTag::whereIn('slug', ['rezeki', 'mindset'])->count());
+        $this->assertSame(1, $result['summary']['categories']);
+        $this->assertSame(2, $result['summary']['tags']);
+
+        $post = Post::where('wp_post_id', 501)->first();
+        $this->assertTrue($post->categories->pluck('slug')->contains('kekayaan'));
+        $this->assertEqualsCanonicalizing(['rezeki', 'mindset'], $post->tags->pluck('slug')->all());
+        // primary category falls back to the first attached category (no term_id map)
+        $this->assertSame(BlogCategory::where('slug', 'kekayaan')->value('id'), $post->primary_category_id);
+
+        @unlink($path);
+    }
 }
