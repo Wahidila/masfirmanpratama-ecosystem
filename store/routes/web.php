@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\BlogFeedController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CourseCheckoutController;
 use App\Http\Controllers\CourseController;
@@ -36,6 +37,8 @@ Route::get('/produk', [ProductController::class, 'index'])->name('products.index
 
 // Blog / Artikel
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/feed', [BlogFeedController::class, 'feed'])->name('blog.feed');
+Route::get('/sitemap-blog.xml', [BlogFeedController::class, 'sitemap'])->name('sitemap.blog');
 Route::get('/blog/{slug}', [BlogController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')
     ->name('blog.show');

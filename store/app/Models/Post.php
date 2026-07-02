@@ -72,12 +72,18 @@ class Post extends Model
     // -----------------------------------------------------------------
 
     /**
-     * Publicly-visible posts: published AND publish time has arrived.
-     * Covers scheduled posts automatically once published_at passes now().
+     * Publicly-visible posts: status published, OR scheduled whose publish time
+     * has already arrived (safety net so due posts appear even if the
+     * posts:publish-scheduled cron hasn't flipped their status yet). Draft and
+     * future-scheduled posts are always excluded.
      */
     public function scopePublished(Builder $query): Builder
     {
-        return $query->where('status', 'published')
+        return $query
+            ->where(function (Builder $q) {
+                $q->where('status', 'published')
+                    ->orWhere('status', 'scheduled');
+            })
             ->where(function (Builder $q) {
                 $q->whereNull('published_at')
                     ->orWhere('published_at', '<=', now());
