@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Course;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
@@ -116,6 +117,61 @@ class TrackOrderPageTest extends TestCase
         $response->assertSee('Pesanan Diproses', false);
         $response->assertSee('Dikirim', false);
         $response->assertSee('Selesai', false);
+    }
+
+    // ─── Course (non-physical) timeline ────────────────────────────────────
+
+    /** Order kelas = non-fisik → timeline TANPA diproses/dikirim + tanpa kartu pengiriman. */
+    public function test_course_order_track_hides_shipping_steps(): void
+    {
+        $course = Course::factory()->create(['title' => 'Kelas Track Test']);
+        $order = Order::factory()->create([
+            'order_number' => 'COURSE-20260101-ABC-XYZ999',
+            'status' => 'paid',
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'course_id' => $course->id,
+            'product_id' => null,
+        ]);
+
+        $response = $this->get($this->signedTrack($order->order_number));
+        $response->assertStatus(200);
+
+        // Timeline kelas: dibuat → bukti diupload → kelas aktif.
+        $response->assertSee('data-step="active"', false);
+        $response->assertSee('Kelas Aktif', false);
+
+        // TANPA step pengiriman fisik + tanpa kartu pengiriman/resi/riwayat lacak.
+        $response->assertDontSee('data-step="processing"', false);
+        $response->assertDontSee('data-step="shipped"', false);
+        $response->assertDontSee('Pesanan Diproses', false);
+        $response->assertDontSee('data-testid="shipment-card"', false);
+        $response->assertDontSee('data-testid="tracking-history-card"', false);
+        $response->assertDontSee('Riwayat Lacak Paket', false);
+    }
+
+    /** Regresi: order fisik (buku shippable) TETAP punya step diproses & dikirim. */
+    public function test_physical_order_track_keeps_shipping_steps(): void
+    {
+        $product = Product::factory()->create(['is_shippable' => true]);
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-20260101-PHYS01',
+            'status' => 'paid',
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'course_id' => null,
+        ]);
+
+        $response = $this->get($this->signedTrack($order->order_number));
+        $response->assertStatus(200);
+
+        $response->assertSee('data-step="processing"', false);
+        $response->assertSee('data-step="shipped"', false);
+        $response->assertSee('Pesanan Diproses', false);
+        $response->assertDontSee('data-step="active"', false); // 'active' hanya utk kelas
     }
 
     // ─── Order items ───────────────────────────────────────────────────────

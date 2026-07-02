@@ -322,15 +322,14 @@
             default => 'unpaid',
         };
 
-        // Pointer timeline (0 = terminal cancelled/refunded → semua step netral).
-        $stepPointer = match ($statusBucket) {
-            'unpaid' => 1,
-            'waiting_confirmation' => 2,
-            'paid', 'partial_paid' => 3,
-            'shipped' => 5,
-            'completed' => 6,
-            default => 0,
-        };
+        // Kelas/kursus = ada item course & tak ada produk fisik berkurir →
+        // timeline tanpa "diproses/dikirim". Order tanpa item / campur produk
+        // fisik tetap pakai timeline default 6-step.
+        $hasPhysicalShipping = $dbOrder->items->contains(
+            fn ($i) => $i->product && (bool) $i->product->is_shippable
+        );
+        $isCourseOrder = ! $hasPhysicalShipping
+            && $dbOrder->items->contains(fn ($i) => $i->course_id !== null);
 
         // Tanggal real per step (fallback ke created_at supaya tidak pernah null).
         $created = \Illuminate\Support\Carbon::parse($dbOrder->created_at);
@@ -340,14 +339,61 @@
             ? \Illuminate\Support\Carbon::parse($firstProof->paid_at)
             : $created;
         $shippedAt = $dbOrder->shipped_at ? \Illuminate\Support\Carbon::parse($dbOrder->shipped_at) : null;
-        $stepDates = [
-            1 => $created,
-            2 => $uploadedAt,
-            3 => $uploadedAt,
-            4 => $shippedAt ?? $updatedAt,
-            5 => $shippedAt ?? $updatedAt,
-            6 => $updatedAt,
-        ];
+
+        if (! $isCourseOrder) {
+            // Order fisik (buku) / default — timeline 6 step termasuk diproses & dikirim.
+            $stepPointer = match ($statusBucket) {
+                'unpaid' => 1,
+                'waiting_confirmation' => 2,
+                'paid', 'partial_paid' => 3,
+                'shipped' => 5,
+                'completed' => 6,
+                default => 0,
+            };
+            $stepDates = [
+                1 => $created,
+                2 => $uploadedAt,
+                3 => $uploadedAt,
+                4 => $shippedAt ?? $updatedAt,
+                5 => $shippedAt ?? $updatedAt,
+                6 => $updatedAt,
+            ];
+        } else {
+            // Kelas/kursus — non-fisik. Timeline: dibuat → bukti diupload → kelas aktif.
+            // Tak ada diproses/dikirim/kurir/resi.
+            $stepDefs = [
+                ['key' => 'created', 'label' => 'Pendaftaran Dibuat', 'icon' => 'clipboard-list'],
+                ['key' => 'uploaded', 'label' => 'Bukti Diupload', 'icon' => 'upload-cloud'],
+                ['key' => 'active', 'label' => 'Kelas Aktif', 'icon' => 'graduation-cap'],
+            ];
+            $stepPointer = match ($statusBucket) {
+                'unpaid' => 1,
+                'waiting_confirmation' => 2,
+                'paid', 'partial_paid', 'shipped', 'completed' => 3,
+                default => 0,
+            };
+            $stepDates = [
+                1 => $created,
+                2 => $uploadedAt,
+                3 => $updatedAt,
+            ];
+
+            // Label status yang menyebut pengiriman → versi kelas.
+            $statusMeta['paid'] = [
+                'label' => 'Lunas — Kelas Aktif',
+                'desc' => 'Pembayaran terverifikasi. Akses kelas kamu sudah aktif. 🎉',
+                'badge' => 'bg-secondary-50 text-secondary-700 ring-secondary-200',
+                'dot' => 'bg-secondary-500',
+                'icon' => 'graduation-cap',
+            ];
+            $statusMeta['completed'] = [
+                'label' => 'Kelas Selesai',
+                'desc' => 'Pendaftaran kelas selesai. Terima kasih sudah bergabung! 🙏',
+                'badge' => 'bg-secondary-50 text-secondary-700 ring-secondary-200',
+                'dot' => 'bg-secondary-500',
+                'icon' => 'check-circle-2',
+            ];
+        }
 
         // Item pesanan dari DB.
         $orderItems = $dbOrder->items->map(function ($item) {
@@ -553,14 +599,16 @@
                         Status Perjalanan Pesanan
                     </h2>
                     <p class="mt-1 text-sm text-slate-500">
-                        6 tahap dari pesanan dibuat sampai selesai diterima.
+                        {{ count($stepDefs) }} tahap dari pesanan dibuat sampai {{ ($isCourseOrder ?? false) ? 'kelas aktif' : 'selesai diterima' }}.
                     </p>
                 </div>
             </header>
 
             {{-- Desktop: horizontal timeline ──────────────────────── --}}
+            {{-- Kolom mengikuti jumlah step ($stepDefs) — kelas 3 step, fisik 6 step --}}
             <ol
-                class="mt-8 hidden grid-cols-6 gap-2 md:grid"
+                class="mt-8 hidden gap-2 md:grid"
+                style="grid-template-columns: repeat({{ count($stepDefs) }}, minmax(0, 1fr));"
                 role="list"
                 aria-label="Timeline status pesanan"
             >
@@ -994,8 +1042,10 @@
         @endif
 
         {{-- ================================================================ --}}
-        {{-- Tracking History (live dari Agenwebsite API)                      --}}
+        {{-- Tracking History (live dari Agenwebsite API) — hanya order fisik. --}}
+        {{-- Kelas/kursus tidak punya paket/kurir → sembunyikan sepenuhnya.    --}}
         {{-- ================================================================ --}}
+        @if (! ($isCourseOrder ?? false))
         @if (!is_null($trackingHistory))
             <section
                 id="trackingHistoryCard"
@@ -1095,6 +1145,7 @@
                 </div>
             </section>
         @endif
+        @endif {{-- /order fisik --}}
 
         {{-- ================================================================ --}}
         {{-- Footer note                                                      --}}

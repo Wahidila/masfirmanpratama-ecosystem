@@ -40,8 +40,12 @@ class CourseCheckoutController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
+        // Hanya skema CICILAN nyata: harus ada sisa yang dicicil (dp_pct < 100).
+        // Skema "lunas" (dp 100%) sudah diwakili opsi "Bayar Lunas" terpisah —
+        // jangan tampil lagi di daftar cicilan (membingungkan).
         $schemes = InstallmentScheme::active()
             ->forCourse($course->id)
+            ->where('dp_pct', '<', 100)
             ->orderBy('n_installments')
             ->get();
 
@@ -83,6 +87,7 @@ class CourseCheckoutController extends Controller
         if ($validated['payment_type'] === 'cicilan' && ! empty($validated['installment_scheme_id'])) {
             $scheme = InstallmentScheme::active()
                 ->forCourse($course->id)
+                ->where('dp_pct', '<', 100) // hanya skema cicilan nyata (lihat create())
                 ->where('id', $validated['installment_scheme_id'])
                 ->firstOrFail();
         }
@@ -114,15 +119,22 @@ class CourseCheckoutController extends Controller
             // Generate payment schedule
             $this->generatePaymentSchedule($order, (int) $course->price, $validated['payment_type'], $scheme);
 
-            // Simpan data tambahan di order_meta (occupation, motivation)
-            if (! empty($validated['occupation']) || ! empty($validated['motivation'])) {
-                $order->update([
-                    'order_meta' => [
-                        'occupation' => $validated['occupation'] ?? '',
-                        'motivation' => $validated['motivation'] ?? '',
-                    ],
-                ]);
+            // Simpan data tambahan + snapshot skema cicilan di order_meta.
+            // Snapshot dipakai halaman success untuk menampilkan jadwal (interval)
+            // tanpa bergantung pada scheme yang bisa berubah/terhapus nanti.
+            $meta = [
+                'occupation' => $validated['occupation'] ?? '',
+                'motivation' => $validated['motivation'] ?? '',
+            ];
+            if ($scheme) {
+                $meta['installment'] = [
+                    'scheme_name' => $scheme->name,
+                    'dp_pct' => (float) $scheme->dp_pct,
+                    'n_installments' => (int) $scheme->n_installments,
+                    'interval_days' => (int) $scheme->interval_days,
+                ];
             }
+            $order->update(['order_meta' => $meta]);
 
             return $order;
         });
@@ -145,19 +157,39 @@ class CourseCheckoutController extends Controller
         $course = Course::where('slug', $slug)->firstOrFail();
         $orderModel = Order::where('order_number', $order)->firstOrFail();
         $orderModel->load(['payments' => fn ($q) => $q->orderBy('id')]);
-        $bankAccounts = Settings::getBankAccounts();
-        $uploadUrl = session('upload_url', $this->generateUploadUrl($order));
 
-        $isCicilan = $orderModel->payments->count() > 1;
-        $firstPayment = $orderModel->payments->first();
+        $payments = $orderModel->payments;
+        $isCicilan = $payments->count() > 1;
+        $firstPayment = $payments->first();
+
+        // Yang HARUS ditransfer sekarang: DP (cicilan) atau total penuh (lunas).
+        $totalTransfer = (int) ($firstPayment->amount ?? $orderModel->total);
+
+        // Jadwal pembayaran cicilan (DP + tiap angsuran) — interval dari snapshot
+        // skema di order_meta (default 30 hari bila tak ada).
+        $schedule = [];
+        if ($isCicilan) {
+            $interval = (int) data_get($orderModel->order_meta, 'installment.interval_days', 30);
+            foreach ($payments->values() as $i => $payment) {
+                $schedule[] = [
+                    'label' => $i === 0 ? 'DP — bayar sekarang' : 'Cicilan ke-'.$i,
+                    'due_label' => $i === 0 ? 'Sekarang' : 'H+'.($i * $interval),
+                    'amount' => (int) $payment->amount,
+                ];
+            }
+        }
 
         return view('pages.courses.checkout-success', [
             'course' => $course,
             'order' => $orderModel,
-            'bankAccounts' => $bankAccounts,
-            'uploadUrl' => $uploadUrl,
+            'bankAccounts' => Settings::getBankAccounts(),
+            'waAdmin' => Settings::getWaAdmin(),
+            'uploadUrl' => session('upload_url', $this->generateUploadUrl($order)),
+            'trackUrl' => $this->generateTrackUrl($orderModel->order_number),
             'isCicilan' => $isCicilan,
-            'firstPayment' => $firstPayment,
+            'paymentType' => $isCicilan ? 'cicilan' : 'lunas',
+            'totalTransfer' => $totalTransfer,
+            'schedule' => $schedule,
         ]);
     }
 
@@ -319,6 +351,20 @@ class CourseCheckoutController extends Controller
 
         return URL::temporarySignedRoute(
             'upload.show',
+            now()->addDays($ttlDays),
+            ['order_number' => $orderNumber],
+        );
+    }
+
+    /**
+     * Signed URL untuk halaman lacak order (TTL lebih panjang, default 30 hari).
+     */
+    protected function generateTrackUrl(string $orderNumber): string
+    {
+        $ttlDays = max(1, (int) config('checkout.track_url_ttl_days', 30));
+
+        return URL::temporarySignedRoute(
+            'track.show',
             now()->addDays($ttlDays),
             ['order_number' => $orderNumber],
         );
