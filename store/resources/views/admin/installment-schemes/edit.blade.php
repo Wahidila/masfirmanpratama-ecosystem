@@ -15,7 +15,7 @@
 
     @include('admin.installment-schemes._form', [
         'scheme' => $scheme,
-        'products' => $products,
+        'courses' => $courses,
         'action' => route('admin.installment-schemes.update', $scheme),
         'method' => 'PUT',
     ])

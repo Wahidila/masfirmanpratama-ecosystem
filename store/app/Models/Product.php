@@ -49,10 +49,8 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function installmentSchemes(): HasMany
-    {
-        return $this->hasMany(InstallmentScheme::class);
-    }
+    // Catatan: produk/buku TIDAK punya cicilan (checkout lunas-only) — relasi
+    // installmentSchemes() sengaja dihapus. Cicilan hanya untuk kelas/kursus.
 
     /**
      * Resolve route binding by slug instead of id.

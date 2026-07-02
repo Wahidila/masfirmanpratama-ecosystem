@@ -69,8 +69,8 @@ class CheckoutController extends Controller
 
         $cart = $this->parseCartJson($validated['cart_json']);
 
-        // Resolve produk dari slug + recalc subtotal server-side. Cart-level only:
-        // ngga ada per-product scheme di task ini (forProduct(null) dari FE config).
+        // Resolve produk dari slug + recalc subtotal server-side. Checkout produk
+        // selalu lunas (payment_type in:lunas) — cicilan hanya untuk kelas/kursus.
         [$resolvedItems, $serverSubtotal, $hasShippable] = $this->resolveCartItems($cart);
 
         if (empty($resolvedItems)) {

@@ -3,12 +3,16 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Admin;
+use App\Models\Course;
 use App\Models\InstallmentScheme;
-use App\Models\Product;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Skema cicilan HANYA untuk kelas/kursus (produk selalu lunas). CRUD admin
+ * meng-scope skema ke: global (semua kelas) atau satu kelas spesifik.
+ */
 class InstallmentSchemeCrudTest extends TestCase
 {
     use RefreshDatabase;
@@ -68,35 +72,45 @@ class InstallmentSchemeCrudTest extends TestCase
     public function test_index_filters_by_global_scope(): void
     {
         InstallmentScheme::factory()->global()->create(['name' => 'GLOBAL-A']);
-        $product = Product::factory()->create();
-        InstallmentScheme::factory()->create([
-            'name' => 'PRODUCT-B',
-            'product_id' => $product->id,
-        ]);
+        $course = Course::factory()->create();
+        InstallmentScheme::factory()->forCourse($course)->create(['name' => 'COURSE-B']);
 
         $response = $this->actingAs($this->admin, 'admin')
             ->get(route('admin.installment-schemes.index', ['scope' => 'global']));
 
         $response->assertStatus(200);
         $response->assertSee('GLOBAL-A');
-        $response->assertDontSee('PRODUCT-B');
+        $response->assertDontSee('COURSE-B');
     }
 
-    public function test_index_filters_by_product_scope(): void
+    public function test_index_filters_by_course_scope(): void
     {
         InstallmentScheme::factory()->global()->create(['name' => 'GLOBAL-X']);
-        $product = Product::factory()->create();
-        InstallmentScheme::factory()->create([
-            'name' => 'PRODUCT-Y',
-            'product_id' => $product->id,
-        ]);
+        $course = Course::factory()->create();
+        InstallmentScheme::factory()->forCourse($course)->create(['name' => 'COURSE-Y']);
 
         $response = $this->actingAs($this->admin, 'admin')
-            ->get(route('admin.installment-schemes.index', ['scope' => 'product']));
+            ->get(route('admin.installment-schemes.index', ['scope' => 'course']));
 
         $response->assertStatus(200);
-        $response->assertSee('PRODUCT-Y');
+        $response->assertSee('COURSE-Y');
         $response->assertDontSee('GLOBAL-X');
+    }
+
+    public function test_index_filters_by_specific_course(): void
+    {
+        $reguler = Course::factory()->create(['title' => 'Kelas Reguler']);
+        $platinum = Course::factory()->create(['title' => 'Kelas Platinum']);
+        InstallmentScheme::factory()->forCourse($reguler)->create(['name' => 'REG-SCHEME']);
+        InstallmentScheme::factory()->forCourse($platinum)->create(['name' => 'PLAT-SCHEME']);
+
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.installment-schemes.index', ['course' => $reguler->id]));
+
+        $response->assertStatus(200);
+        $response->assertSee('REG-SCHEME');
+        $response->assertDontSee('PLAT-SCHEME');
+        $response->assertSee('Kelas Reguler'); // banner filter kelas
     }
 
     public function test_index_search_by_name(): void
@@ -123,6 +137,7 @@ class InstallmentSchemeCrudTest extends TestCase
         $response->assertSee('Skema Cicilan Baru');
         $response->assertSee('Nama Skema');
         $response->assertSee('Berlaku untuk');
+        $response->assertSee('Semua Kelas');
     }
 
     public function test_store_creates_global_scheme(): void
@@ -130,7 +145,7 @@ class InstallmentSchemeCrudTest extends TestCase
         $response = $this->actingAs($this->admin, 'admin')
             ->post(route('admin.installment-schemes.store'), [
                 'name' => '6x Cicilan Test',
-                'product_id' => '',
+                'course_id' => '',
                 'dp_pct' => 25,
                 'n_installments' => 6,
                 'interval_days' => 30,
@@ -142,20 +157,20 @@ class InstallmentSchemeCrudTest extends TestCase
 
         $this->assertDatabaseHas('installment_schemes', [
             'name' => '6x Cicilan Test',
-            'product_id' => null,
+            'course_id' => null,
             'n_installments' => 6,
             'active' => true,
         ]);
     }
 
-    public function test_store_creates_product_specific_scheme(): void
+    public function test_store_creates_course_specific_scheme(): void
     {
-        $product = Product::factory()->create();
+        $course = Course::factory()->create();
 
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.installment-schemes.store'), [
                 'name' => '12x Khusus',
-                'product_id' => $product->id,
+                'course_id' => $course->id,
                 'dp_pct' => 15,
                 'n_installments' => 12,
                 'interval_days' => 30,
@@ -164,7 +179,7 @@ class InstallmentSchemeCrudTest extends TestCase
 
         $this->assertDatabaseHas('installment_schemes', [
             'name' => '12x Khusus',
-            'product_id' => $product->id,
+            'course_id' => $course->id,
         ]);
     }
 
@@ -205,16 +220,16 @@ class InstallmentSchemeCrudTest extends TestCase
             ])->assertSessionHasErrors('n_installments');
     }
 
-    public function test_store_validates_product_id_exists(): void
+    public function test_store_validates_course_id_exists(): void
     {
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.installment-schemes.store'), [
                 'name' => 'Test',
-                'product_id' => 999999,
+                'course_id' => 999999,
                 'dp_pct' => 30,
                 'n_installments' => 3,
                 'interval_days' => 30,
-            ])->assertSessionHasErrors('product_id');
+            ])->assertSessionHasErrors('course_id');
     }
 
     public function test_store_defaults_inactive_when_active_unchecked(): void
@@ -260,7 +275,7 @@ class InstallmentSchemeCrudTest extends TestCase
         $this->actingAs($this->admin, 'admin')
             ->put(route('admin.installment-schemes.update', $scheme), [
                 'name' => 'New Name',
-                'product_id' => '',
+                'course_id' => '',
                 'dp_pct' => 50,
                 'n_installments' => 6,
                 'interval_days' => 14,
@@ -274,15 +289,15 @@ class InstallmentSchemeCrudTest extends TestCase
         $this->assertSame(14, $scheme->interval_days);
     }
 
-    public function test_update_can_change_scope_to_product(): void
+    public function test_update_can_change_scope_to_course(): void
     {
         $scheme = InstallmentScheme::factory()->global()->create();
-        $product = Product::factory()->create();
+        $course = Course::factory()->create();
 
         $this->actingAs($this->admin, 'admin')
             ->put(route('admin.installment-schemes.update', $scheme), [
                 'name' => $scheme->name,
-                'product_id' => $product->id,
+                'course_id' => $course->id,
                 'dp_pct' => 30,
                 'n_installments' => 3,
                 'interval_days' => 30,
@@ -290,7 +305,7 @@ class InstallmentSchemeCrudTest extends TestCase
             ])->assertRedirect();
 
         $scheme->refresh();
-        $this->assertSame($product->id, $scheme->product_id);
+        $this->assertSame($course->id, $scheme->course_id);
     }
 
     // ── Destroy ─────────────────────────────────────────────
@@ -339,28 +354,46 @@ class InstallmentSchemeCrudTest extends TestCase
         $this->assertNotContains('B', $names);
     }
 
-    public function test_for_product_scope_returns_global_plus_specific(): void
+    public function test_for_course_scope_returns_global_plus_specific(): void
     {
-        $product1 = Product::factory()->create();
-        $product2 = Product::factory()->create();
+        $course1 = Course::factory()->create();
+        $course2 = Course::factory()->create();
 
         InstallmentScheme::factory()->global()->create(['name' => 'GLOBAL']);
-        InstallmentScheme::factory()->create(['product_id' => $product1->id, 'name' => 'P1']);
-        InstallmentScheme::factory()->create(['product_id' => $product2->id, 'name' => 'P2']);
+        InstallmentScheme::factory()->forCourse($course1)->create(['name' => 'C1']);
+        InstallmentScheme::factory()->forCourse($course2)->create(['name' => 'C2']);
 
-        $names = InstallmentScheme::forProduct($product1->id)->pluck('name')->toArray();
+        $names = InstallmentScheme::forCourse($course1->id)->pluck('name')->toArray();
         sort($names);
-        $this->assertSame(['GLOBAL', 'P1'], $names);
+        $this->assertSame(['C1', 'GLOBAL'], $names);
     }
 
-    public function test_for_product_scope_with_null_returns_global_only(): void
+    public function test_for_course_scope_with_null_returns_global_only(): void
     {
-        $product = Product::factory()->create();
+        $course = Course::factory()->create();
         InstallmentScheme::factory()->global()->create(['name' => 'GLOBAL']);
-        InstallmentScheme::factory()->create(['product_id' => $product->id, 'name' => 'PROD']);
+        InstallmentScheme::factory()->forCourse($course)->create(['name' => 'COURSE']);
 
-        $names = InstallmentScheme::forProduct(null)->pluck('name')->toArray();
+        $names = InstallmentScheme::forCourse(null)->pluck('name')->toArray();
         $this->assertSame(['GLOBAL'], $names);
+    }
+
+    // ── Preview schedule (mirror checkout math) ─────────────
+
+    public function test_preview_schedule_dp_plus_installments(): void
+    {
+        // DP 20% dari 1.000.000 = 200.000; sisa 800.000 / 4 = 200.000 per cicilan.
+        $scheme = InstallmentScheme::factory()->create([
+            'dp_pct' => 20,
+            'n_installments' => 4,
+        ]);
+
+        $rows = $scheme->previewSchedule(1_000_000);
+
+        $this->assertCount(5, $rows); // 1 DP + 4 cicilan
+        $this->assertSame(200_000, $rows[0]['amount']); // DP
+        $total = array_sum(array_column($rows, 'amount'));
+        $this->assertSame(1_000_000, $total); // penjumlahan = harga penuh
     }
 
     // ── Sidebar nav ─────────────────────────────────────────

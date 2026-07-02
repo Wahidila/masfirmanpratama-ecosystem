@@ -135,6 +135,13 @@
                     Tersedia cicilan
                 </label>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Centang jika kelas ini bisa dibayar dengan skema cicilan.</p>
+                @if ($course->exists ?? false)
+                    <a href="{{ route('admin.installment-schemes.index', ['course' => $course->id]) }}"
+                       class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400">
+                        <i data-lucide="layers" class="h-3.5 w-3.5"></i>
+                        Kelola skema cicilan kelas ini
+                    </a>
+                @endif
             </div>
         </div>
     </x-admin.card>
