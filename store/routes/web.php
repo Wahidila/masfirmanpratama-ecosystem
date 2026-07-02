@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CourseCheckoutController;
 use App\Http\Controllers\CourseController;
@@ -32,6 +33,12 @@ Route::get('/kontak', [PageController::class, 'kontak'])->name('pages.kontak');
 
 // Katalog produk
 Route::get('/produk', [ProductController::class, 'index'])->name('products.index');
+
+// Blog / Artikel
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])
+    ->where('slug', '[a-z0-9\-]+')
+    ->name('blog.show');
 
 Route::get('/kelas/{slug}', [CourseController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')
