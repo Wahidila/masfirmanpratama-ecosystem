@@ -21,6 +21,8 @@ Ekosistem bisnis online Mas Firman Pratama (Mind Power & Life Mastery / AMC):
 1. **Online Store** (`masfirmanpratama.com`) — etalase produk (kelas + buku),
    checkout manual, upload bukti bayar (lunas atau cicilan), tracking order
    tanpa login, integrasi ongkir Agenwebsite.com untuk buku fisik.
+   Plus **Blog/Artikel** (`/blog`) — CMS di `/admin/posts`, SEO (sitemap, OG,
+   canonical), migrasi dari WordPress lama via importer WXR (`blog:import-wordpress`).
 2. **Admin Panel Unified** (`/admin` atau `admin.masfirmanpratama.com`) —
    1 login kontrol Store + Affiliate: produk, pesanan, verifikasi bayar,
    resi, affiliator, komisi, withdrawal, materi marketing, event gamifikasi.
@@ -345,3 +347,5 @@ QC outcome: PASS clean (Lead anggap QC oke setelah verify 10/10 PR ship + tests 
 - 2026-06-18 | engineer (opencode) | M4 batch 1 store emitter (`be48955`) | AffiliateWebhookClient HMAC-SHA256 + retry, DispatchAffiliateOrderPaid listener di PaymentVerified, cookie referral fallback. BONUS FIX: ref_code abuse (occupation/motivation JSON) dipindah ke kolom `order_meta` baru. 438 test pass
 - 2026-06-18 | engineer (opencode) | M4 batch 2 affiliate receiver (`f19ae22`) | StoreWebhookController verify HMAC (hash_equals timing-safe, fail-closed kalau secret kosong → 503), idempotency by store_order_id, order-paid → referral_order+commission cooling, commission_settings match w/ fallback global, min_amount guard, order-refunded → cancel cooling/available (preserve withdrawn), commissions:release command daily. 43 test pass
 - 2026-06-18 | orchestrator | M4 integration smoke PASS end-to-end | Store sign → affiliate verify cocok (200), bad sig 401, referral_order paid + commission 10% (Rp50k) cooling +7d, idempotent (kirim 2x → 1 commission). Secret store/affiliate HARUS sama (AFFILIATE_WEBHOOK_SECRET = STORE_WEBHOOK_SECRET). PENDING: seed commission_settings nilai final dari klien, push ke origin (PAT invalid)
+- 2026-07-03 | engineer (feat/blog) | Modul **Blog** ditambah ke Store (branch `worktree-feat+blog`, paralel) | 8 fase: data layer (posts/blog_categories/blog_tags/pivots/blog_media + kolom kompat WP), admin CRUD `/admin/posts` + Trix + HtmlSanitizer, publik `/blog` + `/blog/{slug}`, SEO (sitemap/RSS/OG/JSON-LD/scheduled-publish), **WXR importer** (`blog:import-wordpress`, idempotent via `wp_post_id`), legacy 301 root→`/blog/{slug}`. 50 test blog pass. Keputusan URL: `/blog/{slug}` + 301 (bukan root, hindari tabrakan route). Detail: `product-development/features/blog/PRD.md`
+- 2026-07-03 | engineer (feat/blog) | Migrasi konten WP lama = export WXR (Tools→Export) → `/admin/posts/import` (checklist: `--media` SEBELUM cutover DNS selagi `wp-content/uploads` masih online) | Situs lama WordPress+Yoast, ~74 artikel/6 kategori. Import idempotent, slug dipertahankan → 301 mulus

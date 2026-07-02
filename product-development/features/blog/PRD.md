@@ -1,8 +1,11 @@
 # PRD — Blog / Artikel masfirmanpratama.com
 
-> **Status:** Draft · **Author:** AI Agent (session paralel `feat/blog`) · **Created:** 2 Juli 2026
+> **Status:** ✅ IMPLEMENTED (3 Juli 2026) · **Author:** AI Agent (session paralel `feat/blog`) · **Created:** 2 Juli 2026
 > **Branch kerja:** `worktree-feat+blog` (worktree terisolasi, merge ke `main` saat selesai)
 > **App target:** `store/` (Laravel 11 — `masfirmanpratama.com`)
+>
+> **Implementasi:** 8 fase selesai — data layer, admin CRUD, publik `/blog`, SEO (sitemap/RSS/OG),
+> WXR importer, legacy 301. **50 test blog PASS**, tanpa regresi. Detail plan: `docs_dev/plans/2026-07-02-blog-feature.md`.
 
 ---
 

@@ -1,5 +1,9 @@
 # Plan — Blog / Artikel (Store) · 2 Juli 2026
 
+> ✅ **STATUS: SELESAI (3 Juli 2026)** — 8 fase diimplementasikan di branch `worktree-feat+blog`.
+> 50 test blog PASS (PostCrud 18, BlogPage 9, BlogSeo 5, WxrImporter 10, LegacyRedirect 8), tanpa regresi.
+> Commit per fase: data → admin → publik → SEO → importer → 301 → docs.
+
 > **PRD:** `product-development/features/blog/PRD.md`
 > **Branch:** `worktree-feat+blog` (worktree paralel; merge ke `main` saat selesai)
 > **App:** `store/` (Laravel 11) · **Scope v1:** Core + **WordPress migration** (F1–F13 must, F8–F9 should)
