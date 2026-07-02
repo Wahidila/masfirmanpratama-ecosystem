@@ -42,7 +42,7 @@
                     <a href="{{ route('blog.show', $post->slug) }}" class="block">
                         <div class="aspect-[16/9] w-full overflow-hidden bg-slate-100">
                             @if ($post->image_path)
-                                <img src="{{ asset($post->image_path) }}" alt="{{ $post->title }}" loading="lazy"
+                                <img src="{{ $post->imageUrl() }}" alt="{{ $post->title }}" loading="lazy"
                                     class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]">
                             @else
                                 <div class="flex h-full w-full items-center justify-center text-slate-300">

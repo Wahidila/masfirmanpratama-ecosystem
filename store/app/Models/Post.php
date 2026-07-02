@@ -136,4 +136,20 @@ class Post extends Model
 
         return max(1, (int) ceil($words / 200));
     }
+
+    /**
+     * Resolve the featured image to a usable URL. Handles both locally-hosted
+     * paths (storage/…) and absolute URLs left pointing at the old WordPress
+     * site when media wasn't rehosted yet.
+     */
+    public function imageUrl(): ?string
+    {
+        if (blank($this->image_path)) {
+            return null;
+        }
+
+        return Str::startsWith($this->image_path, ['http://', 'https://'])
+            ? $this->image_path
+            : asset($this->image_path);
+    }
 }

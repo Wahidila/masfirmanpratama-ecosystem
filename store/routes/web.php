@@ -230,7 +230,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->except(['show'])
             ->parameters(['products' => 'product']);
 
-        // Blog — Artikel CRUD (WordPress import routes added in blog import phase)
+        // Blog — Artikel CRUD + WordPress import
+        Route::get('posts/import', [AdminPostController::class, 'importForm'])->name('posts.import.form');
+        Route::post('posts/import', [AdminPostController::class, 'import'])->name('posts.import');
         Route::post('posts/bulk', [AdminPostController::class, 'bulk'])->name('posts.bulk');
         Route::post('posts/{post}/restore', [AdminPostController::class, 'restore'])
             ->withTrashed()

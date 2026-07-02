@@ -9,6 +9,7 @@ use App\Models\BlogCategory;
 use App\Models\BlogTag;
 use App\Models\Post;
 use App\Models\Product;
+use App\Services\Blog\WxrImporter;
 use App\Support\HtmlSanitizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -202,6 +203,58 @@ class PostController extends Controller
         return redirect()
             ->route('admin.posts.index', $request->only(['view', 'status', 'category', 'q']))
             ->with('status', $message);
+    }
+
+    // -----------------------------------------------------------------
+    // WordPress import
+    // -----------------------------------------------------------------
+
+    public function importForm(): View
+    {
+        return view('admin.posts.import', [
+            'result' => session('import_result'),
+        ]);
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'wxr' => ['required', 'file', 'mimes:xml,txt', 'max:51200'], // 50 MB
+            'download_media' => ['nullable', 'boolean'],
+            'dry_run' => ['nullable', 'boolean'],
+        ], [
+            'wxr.required' => 'Pilih file export WordPress (.xml) dulu.',
+            'wxr.mimes' => 'File harus berupa XML export WordPress (WXR).',
+            'wxr.max' => 'File terlalu besar (maksimal 50 MB).',
+        ]);
+
+        $dryRun = (bool) ($data['dry_run'] ?? false);
+
+        $importer = new WxrImporter(
+            downloadMedia: (bool) ($data['download_media'] ?? false),
+            force: false,
+            dryRun: $dryRun,
+        );
+
+        try {
+            $result = $importer->import($request->file('wxr')->getRealPath());
+        } catch (\Throwable $e) {
+            return back()->with('status', 'Import gagal: '.$e->getMessage());
+        }
+
+        $s = $result['summary'];
+
+        if ($dryRun) {
+            return back()->with('import_result', $result)
+                ->with('status', 'Preview (dry-run) selesai — belum ada perubahan disimpan.');
+        }
+
+        $msg = sprintf(
+            'Import selesai: %d artikel baru, %d diperbarui, %d kategori, %d tag, %d media.',
+            $s['posts_created'], $s['posts_updated'], $s['categories'], $s['tags'], $s['media_downloaded'],
+        );
+
+        return redirect()->route('admin.posts.index')->with('status', $msg);
     }
 
     // -----------------------------------------------------------------

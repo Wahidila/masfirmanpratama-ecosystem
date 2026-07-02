@@ -76,7 +76,7 @@
         {{-- Featured image (contained, beneath title) --}}
         @if ($post->image_path)
             <figure class="mt-6 overflow-hidden rounded-2xl bg-slate-100">
-                <img src="{{ asset($post->image_path) }}" alt="{{ $post->title }}" class="w-full object-cover">
+                <img src="{{ $post->imageUrl() }}" alt="{{ $post->title }}" class="w-full object-cover">
             </figure>
         @endif
 
@@ -148,7 +148,7 @@
                         <a href="{{ route('blog.show', $related->slug) }}" class="group block">
                             <div class="aspect-[16/9] w-full overflow-hidden rounded-xl bg-slate-100">
                                 @if ($related->image_path)
-                                    <img src="{{ asset($related->image_path) }}" alt="{{ $related->title }}" loading="lazy" class="h-full w-full object-cover transition group-hover:scale-105">
+                                    <img src="{{ $related->imageUrl() }}" alt="{{ $related->title }}" loading="lazy" class="h-full w-full object-cover transition group-hover:scale-105">
                                 @endif
                             </div>
                             <p class="mt-2 text-sm font-semibold text-slate-800 group-hover:text-primary-600 line-clamp-2">{{ $related->title }}</p>

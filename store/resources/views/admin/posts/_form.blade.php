@@ -14,7 +14,7 @@
         : route('admin.posts.store');
 
     $metaSeo = is_array($post->meta_seo ?? null) ? $post->meta_seo : [];
-    $existingImage = $post->image_path ? asset($post->image_path) : null;
+    $existingImage = $post->exists ? $post->imageUrl() : null;
 
     $selectedCategories = collect(old('category_ids', $selectedCategories))->map(fn ($v) => (int) $v)->all();
     $selectedProducts = collect(old('product_ids', $selectedProducts))->map(fn ($v) => (int) $v)->all();

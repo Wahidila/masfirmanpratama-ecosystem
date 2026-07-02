@@ -165,7 +165,7 @@
                         <div class="flex items-center gap-3">
                             <div class="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-white/[0.03]">
                                 @if ($post->image_path)
-                                    <img src="{{ asset($post->image_path) }}" alt="{{ $post->title }}" class="h-full w-full object-cover">
+                                    <img src="{{ $post->imageUrl() }}" alt="{{ $post->title }}" class="h-full w-full object-cover">
                                 @else
                                     <div class="flex h-full w-full items-center justify-center text-gray-300 dark:text-gray-600">
                                         <x-admin.icon name="image" class="h-5 w-5" />
