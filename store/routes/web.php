@@ -6,6 +6,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CourseCheckoutController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LegacyRedirectController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingRateController;
@@ -42,6 +43,12 @@ Route::get('/sitemap-blog.xml', [BlogFeedController::class, 'sitemap'])->name('s
 Route::get('/blog/{slug}', [BlogController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')
     ->name('blog.show');
+
+// Legacy WordPress taxonomy archives → 301 to new blog (SEO continuity)
+Route::get('/category/{slug}', [LegacyRedirectController::class, 'category'])
+    ->where('slug', '[a-z0-9\-]+')->name('legacy.category');
+Route::get('/tag/{slug}', [LegacyRedirectController::class, 'tag'])
+    ->where('slug', '[a-z0-9\-]+')->name('legacy.tag');
 
 Route::get('/kelas/{slug}', [CourseController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')
@@ -297,3 +304,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Legacy WordPress root permalink 301 (MUST be registered LAST)
+|--------------------------------------------------------------------------
+|
+| Old posts lived at masfirmanpratama.com/{slug}/. This catch-all only fires
+| when no earlier route matched, and only 301s when {slug} is a real published
+| post (otherwise 404). The regex excludes reserved first segments so store
+| routes are never shadowed.
+*/
+Route::get('/{slug}', [LegacyRedirectController::class, 'post'])
+    ->where('slug', '(?!blog|produk|kelas|admin|storage|checkout|cart|track|upload|category|tag|sitemap-blog\.xml)[a-z0-9\-]+')
+    ->name('legacy.post');
