@@ -187,10 +187,12 @@ if (! app()->environment('production')) {
 */
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BlogCategoryController as AdminBlogCategoryController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InstallmentSchemeController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -217,6 +219,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('products', AdminProductController::class)
             ->except(['show'])
             ->parameters(['products' => 'product']);
+
+        // Blog — Artikel CRUD (WordPress import routes added in blog import phase)
+        Route::post('posts/bulk', [AdminPostController::class, 'bulk'])->name('posts.bulk');
+        Route::post('posts/{post}/restore', [AdminPostController::class, 'restore'])
+            ->withTrashed()
+            ->name('posts.restore');
+        Route::resource('posts', AdminPostController::class)
+            ->except(['show'])
+            ->parameters(['posts' => 'post']);
+        Route::resource('blog-categories', AdminBlogCategoryController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
 
         Route::post('courses/bulk', [AdminCourseController::class, 'bulk'])->name('courses.bulk');
         Route::post('courses/{course}/restore', [AdminCourseController::class, 'restore'])
