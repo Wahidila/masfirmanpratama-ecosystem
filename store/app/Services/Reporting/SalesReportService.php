@@ -139,19 +139,28 @@ class SalesReportService
      */
     public function monthlyRevenue(Carbon $from, Carbon $to): array
     {
-        $start = $from->startOfMonth();
-        $end = $to->endOfMonth();
+        // copy() WAJIB — Carbon mutable; tanpa copy, startOfMonth/endOfMonth
+        // mengubah $from/$to milik caller → query berikutnya (top products,
+        // status, payment summary) diam-diam memakai range yang melebar.
+        $start = $from->copy()->startOfMonth();
+        $end = $to->copy()->endOfMonth();
         $period = CarbonPeriod::create($start, '1 month', $end);
+
+        // Ekspresi grup per-bulan portable: SQLite (dev/test) pakai strftime,
+        // MySQL/MariaDB (produksi) pakai DATE_FORMAT.
+        $monthExpr = fn (string $col) => DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', {$col})"
+            : "DATE_FORMAT({$col}, '%Y-%m')";
 
         $raw = OrderPayment::where('status', 'verified')
             ->whereBetween('paid_at', [$start, $end])
-            ->selectRaw("DATE_FORMAT(paid_at, '%Y-%m') as month, SUM(amount) as revenue")
-            ->groupByRaw("DATE_FORMAT(paid_at, '%Y-%m')")
+            ->selectRaw($monthExpr('paid_at').' as month, SUM(amount) as revenue')
+            ->groupByRaw($monthExpr('paid_at'))
             ->pluck('revenue', 'month');
 
         $ordersPerMonth = Order::whereBetween('created_at', [$start, $end])
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt")
-            ->groupByRaw("DATE_FORMAT(created_at, '%Y-%m')")
+            ->selectRaw($monthExpr('created_at').' as month, COUNT(*) as cnt')
+            ->groupByRaw($monthExpr('created_at'))
             ->pluck('cnt', 'month');
 
         $categories = [];

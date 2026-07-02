@@ -174,6 +174,10 @@ class OrderController extends Controller
             }
             $payment->status = 'verified';
             $payment->verified_at = now();
+            // Backfill paid_at bila belum ada (mis. admin approve tanpa customer
+            // upload bukti) — laporan revenue di-bucket by paid_at; NULL = tak
+            // pernah terhitung di Total Revenue/chart selamanya.
+            $payment->paid_at ??= now();
             $payment->verified_by = $request->user('admin')?->id;
             $payment->rejection_reason = null;
             $payment->save();

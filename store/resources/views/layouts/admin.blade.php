@@ -74,7 +74,11 @@
         @include('layouts.partials.admin-sidebar')
 
         {{-- Main content area --}}
-        <div class="flex-1 transition-all duration-300 ease-in-out"
+        {{-- min-w-0 WAJIB: tanpa ini flex item (flex-1) punya min-width:auto sehingga
+             tidak bisa menyusut untuk memberi ruang bagi margin-kiri-nya sendiri
+             (xl:ml-[290px] = lebar sidebar). Akibatnya konten meluber 290px ke kanan
+             dan terpotong di layar laptop. Berlaku untuk SEMUA halaman /admin. --}}
+        <div class="flex-1 min-w-0 transition-all duration-300 ease-in-out"
             :class="{
                 'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
                 'xl:ml-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isHovered,
