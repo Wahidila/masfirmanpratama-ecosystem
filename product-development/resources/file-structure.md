@@ -279,6 +279,37 @@ tests/
 
 **Test stats:** 438 tests, 1544 assertions — 28 failures (all shipping API), 4 errors
 
+### Blog module (`store/`, feat/blog — 2026-07-03)
+
+```
+app/
+├── Models/                      Post, BlogCategory, BlogTag, BlogMedia
+├── Http/Controllers/
+│   ├── BlogController.php        → /blog (index+filter+search), /blog/{slug}
+│   ├── BlogFeedController.php     → /sitemap-blog.xml, /blog/feed (RSS)
+│   ├── LegacyRedirectController.php → 301 old root /{slug}/ → /blog/{slug}
+│   └── Admin/
+│       ├── PostController.php     → CRUD + bulk + restore + WXR import
+│       └── BlogCategoryController.php
+├── Http/Requests/Admin/          StorePostRequest, UpdatePostRequest
+├── Services/Blog/WxrImporter.php → WordPress WXR parser (idempotent)
+├── Console/Commands/             ImportWordpressBlog, PublishScheduledPosts
+└── Support/HtmlSanitizer.php     → DOM allowlist (anti-XSS) for post bodies
+
+database/migrations/2026_07_02_1000*  → posts, blog_categories, blog_tags,
+                                         category_post, tag_post, blog_media, post_product
+database/seeders/BlogSeeder.php        (+ Post/BlogCategory/BlogTag factories)
+resources/views/admin/posts/           index, _form, create, edit, import
+resources/views/admin/blog-categories/ index
+resources/views/pages/blog/            index, show
+tests/Feature/{Admin/PostCrudTest, BlogPageTest, BlogSeoTest,
+              Blog/WxrImporterTest, Blog/LegacyRedirectTest}  → 50 tests
+tests/Fixtures/wxr-sample.xml
+```
+
+Migrasi WordPress: `php artisan blog:import-wordpress export.xml --media` (jalankan
+`--media` SEBELUM cutover DNS). Detail: `product-development/features/blog/PRD.md §10`.
+
 ---
 
 ## Affiliate App (`affiliate/`)

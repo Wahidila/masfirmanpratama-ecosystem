@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\BlogFeedController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CourseCheckoutController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LegacyRedirectController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingRateController;
@@ -32,6 +35,20 @@ Route::get('/kontak', [PageController::class, 'kontak'])->name('pages.kontak');
 
 // Katalog produk
 Route::get('/produk', [ProductController::class, 'index'])->name('products.index');
+
+// Blog / Artikel
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/feed', [BlogFeedController::class, 'feed'])->name('blog.feed');
+Route::get('/sitemap-blog.xml', [BlogFeedController::class, 'sitemap'])->name('sitemap.blog');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])
+    ->where('slug', '[a-z0-9\-]+')
+    ->name('blog.show');
+
+// Legacy WordPress taxonomy archives → 301 to new blog (SEO continuity)
+Route::get('/category/{slug}', [LegacyRedirectController::class, 'category'])
+    ->where('slug', '[a-z0-9\-]+')->name('legacy.category');
+Route::get('/tag/{slug}', [LegacyRedirectController::class, 'tag'])
+    ->where('slug', '[a-z0-9\-]+')->name('legacy.tag');
 
 Route::get('/kelas/{slug}', [CourseController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')
@@ -187,10 +204,12 @@ if (! app()->environment('production')) {
 */
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BlogCategoryController as AdminBlogCategoryController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InstallmentSchemeController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -217,6 +236,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('products', AdminProductController::class)
             ->except(['show'])
             ->parameters(['products' => 'product']);
+
+        // Blog — Artikel CRUD + WordPress import
+        Route::get('posts/import', [AdminPostController::class, 'importForm'])->name('posts.import.form');
+        Route::post('posts/import', [AdminPostController::class, 'import'])->name('posts.import');
+        Route::post('posts/bulk', [AdminPostController::class, 'bulk'])->name('posts.bulk');
+        Route::post('posts/{post}/restore', [AdminPostController::class, 'restore'])
+            ->withTrashed()
+            ->name('posts.restore');
+        Route::resource('posts', AdminPostController::class)
+            ->except(['show'])
+            ->parameters(['posts' => 'post']);
+        Route::resource('blog-categories', AdminBlogCategoryController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
 
         Route::post('courses/bulk', [AdminCourseController::class, 'bulk'])->name('courses.bulk');
         Route::post('courses/{course}/restore', [AdminCourseController::class, 'restore'])
@@ -272,3 +304,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Legacy WordPress root permalink 301 (MUST be registered LAST)
+|--------------------------------------------------------------------------
+|
+| Old posts lived at masfirmanpratama.com/{slug}/. This catch-all only fires
+| when no earlier route matched, and only 301s when {slug} is a real published
+| post (otherwise 404). The regex excludes reserved first segments so store
+| routes are never shadowed.
+*/
+Route::get('/{slug}', [LegacyRedirectController::class, 'post'])
+    ->where('slug', '(?!blog|produk|kelas|admin|storage|checkout|cart|track|upload|category|tag|sitemap-blog\.xml)[a-z0-9\-]+')
+    ->name('legacy.post');

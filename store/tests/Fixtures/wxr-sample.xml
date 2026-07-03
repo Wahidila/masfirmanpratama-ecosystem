@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+    xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/"
+    xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+    <title>Firman Pratama</title>
+    <link>https://masfirmanpratama.com</link>
+    <description>Old blog</description>
+    <language>id-ID</language>
+    <wp:wxr_version>1.2</wp:wxr_version>
+    <wp:base_site_url>https://masfirmanpratama.com</wp:base_site_url>
+    <wp:base_blog_url>https://masfirmanpratama.com</wp:base_blog_url>
+
+    <wp:author>
+        <wp:author_id>1</wp:author_id>
+        <wp:author_login><![CDATA[firmanp]]></wp:author_login>
+        <wp:author_email><![CDATA[firman@example.com]]></wp:author_email>
+        <wp:author_display_name><![CDATA[Firman Pratama]]></wp:author_display_name>
+    </wp:author>
+
+    <wp:category>
+        <wp:term_id>11</wp:term_id>
+        <wp:category_nicename><![CDATA[kekuatan-pikiran]]></wp:category_nicename>
+        <wp:category_parent><![CDATA[]]></wp:category_parent>
+        <wp:cat_name><![CDATA[Kekuatan Pikiran]]></wp:cat_name>
+        <wp:category_description><![CDATA[Seputar kekuatan pikiran]]></wp:category_description>
+    </wp:category>
+    <wp:category>
+        <wp:term_id>12</wp:term_id>
+        <wp:category_nicename><![CDATA[sub-pikiran]]></wp:category_nicename>
+        <wp:category_parent><![CDATA[kekuatan-pikiran]]></wp:category_parent>
+        <wp:cat_name><![CDATA[Sub Pikiran]]></wp:cat_name>
+    </wp:category>
+
+    <wp:tag>
+        <wp:term_id>180</wp:term_id>
+        <wp:tag_slug><![CDATA[berpikir-positif]]></wp:tag_slug>
+        <wp:tag_name><![CDATA[Berpikir Positif]]></wp:tag_name>
+    </wp:tag>
+    <wp:tag>
+        <wp:term_id>29</wp:term_id>
+        <wp:tag_slug><![CDATA[pikiran]]></wp:tag_slug>
+        <wp:tag_name><![CDATA[Pikiran]]></wp:tag_name>
+    </wp:tag>
+
+    <item>
+        <title>berpikir-positif</title>
+        <guid isPermaLink="false">https://masfirmanpratama.com/wp-content/uploads/2026/06/berpikir-positif.jpg</guid>
+        <wp:post_id>2008</wp:post_id>
+        <wp:post_type><![CDATA[attachment]]></wp:post_type>
+        <wp:status><![CDATA[inherit]]></wp:status>
+        <wp:post_parent>2006</wp:post_parent>
+        <wp:attachment_url><![CDATA[https://masfirmanpratama.com/wp-content/uploads/2026/06/berpikir-positif.jpg]]></wp:attachment_url>
+        <wp:postmeta>
+            <wp:meta_key><![CDATA[_wp_attached_file]]></wp:meta_key>
+            <wp:meta_value><![CDATA[2026/06/berpikir-positif.jpg]]></wp:meta_value>
+        </wp:postmeta>
+    </item>
+
+    <item>
+        <title><![CDATA[Stop Berpikir Positif]]></title>
+        <link>https://masfirmanpratama.com/stop-berpikir-positif/</link>
+        <dc:creator><![CDATA[firmanp]]></dc:creator>
+        <guid isPermaLink="false">https://masfirmanpratama.com/?p=2006</guid>
+        <content:encoded><![CDATA[<p>Isi artikel yang bermanfaat.</p><img src="https://masfirmanpratama.com/wp-content/uploads/2026/06/berpikir-positif-1024x585.jpg" alt="ilustrasi" /><script>alert('x')</script>]]></content:encoded>
+        <excerpt:encoded><![CDATA[Ringkasan artikel stop berpikir positif.]]></excerpt:encoded>
+        <wp:post_id>2006</wp:post_id>
+        <wp:post_date><![CDATA[2026-06-16 15:16:42]]></wp:post_date>
+        <wp:post_date_gmt><![CDATA[2026-06-16 08:16:42]]></wp:post_date_gmt>
+        <wp:post_modified_gmt><![CDATA[2026-06-16 08:17:31]]></wp:post_modified_gmt>
+        <wp:post_name><![CDATA[stop-berpikir-positif]]></wp:post_name>
+        <wp:status><![CDATA[publish]]></wp:status>
+        <wp:post_type><![CDATA[post]]></wp:post_type>
+        <category domain="category" nicename="kekuatan-pikiran"><![CDATA[Kekuatan Pikiran]]></category>
+        <category domain="post_tag" nicename="berpikir-positif"><![CDATA[Berpikir Positif]]></category>
+        <category domain="post_tag" nicename="pikiran"><![CDATA[Pikiran]]></category>
+        <wp:postmeta>
+            <wp:meta_key><![CDATA[_thumbnail_id]]></wp:meta_key>
+            <wp:meta_value><![CDATA[2008]]></wp:meta_value>
+        </wp:postmeta>
+        <wp:postmeta>
+            <wp:meta_key><![CDATA[_yoast_wpseo_title]]></wp:meta_key>
+            <wp:meta_value><![CDATA[Stop Berpikir Positif - Expert in Mind Power]]></wp:meta_value>
+        </wp:postmeta>
+        <wp:postmeta>
+            <wp:meta_key><![CDATA[_yoast_wpseo_metadesc]]></wp:meta_key>
+            <wp:meta_value><![CDATA[Kenapa berpikir positif saja tidak cukup.]]></wp:meta_value>
+        </wp:postmeta>
+        <wp:postmeta>
+            <wp:meta_key><![CDATA[_yoast_wpseo_primary_category]]></wp:meta_key>
+            <wp:meta_value><![CDATA[11]]></wp:meta_value>
+        </wp:postmeta>
+    </item>
+
+    <item>
+        <title><![CDATA[Artikel Draft Lama]]></title>
+        <link>https://masfirmanpratama.com/?p=2010</link>
+        <dc:creator><![CDATA[firmanp]]></dc:creator>
+        <guid isPermaLink="false">https://masfirmanpratama.com/?p=2010</guid>
+        <content:encoded><![CDATA[<p>Draft belum selesai.</p>]]></content:encoded>
+        <excerpt:encoded><![CDATA[]]></excerpt:encoded>
+        <wp:post_id>2010</wp:post_id>
+        <wp:post_date><![CDATA[2026-05-01 10:00:00]]></wp:post_date>
+        <wp:post_date_gmt><![CDATA[0000-00-00 00:00:00]]></wp:post_date_gmt>
+        <wp:post_name><![CDATA[artikel-draft-lama]]></wp:post_name>
+        <wp:status><![CDATA[draft]]></wp:status>
+        <wp:post_type><![CDATA[post]]></wp:post_type>
+    </item>
+
+    <item>
+        <title><![CDATA[Artikel Terjadwal]]></title>
+        <link>https://masfirmanpratama.com/?p=2011</link>
+        <dc:creator><![CDATA[firmanp]]></dc:creator>
+        <guid isPermaLink="false">https://masfirmanpratama.com/?p=2011</guid>
+        <content:encoded><![CDATA[<p>Akan tayang nanti.</p>]]></content:encoded>
+        <wp:post_id>2011</wp:post_id>
+        <wp:post_date><![CDATA[2099-01-01 09:00:00]]></wp:post_date>
+        <wp:post_date_gmt><![CDATA[2099-01-01 02:00:00]]></wp:post_date_gmt>
+        <wp:post_name><![CDATA[artikel-terjadwal]]></wp:post_name>
+        <wp:status><![CDATA[future]]></wp:status>
+        <wp:post_type><![CDATA[post]]></wp:post_type>
+        <category domain="category" nicename="kekuatan-pikiran"><![CDATA[Kekuatan Pikiran]]></category>
+    </item>
+
+    <item>
+        <title><![CDATA[Artikel Sampah]]></title>
+        <link>https://masfirmanpratama.com/?p=2012</link>
+        <guid isPermaLink="false">https://masfirmanpratama.com/?p=2012</guid>
+        <content:encoded><![CDATA[<p>Di trash.</p>]]></content:encoded>
+        <wp:post_id>2012</wp:post_id>
+        <wp:post_date><![CDATA[2026-03-01 10:00:00]]></wp:post_date>
+        <wp:post_date_gmt><![CDATA[2026-03-01 03:00:00]]></wp:post_date_gmt>
+        <wp:post_name><![CDATA[artikel-sampah]]></wp:post_name>
+        <wp:status><![CDATA[trash]]></wp:status>
+        <wp:post_type><![CDATA[post]]></wp:post_type>
+    </item>
+
+    <item>
+        <title><![CDATA[Halaman Statis]]></title>
+        <guid isPermaLink="false">https://masfirmanpratama.com/?page_id=3000</guid>
+        <content:encoded><![CDATA[<p>Halaman, harus dilewati.</p>]]></content:encoded>
+        <wp:post_id>3000</wp:post_id>
+        <wp:post_name><![CDATA[halaman-statis]]></wp:post_name>
+        <wp:status><![CDATA[publish]]></wp:status>
+        <wp:post_type><![CDATA[page]]></wp:post_type>
+    </item>
+</channel>
+</rss>
