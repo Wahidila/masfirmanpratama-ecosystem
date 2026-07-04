@@ -57,10 +57,14 @@ class ReportController extends Controller
             'topProducts' => $topProducts,
             'orderStatusBreakdown' => $statusBreakdown,
             'paymentSummary' => $paymentSummary,
+            // Tanggal RESOLVED (bukan raw input yang bisa kosong) — input filter
+            // selalu menampilkan periode yang benar-benar dipakai laporan, dan
+            // link Export CSV membawa periode yang sama persis.
             'filters' => [
-                'from' => $request->input('from'),
-                'to' => $request->input('to'),
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
             ],
+            'periodLabel' => $from->translatedFormat('d M Y').' – '.$to->translatedFormat('d M Y'),
         ]);
     }
 

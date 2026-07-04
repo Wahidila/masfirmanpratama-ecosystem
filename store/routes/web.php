@@ -82,45 +82,11 @@ Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.s
 /*
  * GET /checkout/success/{order}
  * --------------------------------------------------------------------------
- * Membaca payload yang di-flash di POST /checkout (M1 stub) supaya view
- * tahu total transfer (DP atau lunas) tanpa harus refetch dari DB.
- *
- * M2: ganti closure ini dengan CheckoutController@success → fetch order
- *     dari `orders` + `order_payments`, hitung total transfer dari
- *     schema cicilan yang tersimpan, dan render dengan data DB-driven.
+ * Halaman "Order berhasil dibuat" — DB-backed (fetch Order by order_number),
+ * jadi tahan refresh & share-link. Signed upload/track URL di-generate di
+ * controller. Lihat CheckoutController::success().
  */
-Route::get('/checkout/success/{order}', function (string $order) {
-    /** @var array<string, mixed> $payload */
-    $payload = (array) session('checkout.payload', []);
-
-    $paymentType = in_array(($payload['payment_type'] ?? null), ['lunas', 'cicilan'], true)
-        ? $payload['payment_type']
-        : 'lunas';
-
-    $cartTotal = (int) ($payload['cart_total'] ?? 0);
-
-    // schedule_json di-serialize dari Alpine; row 0 = DP saat cicilan.
-    $schedule = [];
-    if (! empty($payload['schedule_json']) && is_string($payload['schedule_json'])) {
-        $decoded = json_decode($payload['schedule_json'], true);
-        if (is_array($decoded)) {
-            $schedule = $decoded;
-        }
-    }
-
-    $totalTransfer = $cartTotal;
-    if ($paymentType === 'cicilan' && isset($schedule[0]['amount'])) {
-        $totalTransfer = (int) $schedule[0]['amount'];
-    }
-
-    return view('pages.checkout.success', [
-        'order' => $order,
-        'paymentType' => $paymentType,
-        'cartTotal' => $cartTotal,
-        'totalTransfer' => $totalTransfer,
-        'schedule' => $schedule,
-    ]);
-})
+Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])
     ->where('order', '[A-Za-z0-9\-]+')
     ->name('checkout.success');
 
@@ -133,8 +99,8 @@ Route::get('/checkout/success/{order}', function (string $order) {
  * compat dengan prototype + signed URL dari checkout).
  *
  * Token-protect (task t_8a063559): require Laravel signed middleware. URL
- * generated di CheckoutController::store via URL::temporarySignedRoute.
- * TTL configurable via config('checkout.upload_url_ttl_seconds') default 7d.
+ * generated di CheckoutController::success() via URL::temporarySignedRoute.
+ * TTL configurable via config('checkout.upload_url_ttl_days') default 7d.
  */
 Route::get('/upload/{order_number}', [UploadController::class, 'show'])
     ->where('order_number', '[A-Za-z0-9\\-]+')
@@ -177,6 +143,12 @@ Route::get('/track/{order_number}', [TrackController::class, 'show'])
     ->middleware('signed')
     ->name('track.show');
 
+// Autocomplete kota/kecamatan via /shipping/data (Agenwebsite).
+// Throttle agar tidak abuse cache + API ongkir.
+Route::get('/shipping/destinations', [ShippingRateController::class, 'destinations'])
+    ->middleware('throttle:60,1')
+    ->name('shipping.destinations');
+
 // Shipping rate lookup (AJAX from checkout page)
 Route::post('/shipping/rates', [ShippingRateController::class, 'rates'])
     ->middleware('throttle:30,1')
@@ -211,8 +183,10 @@ use App\Http\Controllers\Admin\InstallmentSchemeController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\PromoBannerController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\VideoTestimonialController;
 use App\Http\Controllers\Admin\WaNotificationController;
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -230,6 +204,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::post('products/bulk', [AdminProductController::class, 'bulk'])->name('products.bulk');
+        Route::patch('products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])
+            ->name('products.toggle-status');
         Route::post('products/{product}/restore', [AdminProductController::class, 'restore'])
             ->withTrashed()
             ->name('products.restore');
@@ -251,12 +227,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->only(['index', 'store', 'update', 'destroy']);
 
         Route::post('courses/bulk', [AdminCourseController::class, 'bulk'])->name('courses.bulk');
+        Route::patch('courses/{course}/toggle-status', [AdminCourseController::class, 'toggleStatus'])
+            ->name('courses.toggle-status');
         Route::post('courses/{course}/restore', [AdminCourseController::class, 'restore'])
             ->withTrashed()
             ->name('courses.restore');
         Route::resource('courses', AdminCourseController::class)
             ->except(['show'])
             ->parameters(['courses' => 'course']);
+
+        Route::resource('video-testimonials', VideoTestimonialController::class)
+            ->except(['show'])
+            ->parameters(['video-testimonials' => 'videoTestimonial']);
+
+        // Banner promo/jadwal terdekat homepage (sering ganti per event).
+        Route::post('promo-banners/{promo_banner}/toggle', [PromoBannerController::class, 'toggle'])
+            ->name('promo-banners.toggle');
+        Route::resource('promo-banners', PromoBannerController::class)
+            ->except(['show'])
+            ->parameters(['promo-banners' => 'promo_banner']);
 
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -268,8 +257,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/ship', [OrderController::class, 'markShipped'])
             ->name('orders.ship');
 
-        Route::post('orders/{order}/generate-shipment', [OrderController::class, 'generateShipment'])
-            ->name('orders.generate-shipment');
+        // Tandai order 'shipped' → 'completed' manual (alur resi-manual tak dapat
+        // callback AWB 'delivered', jadi admin tutup siklus sendiri).
+        Route::post('orders/{order}/complete', [OrderController::class, 'markCompleted'])
+            ->name('orders.complete');
+
+        // Cek non-blocking apakah resi manual sudah terdeteksi di sistem kurir
+        // (opsi B) — tidak memvalidasi/menolak input, hanya indikator + refresh
+        // tracking_status untuk order manual yang tak dapat callback AWB.
+        Route::post('orders/{order}/check-resi', [OrderController::class, 'checkResi'])
+            ->name('orders.check-resi');
 
         Route::post('orders/{order}/refund', [OrderController::class, 'refund'])
             ->name('orders.refund');
@@ -281,6 +278,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('settings.bank-accounts.update');
         Route::put('settings/shipping', [SettingsController::class, 'updateShipping'])
             ->name('settings.shipping.update');
+        Route::post('settings/shipping/test', [SettingsController::class, 'testShipping'])
+            ->name('settings.shipping.test');
         Route::put('settings/whatsapp', [SettingsController::class, 'updateWhatsapp'])
             ->name('settings.whatsapp.update');
         Route::post('settings/whatsapp/test', [SettingsController::class, 'testWhatsapp'])
@@ -298,6 +297,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // route name pakai dash juga biar konsisten.
         Route::get('wa-notifications', [WaNotificationController::class, 'index'])
             ->name('wa-notifications.index');
+
+        // Kirim ulang manual satu notifikasi (mitigasi gagal kirim) — dipicu dari
+        // section Notifikasi WhatsApp di detail order.
+        Route::post('wa-notifications/{notification}/resend', [WaNotificationController::class, 'resend'])
+            ->name('wa-notifications.resend');
 
         // Sales Reports (Stream A — Laporan Penjualan)
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

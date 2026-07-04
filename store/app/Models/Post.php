@@ -72,22 +72,25 @@ class Post extends Model
     // -----------------------------------------------------------------
 
     /**
-     * Publicly-visible posts: status published, OR scheduled whose publish time
-     * has already arrived (safety net so due posts appear even if the
-     * posts:publish-scheduled cron hasn't flipped their status yet). Draft and
-     * future-scheduled posts are always excluded.
+     * Publicly-visible posts:
+     *   - status 'published' → SELALU tayang (status = sumber kebenaran
+     *     visibilitas; admin menandai "Published" berarti mau tayang, apa pun
+     *     tanggalnya). Ini cegah bug "Published tapi hilang dari /blog" saat
+     *     published_at tak sengaja diisi tanggal masa depan.
+     *   - status 'scheduled' → tayang hanya bila published_at sudah tiba
+     *     (safety net kalau cron posts:publish-scheduled belum flip statusnya).
+     * Draft & scheduled-masa-depan selalu tersembunyi.
      */
     public function scopePublished(Builder $query): Builder
     {
-        return $query
-            ->where(function (Builder $q) {
-                $q->where('status', 'published')
-                    ->orWhere('status', 'scheduled');
-            })
-            ->where(function (Builder $q) {
-                $q->whereNull('published_at')
-                    ->orWhere('published_at', '<=', now());
-            });
+        return $query->where(function (Builder $outer) {
+            $outer->where('status', 'published')
+                ->orWhere(function (Builder $q) {
+                    $q->where('status', 'scheduled')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                });
+        });
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

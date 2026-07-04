@@ -117,6 +117,70 @@
             'initial' => 'E',
         ],
     ];
+
+    $fallbackVideoTestimonials = [
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/27-1.mp4', 'poster' => null, 'title' => 'Dari AMC Saya Sadar Hidup Ini Indah, Enak dan Menyenangkan', 'name' => 'Ria Handayani', 'role' => 'Alumni AMC'],
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/bener-28-2.mp4', 'poster' => null, 'title' => 'Kita Bisa Mencapai Apapun dengan Kekuatan Pikiran', 'name' => 'Fitria', 'role' => 'Alumni AMC'],
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/bener-1.mp4', 'poster' => null, 'title' => 'AMC Adalah Ilmu yang Sangat Mind Blowing', 'name' => 'Edi', 'role' => 'Alumni AMC'],
+        ['video' => 'https://masfirmanpratama.com/wp-content/uploads/2024/08/27-3.mp4', 'poster' => null, 'title' => 'AMC Adalah Ilmu yang "Daging" Banget', 'name' => 'Ane', 'role' => 'Alumni AMC'],
+    ];
+    $videoTestimonials = ! empty($videoTestimonials ?? []) ? $videoTestimonials : $fallbackVideoTestimonials;
+
+    $journeyStats = [
+        [
+            'value' => '2,550+',
+            'label' => 'Peserta yang sudah belajar bersama Mas Firman dan merasakan Keajaiban',
+            'icon' => 'users',
+        ],
+        [
+            'value' => '12+',
+            'label' => 'Tahun Berpengalaman membantu masalah Banyak orang',
+            'icon' => 'badge-check',
+        ],
+        [
+            'value' => '125+',
+            'label' => 'Artikel tentang Keajaiban Pikiran yang sudah ditulis Mas Firman',
+            'icon' => 'newspaper',
+        ],
+        [
+            'value' => '1,000+',
+            'label' => 'Video Mas Firman di Channel Youtube Cahaya Kehidupan',
+            'icon' => 'youtube',
+        ],
+    ];
+
+    $lifeProblems = [
+        [
+            'title' => 'Bisnis Terasa Lesu',
+            'body' => 'Sudah melakukan berbagai usaha berbagai ilmu penjualan tapi bisnis masih sepi saja.',
+            'icon' => 'trending-down',
+        ],
+        [
+            'title' => 'Hutang Menumpuk',
+            'body' => 'Hutang terus menumpuk dan tidak kunjung lunas padahal sudah berusaha kesana kemari.',
+            'icon' => 'wallet',
+        ],
+        [
+            'title' => 'Susah Naik Jabatan',
+            'body' => 'Sudah rajin bekerja bertahun-tahun, rajin absen tapi susah untuk naik jabatan malah dicuekin atasan.',
+            'icon' => 'briefcase-business',
+        ],
+        [
+            'title' => 'Hidup Terasa Stagnan',
+            'body' => 'Usia bertambah tetapi hidup masih biasa saja, belum punya rumah dan belum ada mobil.',
+            'icon' => 'circle-pause',
+        ],
+        [
+            'title' => 'Anak Susah Menurut',
+            'body' => 'Sering memarahi anak, tapi anak malah semakin susah menurut dan malas belajar.',
+            'icon' => 'heart-handshake',
+        ],
+        [
+            'title' => 'Pasangan Pergi',
+            'body' => 'Orang yang anda cintai tiba-tiba berubah. Anda ingin membuat sesorang suka kepada anda?',
+            'icon' => 'heart-crack',
+        ],
+    ];
 @endphp
 
 <x-layouts.store
@@ -467,32 +531,51 @@
     </section>
 
     {{-- ======================================================
-       | PROMO BANNER — Kelas Reguler AMC Surabaya 23 Mei 2026
+       | PROMO BANNER — Jadwal terdekat (dinamis dari admin,
+       | CRUD /admin/promo-banners; auto-hide di luar jendela tayang)
        |====================================================== --}}
-    <section class="py-10 lg:py-14 bg-slate-50" aria-label="Promo event terdekat">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-5 text-center">
-                Jadwal Terdekat
-            </p>
-            <a
-                href="https://wa.me/6281230633464?text=Saya%20mau%20daftar%20Kelas%20Reguler%20AMC%20Surabaya%2023%20Mei%202026"
-                target="_blank"
-                rel="noopener"
-                class="block rounded-2xl lg:rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                aria-label="Daftar Kelas Reguler Alpha Mind Control Surabaya 23 Mei 2026 via WhatsApp"
-            >
-                <img
-                    src="{{ asset('assets/images/jadwal-amc-surabaya.webp') }}"
-                    alt="Kelas Reguler Alpha Mind Control — Surabaya 23 Mei 2026 di Hotel Bisanta bersama Mas Firman"
-                    width="1280"
-                    height="312"
-                    loading="lazy"
-                    decoding="async"
-                    class="w-full h-auto"
-                >
-            </a>
-        </div>
-    </section>
+    @if (($promoBanners ?? collect())->isNotEmpty())
+        <section class="py-10 lg:py-14 bg-slate-50" aria-label="Promo event terdekat">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase text-center">
+                    Jadwal Terdekat
+                </p>
+                @foreach ($promoBanners as $banner)
+                    @if ($banner->link_url)
+                        <a
+                            href="{{ $banner->link_url }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="block rounded-2xl lg:rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                            aria-label="{{ $banner->title }}"
+                        >
+                            <img
+                                src="{{ $banner->imageUrl() }}"
+                                alt="{{ $banner->title }}"
+                                width="1280"
+                                height="312"
+                                loading="lazy"
+                                decoding="async"
+                                class="w-full h-auto"
+                            >
+                        </a>
+                    @else
+                        <div class="rounded-2xl lg:rounded-3xl overflow-hidden shadow-lg">
+                            <img
+                                src="{{ $banner->imageUrl() }}"
+                                alt="{{ $banner->title }}"
+                                width="1280"
+                                height="312"
+                                loading="lazy"
+                                decoding="async"
+                                class="w-full h-auto"
+                            >
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     {{-- ==============================================================
        | WELCOME / SELAMAT DATANG — Intro Mas Firman + Buku Karya
@@ -549,6 +632,91 @@
                         @endforeach
                     </div>
                 @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- ==============================================================
+       | JOURNEY + PROBLEM SECTIONS
+       |============================================================== --}}
+    <section class="py-20 lg:py-24 bg-slate-950 text-white relative overflow-hidden" aria-labelledby="journey-heading">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.14),transparent_34%)]" aria-hidden="true"></div>
+        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" aria-hidden="true"></div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl mb-12 lg:mb-14">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-300 uppercase mb-4">
+                    Jejak Perubahan
+                </p>
+                <h2 id="journey-heading" class="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-5">
+                    Perjalanan Hidup Menjadi Solusi Bagi Manusia
+                </h2>
+                <p class="text-lg text-slate-300 leading-relaxed">
+                    Dari kelas, artikel, sampai video pembelajaran, Mas Firman terus membagikan Formula AMC untuk membantu lebih banyak orang menemukan jalan perubahan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+                @foreach ($journeyStats as $stat)
+                    <div class="group rounded-2xl border border-white/10 bg-white/[0.06] p-6 lg:p-7 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.09] hover:border-accent-300/40">
+                        <div class="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-accent-300 ring-1 ring-white/10">
+                            <i data-lucide="{{ $stat['icon'] }}" class="h-6 w-6"></i>
+                        </div>
+                        <div class="text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
+                            {{ $stat['value'] }}
+                        </div>
+                        <p class="text-sm leading-relaxed text-slate-300">
+                            {{ $stat['label'] }}
+                        </p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 lg:py-24 bg-white border-t border-slate-100" aria-labelledby="problems-heading">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-4">
+                    Saatnya Berubah
+                </p>
+                <h2 id="problems-heading" class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 leading-tight">
+                    Anda Punya Masalah Seperti ini ?
+                </h2>
+                <p class="text-lg text-slate-600">
+                    Jika salah satu kondisi ini terasa dekat dengan hidup anda sekarang, Formula AMC bisa menjadi jalan praktis untuk mulai membalik keadaan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                @foreach ($lifeProblems as $problem)
+                    <article class="group rounded-2xl border border-slate-100 bg-slate-50 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:bg-white hover:shadow-lg">
+                        <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 transition-colors group-hover:bg-primary-600 group-hover:text-white">
+                            <i data-lucide="{{ $problem['icon'] }}" class="h-6 w-6"></i>
+                        </div>
+                        <h3 class="text-xl font-extrabold text-slate-900 mb-3">
+                            {{ $problem['title'] }}
+                        </h3>
+                        <p class="text-slate-600 leading-relaxed mb-5">
+                            {{ $problem['body'] }}
+                        </p>
+                        <p class="font-bold text-primary-700">
+                            Maka anda butuh Formula AMC
+                        </p>
+                    </article>
+                @endforeach
+            </div>
+
+            <div class="text-center">
+                <a
+                    href="https://wa.me/6281230633464?text=Halo,%20saya%20tertarik%20untuk%20mendaftar%20Kelas%20AMC%20"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="ripple inline-flex items-center justify-center gap-2 rounded-full bg-accent-500 px-7 py-4 text-base md:text-lg font-extrabold text-white shadow-lg shadow-accent-500/30 transition-all hover:-translate-y-1 hover:bg-accent-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2"
+                >
+                    <i data-lucide="message-circle" class="h-5 w-5"></i>
+                    Saya Mau Mengubah Hidup #DisiniJalannya
+                </a>
             </div>
         </div>
     </section>
@@ -653,76 +821,110 @@
                     @php
                         $isHighlight = $tier['highlight'] ?? false;
                         $isDark = $tier['dark'] ?? false;
-                        $cardClass = $isDark
-                            ? 'group relative bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-xl hover-lift flex flex-col h-full overflow-hidden'
-                            : ($isHighlight
-                                ? 'group relative bg-white rounded-3xl p-8 border border-slate-100 shadow-lg hover-lift flex flex-col h-full overflow-hidden ring-2 ring-primary-500 transform lg:-translate-y-4'
-                                : 'group relative bg-white rounded-3xl p-8 border border-slate-100 shadow-sm hover-lift flex flex-col h-full overflow-hidden');
+
+                        // Hierarki 3 tingkat lewat elevasi/ring/lift — bukan 3 background ramai.
+                        // Reguler datar (shadow-sm), Terlaris dominan (ring + shadow-2xl + terangkat),
+                        // Platinum dark seremonial (hairline emas tipis).
+                        $cardClass = 'group relative flex flex-col h-full rounded-3xl p-8 overflow-hidden hover-lift transition-all '
+                            .($isDark
+                                ? 'bg-slate-900 border border-slate-800 ring-1 ring-accent-500/25 shadow-xl'
+                                : ($isHighlight
+                                    ? 'bg-white ring-2 ring-primary-500 shadow-2xl lg:-translate-y-6 z-10'
+                                    : 'bg-white border border-slate-200 shadow-sm'));
+
                         $titleClass = $isDark ? 'text-white' : 'text-slate-900';
                         $taglineClass = $isDark ? 'text-slate-300' : 'text-slate-600';
                         $priceClass = $isDark ? 'text-white' : 'text-slate-900';
                         $featureTextClass = $isDark ? 'text-slate-300' : 'text-slate-700';
                         $checkIconClass = $isDark ? 'text-secondary-400' : 'text-secondary-500';
                         $borderClass = $isDark ? 'border-slate-800' : 'border-slate-100';
-                        $noteClass = $isDark ? 'text-slate-500' : 'text-slate-500';
+                        $noteClass = $isDark ? 'text-slate-400' : 'text-slate-500';
+
+                        // Badge jadi "eyebrow rail" identitas tier (bukan stiker nempel di tepi).
+                        $badgeGlyph = $isHighlight ? 'badge-check' : ($isDark ? 'crown' : 'star');
+                        $badgeColor = $isHighlight ? 'text-primary-600' : ($isDark ? 'text-accent-400' : 'text-slate-500');
+
+                        // CTA solid & high-contrast per varian; hero=primary, entry=slate, dark=putih.
+                        // Hierarki tetap terjaga lewat kartu (elevasi/ring), bukan tombol lemah.
+                        $ctaClass = $isHighlight
+                            ? 'ripple bg-primary-600 text-white hover:bg-primary-700 shadow-lg shadow-primary-600/25'
+                            : ($isDark
+                                ? 'bg-white text-slate-900 hover:bg-accent-50 hover:text-accent-700 shadow-md'
+                                : 'bg-slate-900 text-white hover:bg-slate-800');
                     @endphp
 
                     <div class="{{ $cardClass }}">
-                        <div class="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none" aria-hidden="true">
+                        {{-- Wash lembut di puncak kartu hero (Terlaris) --}}
+                        @if ($isHighlight)
+                            <div class="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary-50/70 to-transparent pointer-events-none" aria-hidden="true"></div>
+                        @endif
+
+                        {{-- Watermark ikon tier (dekoratif, halus) --}}
+                        <div class="absolute top-0 right-0 p-6 opacity-[0.04] group-hover:opacity-10 transition-opacity pointer-events-none" aria-hidden="true">
                             <i data-lucide="{{ $tier['iconAccent'] }}" class="w-32 h-32 {{ $tier['iconColor'] }}"></i>
                         </div>
 
-                        @if (! empty($tier['badge']))
-                            <div class="absolute top-0 left-1/2 -translate-x-1/2 bg-primary-500 text-white px-4 py-1 rounded-b-xl text-xs font-bold tracking-wider uppercase">
-                                {{ $tier['badge'] }}
+                        {{-- Eyebrow rail: identitas tier. Tinggi tetap (h-4) agar 3 kartu sebaris --}}
+                        <div class="relative z-10 flex items-center gap-1.5 mb-5 h-4 text-[11px] font-extrabold uppercase tracking-[0.18em] {{ $badgeColor }}">
+                            @if (! empty($tier['badge']))
+                                <i data-lucide="{{ $badgeGlyph }}" class="w-3.5 h-3.5"></i>
+                                <span>{{ $tier['badge'] }}</span>
+                            @endif
+                        </div>
+
+                        {{-- Header: nama + tagline (line-clamp 2 baris, ganti hack min-height) --}}
+                        <div class="relative z-10">
+                            <h3 class="text-2xl font-bold tracking-tight {{ $titleClass }}">{{ $tier['name'] }}</h3>
+                            <p class="mt-2 text-sm leading-relaxed line-clamp-2 min-h-[40px] {{ $taglineClass }}">{{ $tier['tagline'] }}</p>
+                        </div>
+
+                        {{-- Value ledger: coret kecil di atas → harga besar → chip Hemat inline.
+                             Dibaca sebagai satu pernyataan nilai, bukan tumpukan vertikal. --}}
+                        <div class="relative z-10 mt-6 mb-6 pb-6 border-b {{ $borderClass }}">
+                            @if (! empty($tier['originalPrice']))
+                                <div class="text-sm line-through font-medium {{ $isDark ? 'text-slate-500' : 'text-slate-400' }}">{{ $tier['originalPrice'] }}</div>
+                            @endif
+                            <div class="mt-0.5 flex items-baseline gap-2.5 flex-wrap">
+                                {{-- whitespace-nowrap = harga selalu 1 baris. Ukuran naik hanya
+                                     di xl (≥1280) di mana kartu kolom-3 cukup lebar; di rentang
+                                     lg (1024–1279) kartu sempit → tetap text-3xl agar "Rp 22.500.000" muat. --}}
+                                <span class="text-3xl xl:text-4xl font-extrabold tracking-tight leading-none whitespace-nowrap {{ $priceClass }}">{{ $tier['price'] }}</span>
+                                @if (! empty($tier['discountPercent']))
+                                    <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-600' }}">
+                                        <i data-lucide="tag" class="w-3 h-3"></i>
+                                        Hemat {{ $tier['discountPercent'] }}%
+                                    </span>
+                                @endif
                             </div>
-                        @endif
-
-                        <div class="mb-6 relative z-10 {{ $isHighlight ? 'mt-2' : '' }}">
-                            <h3 class="text-2xl font-bold {{ $titleClass }} mb-3">{{ $tier['name'] }}</h3>
-                            <p class="text-sm {{ $taglineClass }} min-h-[60px] leading-relaxed">{{ $tier['tagline'] }}</p>
                         </div>
 
-                        <div class="mb-8 relative z-10 pb-8 border-b {{ $borderClass }}">
-                            <div class="text-3xl font-extrabold {{ $priceClass }}">{{ $tier['price'] }}</div>
-                        </div>
-
-                        <ul class="space-y-4 mb-8 flex-grow relative z-10 text-sm {{ $featureTextClass }} font-medium">
+                        {{-- Fitur --}}
+                        <ul class="relative z-10 space-y-3.5 mb-8 flex-grow text-sm font-medium {{ $featureTextClass }}">
                             @foreach ($tier['features'] as $feature)
                                 <li class="flex items-start gap-3">
-                                    <i data-lucide="check-circle-2" class="w-5 h-5 {{ $checkIconClass }} shrink-0 mt-0.5"></i>
+                                    <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 mt-0.5 {{ $checkIconClass }}"></i>
                                     <span>{{ $feature }}</span>
                                 </li>
                             @endforeach
                         </ul>
 
-                        <div class="mt-auto relative z-10">
-                            @if ($isHighlight)
-                                <a
-                                    href="{{ $tier['ctaHref'] }}"
-                                    class="ripple block w-full text-center bg-primary-600 text-white hover:bg-primary-700 hover:shadow-lg rounded-xl py-3.5 font-bold transition-all"
-                                >
-                                    {{ $tier['ctaLabel'] }}
-                                </a>
-                            @elseif ($isDark)
-                                <a
-                                    href="{{ $tier['ctaHref'] }}"
-                                    class="block w-full text-center bg-white text-slate-900 hover:bg-secondary-50 hover:text-secondary-700 rounded-xl py-3.5 font-bold transition-all shadow-md"
-                                >
-                                    {{ $tier['ctaLabel'] }}
-                                </a>
-                            @else
-                                <a
-                                    href="{{ $tier['ctaHref'] }}"
-                                    class="block w-full text-center bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl py-3.5 font-bold transition-all shadow-sm"
-                                >
-                                    {{ $tier['ctaLabel'] }}
-                                </a>
-                            @endif
+                        {{-- CTA + reassurance cicilan --}}
+                        <div class="relative z-10 mt-auto">
+                            <a
+                                href="{{ $tier['ctaHref'] }}"
+                                aria-label="{{ $tier['ctaLabel'] }} — {{ $tier['name'] }}, {{ $tier['price'] }}"
+                                class="group/btn inline-flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-bold transition-all hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 {{ $isDark ? 'focus-visible:ring-offset-slate-900' : '' }} {{ $ctaClass }}"
+                            >
+                                <span>{{ $tier['ctaLabel'] }}</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5"></i>
+                            </a>
 
-                            <p class="text-xs {{ $noteClass }} mt-4 text-center leading-relaxed">
-                                {{ $tier['priceNote'] }}
-                            </p>
+                            @if (! empty($tier['priceNote']))
+                                <p class="mt-4 text-xs text-center flex items-center justify-center gap-1.5 {{ $noteClass }}">
+                                    <i data-lucide="wallet" class="w-3.5 h-3.5 shrink-0"></i>
+                                    <span>{{ ltrim($tier['priceNote'], '*') }}</span>
+                                </p>
+                            @endif
                         </div>
                     </div>
                 @endforeach
@@ -731,7 +933,59 @@
     </section>
 
     {{-- ======================================================
-       | 5. TESTIMONI — static grid
+       | 5. TESTIMONI VIDEO — hosted cards
+       |====================================================== --}}
+    <section id="testimoni-video" class="py-20 lg:py-24 bg-white border-t border-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <p class="text-xs tracking-[0.2em] font-extrabold text-accent-600 uppercase mb-4">
+                    Testimoni Peserta AMC
+                </p>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 leading-tight">
+                    Sebagian Kecil Kisah Nyata dari <span class="text-gradient">Peserta Kelas AMC</span>
+                </h2>
+                <p class="text-lg text-slate-600">
+                    Dengarkan langsung pengalaman alumni yang sudah mempraktikkan Formula AMC dan merasakan perubahan dalam hidupnya.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                @foreach ($videoTestimonials as $videoTestimonial)
+                    <article class="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-primary-200">
+                        <div class="relative bg-slate-950 aspect-[9/16] overflow-hidden">
+                            <video
+                                class="h-full w-full object-cover"
+                                src="{{ $videoTestimonial['video'] }}"
+                                @if(! empty($videoTestimonial['poster'])) poster="{{ $videoTestimonial['poster'] }}" @endif
+                                controls
+                                preload="metadata"
+                                playsinline
+                                controlsList="nodownload"
+                                aria-label="Video testimoni {{ $videoTestimonial['name'] }}"
+                            ></video>
+                        </div>
+                        <div class="p-5">
+                            <h3 class="text-base font-extrabold leading-snug text-slate-900 mb-3">
+                                {{ $videoTestimonial['title'] }}
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-extrabold text-primary-700">
+                                    {{ mb_substr($videoTestimonial['name'], 0, 1) }}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-900">{{ $videoTestimonial['name'] }}</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-primary-600">{{ $videoTestimonial['role'] ?? 'Alumni AMC' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    {{-- ======================================================
+       | 6. TESTIMONI — static grid
        |====================================================== --}}
     <section id="testimoni" class="py-20 lg:py-24 bg-slate-50 relative overflow-hidden">
         <div class="absolute right-0 top-0 w-1/3 h-full bg-primary-50 rounded-l-full blur-3xl -z-10" aria-hidden="true"></div>

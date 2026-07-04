@@ -9,6 +9,7 @@ use App\Services\XSenderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
@@ -20,11 +21,46 @@ class SettingsController extends Controller
     protected const ALLOWED_TABS = ['store-info', 'bank-accounts', 'shipping', 'whatsapp'];
 
     /**
-     * Daftar kurir yang tersedia.
+     * Static fallback bila API courier master tidak bisa di-fetch
+     * (license invalid / network down / cache kosong).
      */
     protected const AVAILABLE_COURIERS = [
         'jne', 'jnt', 'sicepat', 'anteraja', 'pos', 'tiki', 'spx', 'lion', 'paxel',
     ];
+
+    /**
+     * Build live courier id ⇒ title map dari API (cached 24h). Fallback ke
+     * static list bila API gagal — admin tetap bisa pilih kurir, sekadar
+     * kehilangan label cantik dari API.
+     *
+     * @return array<string, string>
+     */
+    protected function liveCouriersMap(): array
+    {
+        try {
+            $client = AgenwebsiteClient::fromConfig();
+            $couriers = $client->couriers();
+        } catch (\Throwable) {
+            $couriers = [];
+        }
+
+        $map = [];
+        foreach ($couriers as $c) {
+            $id = $c['id'] ?? null;
+            if (! $id || isset($map[$id])) {
+                continue;
+            }
+            $map[$id] = (string) ($c['title'] ?? strtoupper($id));
+        }
+
+        if ($map === []) {
+            foreach (self::AVAILABLE_COURIERS as $id) {
+                $map[$id] = strtoupper($id);
+            }
+        }
+
+        return $map;
+    }
 
     /**
      * Halaman tunggal Settings dengan tab:
@@ -49,7 +85,7 @@ class SettingsController extends Controller
 
         if ($tab === 'shipping') {
             $viewData['shippingData'] = $this->getShippingData();
-            $viewData['availableCouriers'] = self::AVAILABLE_COURIERS;
+            $viewData['availableCouriers'] = $this->liveCouriersMap();
         }
 
         if ($tab === 'whatsapp') {
@@ -93,6 +129,8 @@ class SettingsController extends Controller
             'service_markup_raw' => $serviceMarkupLines,
             'shipping_enabled' => Settings::get('shipping.shipping_enabled', true),
             'default_weight_kg' => Settings::get('shipping.default_weight_kg', config('shipping.default_weight_kg')),
+            'license' => Settings::get('shipping.license', config('shipping.license')),
+            'site_url' => Settings::get('shipping.site_url', config('shipping.site_url')),
             'license_status' => $licenseStatus,
         ];
     }
@@ -178,18 +216,23 @@ class SettingsController extends Controller
      * Update shipping settings (tab shipping).
      *
      * Validasi + persist ke DB via Settings service.
-     * site_url dan license tidak bisa diubah dari form — di-hardcode di .env.
+     * License + site_url (domain) bisa diisi dari form — fallback ke .env bila
+     * dikosongkan. Domain agenwebsite license-bound, jadi keduanya disimpan bareng.
      */
     public function updateShipping(Request $request): RedirectResponse
     {
+        $allowedCourierIds = array_keys($this->liveCouriersMap());
+
         $data = $request->validate([
             'origin' => ['required', 'string', 'max:100'],
             'origin_zipcode' => ['required', 'string', 'max:10'],
             'couriers' => ['nullable', 'array'],
-            'couriers.*' => ['string', 'in:'.implode(',', self::AVAILABLE_COURIERS)],
+            'couriers.*' => ['string', 'in:'.implode(',', $allowedCourierIds)],
             'service_markup' => ['nullable', 'string'],
             'shipping_enabled' => ['nullable'],
             'default_weight_kg' => ['required', 'numeric', 'min:0.1', 'max:100'],
+            'license' => ['nullable', 'string', 'max:255'],
+            'site_url' => ['nullable', 'url', 'max:255'],
         ], [
             'origin.required' => 'Kota asal wajib diisi.',
             'origin_zipcode.required' => 'Kode pos asal wajib diisi.',
@@ -197,11 +240,26 @@ class SettingsController extends Controller
             'default_weight_kg.min' => 'Berat default minimal 0.1 kg.',
             'default_weight_kg.max' => 'Berat default maksimal 100 kg.',
             'couriers.*.in' => 'Kurir tidak valid.',
+            'site_url.url' => 'Domain harus berupa URL valid (mis. https://masfirmanpratama.com).',
         ]);
 
         // Simpan origin
         Settings::set('shipping.origin', $data['origin'], 'string');
         Settings::set('shipping.origin_zipcode', $data['origin_zipcode'], 'string');
+
+        // Simpan license + domain (kosong = fallback ke .env). Bila berubah,
+        // flush cache master (couriers/services) yang license/domain-bound.
+        $oldLicense = Settings::get('shipping.license', config('shipping.license'));
+        $oldSiteUrl = Settings::get('shipping.site_url', config('shipping.site_url'));
+        Settings::set('shipping.license', $data['license'] ?? '', 'string');
+        Settings::set('shipping.site_url', $data['site_url'] ?? '', 'string');
+
+        if (($data['license'] ?? '') !== $oldLicense || ($data['site_url'] ?? '') !== $oldSiteUrl) {
+            Cache::forget('shipping.couriers');
+            foreach (['domestic', 'instant', 'international'] as $cat) {
+                Cache::forget('shipping.services.'.$cat);
+            }
+        }
 
         // Simpan daftar kurir aktif
         Settings::set('shipping.couriers', $data['couriers'] ?? [], 'array');
@@ -240,14 +298,81 @@ class SettingsController extends Controller
     }
 
     /**
+     * Test koneksi lisensi Agenwebsite — pakai license + site_url dari form
+     * (bisa dites SEBELUM disimpan), bukan dari DB/config.
+     */
+    public function testShipping(Request $request): JsonResponse
+    {
+        $license = trim((string) $request->input('license'));
+        $siteUrl = trim((string) $request->input('site_url'));
+
+        // Kosong = pakai nilai .env/config saat ini (test config yang sedang aktif).
+        $cfg = config('shipping');
+        if ($license !== '') {
+            $cfg['license'] = $license;
+        }
+        if ($siteUrl !== '') {
+            $cfg['site_url'] = $siteUrl;
+            $cfg['user_agent'] = 'WordPress/'.$cfg['wordpress_version'].'; '.$siteUrl;
+        }
+
+        if (($cfg['license'] ?? '') === '') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Kode lisensi belum diisi.',
+            ]);
+        }
+
+        try {
+            $client = new AgenwebsiteClient($cfg);
+            $result = $client->activateLicense();
+
+            if (($result['status'] ?? '') === 'success') {
+                $data = is_array($result['result'] ?? null) ? $result['result'] : [];
+                $detail = [];
+                if (! empty($data['account_email'])) {
+                    $detail[] = 'Akun: '.$data['account_email'];
+                }
+                if (! empty($data['type'])) {
+                    $detail[] = 'Tipe: '.$data['type'];
+                }
+                if (! empty($data['expire_date'])) {
+                    $detail[] = 'Berlaku hingga '.$data['expire_date'];
+                }
+                if (! empty($data['shipping_quota'])) {
+                    $detail[] = 'Kuota: '.$data['shipping_quota'];
+                }
+
+                return response()->json([
+                    'ok' => true,
+                    'message' => $detail === [] ? 'Lisensi aktif & terhubung.' : implode(' · ', $detail),
+                ]);
+            }
+
+            return response()->json([
+                'ok' => false,
+                'message' => $result['message'] ?? 'Lisensi tidak dapat diverifikasi.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Exception: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Data untuk tab WhatsApp (XSender gateway).
      */
     protected function getWhatsappData(): array
     {
+        $waAdmin = Settings::getWaAdmin();
+
         return [
             'api_key' => Settings::get('xsender.api_key', config('services.xsender.api_key')),
             'sender' => Settings::get('xsender.sender', config('services.xsender.sender')),
             'endpoint' => Settings::get('xsender.endpoint', config('services.xsender.endpoint', 'https://xsender.id/id/send-message')),
+            'admin_number' => $waAdmin['number'] ?? '',
         ];
     }
 
@@ -260,6 +385,7 @@ class SettingsController extends Controller
             'xsender_api_key' => ['required', 'string', 'max:255'],
             'xsender_sender' => ['required', 'string', 'max:30'],
             'xsender_endpoint' => ['nullable', 'url', 'max:255'],
+            'wa_admin_number' => ['nullable', 'string', 'max:30'],
         ], [
             'xsender_api_key.required' => 'API Key XSender wajib diisi.',
             'xsender_sender.required' => 'Nomor WhatsApp XSender wajib diisi.',
@@ -271,6 +397,16 @@ class SettingsController extends Controller
 
         if (! empty($data['xsender_endpoint'])) {
             Settings::set('xsender.endpoint', $data['xsender_endpoint'], 'string');
+        }
+
+        // Nomor WA admin = penerima alert (mis. "bukti bayar baru"). Kalau kosong,
+        // fallback ke config placeholder yang TIDAK terdaftar di WA → alert gagal.
+        if (! empty($data['wa_admin_number'])) {
+            $current = Settings::getWaAdmin();
+            Settings::set('wa_admin', [
+                'number' => XSenderService::normalizePhone($data['wa_admin_number']),
+                'label' => $current['label'] ?? 'Admin',
+            ], 'array');
         }
 
         return redirect()

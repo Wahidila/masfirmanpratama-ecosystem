@@ -16,6 +16,11 @@ class Order extends Model
         'phone',
         'email',
         'address',
+        'shipping_city',
+        'shipping_province',
+        'shipping_district',
+        'shipping_village',
+        'shipping_zipcode',
         'total',
         'status',
         'ref_code',
@@ -30,6 +35,7 @@ class Order extends Model
         'fulfillment_reference_id',
         'fulfillment_api_order_id',
         'label_url',
+        'fulfillment_payment_url',
         'fulfillment_payload',
         'shipped_email_sent_at',
         'order_meta',
@@ -45,6 +51,26 @@ class Order extends Model
             'shipped_email_sent_at' => 'datetime',
             'order_meta' => 'array',
         ];
+    }
+
+    /**
+     * Transisi order ke 'completed' + fulfillment 'delivered'. Idempotent:
+     * mengembalikan true HANYA saat benar-benar baru transisi (bukan sudah
+     * completed sebelumnya) supaya caller bisa men-dispatch OrderCompleted
+     * tepat sekali. Sumber tunggal transisi selesai — dipakai bersama oleh
+     * webhook AWB, tombol admin "Tandai Selesai", dan cek-resi otomatis.
+     */
+    public function markCompleted(): bool
+    {
+        if ($this->status === 'completed') {
+            return false;
+        }
+
+        $this->status = 'completed';
+        $this->fulfillment_status = 'delivered';
+        $this->save();
+
+        return true;
     }
 
     public function items(): HasMany

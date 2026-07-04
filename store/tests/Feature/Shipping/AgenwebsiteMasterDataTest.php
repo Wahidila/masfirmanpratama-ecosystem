@@ -76,11 +76,16 @@ class AgenwebsiteMasterDataTest extends TestCase
 
     public function test_services_returns_array_from_api(): void
     {
+        // FIX-2: API mengabaikan ?category=, klien sekarang fetch SEMUA lalu filter
+        // by row.category. Test wajib include `category` di tiap row.
         Http::fake([
-            '*/shipping/services*category=domestic*' => Http::response([
+            '*/shipping/services*' => Http::response([
                 'message' => 'Success',
                 'data' => [
-                    ['courier_id' => 'jne_reg', 'name' => 'JNE REG', 'courier' => 'jne', 'enable' => '1', 'extra_cost' => 0],
+                    ['courier_id' => 'jne_reg', 'name' => 'JNE REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'enable' => '1', 'extra_cost' => 0],
+                    ['courier_id' => 'gosend_instant', 'name' => 'Gosend Instant', 'courier' => 'gosend',
+                        'category' => 'instant', 'enable' => '1', 'extra_cost' => 0],
                 ],
             ], 200),
         ]);
@@ -98,7 +103,10 @@ class AgenwebsiteMasterDataTest extends TestCase
         Http::fake([
             '*/shipping/services*' => Http::response([
                 'message' => 'Success',
-                'data' => [['courier_id' => 'jne_reg', 'name' => 'JNE REG', 'courier' => 'jne', 'enable' => '1', 'extra_cost' => 0]],
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'JNE REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'enable' => '1', 'extra_cost' => 0],
+                ],
             ], 200),
         ]);
 

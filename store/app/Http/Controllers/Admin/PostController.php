@@ -13,6 +13,7 @@ use App\Services\Blog\WxrImporter;
 use App\Support\HtmlSanitizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -230,6 +231,14 @@ class PostController extends Controller
 
         $dryRun = (bool) ($data['dry_run'] ?? false);
 
+        // A WXR import parses a large XML and (with media rehosting on) downloads
+        // every image over HTTP — a real blog easily blows past the default 30s
+        // max_execution_time and dies with a FatalError. This is an admin-only,
+        // on-demand migration, so let it run to completion and keep going even if
+        // the browser tab gives up mid-way.
+        @set_time_limit(0);
+        @ignore_user_abort(true);
+
         $importer = new WxrImporter(
             downloadMedia: (bool) ($data['download_media'] ?? false),
             force: false,
@@ -250,8 +259,8 @@ class PostController extends Controller
         }
 
         $msg = sprintf(
-            'Import selesai: %d artikel baru, %d diperbarui, %d kategori, %d tag, %d media.',
-            $s['posts_created'], $s['posts_updated'], $s['categories'], $s['tags'], $s['media_downloaded'],
+            'Import selesai: %d artikel baru, %d diperbarui, %d kategori, %d tag, %d media, %d link internal dirapikan.',
+            $s['posts_created'], $s['posts_updated'], $s['categories'], $s['tags'], $s['media_downloaded'], $s['links_relinked'] ?? 0,
         );
 
         return redirect()->route('admin.posts.index')->with('status', $msg);
@@ -261,7 +270,7 @@ class PostController extends Controller
     // Bulk helpers
     // -----------------------------------------------------------------
 
-    /** @param \Illuminate\Support\Collection<int, Post> $posts */
+    /** @param Collection<int, Post> $posts */
     protected function bulkPublish($posts): string
     {
         foreach ($posts as $post) {
@@ -275,7 +284,7 @@ class PostController extends Controller
         return "{$posts->count()} artikel berhasil dipublish.";
     }
 
-    /** @param \Illuminate\Support\Collection<int, Post> $posts */
+    /** @param Collection<int, Post> $posts */
     protected function bulkSetStatus($posts, string $status): string
     {
         foreach ($posts as $post) {
@@ -286,7 +295,7 @@ class PostController extends Controller
         return "{$posts->count()} artikel di-set ke {$status}.";
     }
 
-    /** @param \Illuminate\Support\Collection<int, Post> $posts */
+    /** @param Collection<int, Post> $posts */
     protected function bulkSoftDelete($posts): string
     {
         foreach ($posts as $post) {
@@ -296,7 +305,7 @@ class PostController extends Controller
         return "{$posts->count()} artikel dipindahkan ke arsip (soft delete).";
     }
 
-    /** @param \Illuminate\Support\Collection<int, Post> $posts */
+    /** @param Collection<int, Post> $posts */
     protected function bulkRestore($posts): string
     {
         foreach ($posts as $post) {
@@ -306,7 +315,7 @@ class PostController extends Controller
         return "{$posts->count()} artikel berhasil dipulihkan.";
     }
 
-    /** @param \Illuminate\Support\Collection<int, Post> $posts */
+    /** @param Collection<int, Post> $posts */
     protected function bulkForceDelete($posts): string
     {
         $count = 0;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\ShippingRateException;
+use App\Services\Shipping\AgenwebsiteClient;
 use App\Services\Shipping\ShippingRateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class ShippingRateController extends Controller
 {
-    public function __construct(private ShippingRateService $shippingRateService) {}
+    public function __construct(
+        private ShippingRateService $shippingRateService,
+        private AgenwebsiteClient $agenwebsite,
+    ) {}
 
     public function rates(Request $request): JsonResponse
     {
@@ -18,7 +22,8 @@ class ShippingRateController extends Controller
             $validated = $request->validate([
                 'city' => ['required', 'string'],
                 'province' => ['required', 'string'],
-                'zipcode' => ['required', 'string'],
+                'district' => ['nullable', 'string'],
+                'zipcode' => ['nullable', 'string'],
                 'cart_json' => ['required', 'string'],
             ]);
 
@@ -33,8 +38,8 @@ class ShippingRateController extends Controller
             $destination = [
                 'province' => $validated['province'],
                 'city' => $validated['city'],
-                'district' => $request->input('district', ''),
-                'zipcode' => $validated['zipcode'],
+                'district' => $validated['district'] ?? $request->input('district', ''),
+                'zipcode' => $validated['zipcode'] ?? '',
             ];
 
             $cartItems = array_map(fn ($item) => [
@@ -53,7 +58,31 @@ class ShippingRateController extends Controller
                 'error' => 'Ongkir sementara tidak tersedia. Silakan hubungi admin via WhatsApp untuk konfirmasi ongkir.',
             ], 200);
         } catch (\Throwable $e) {
-            return response()->json(['rates' => []]);
+            return response()->json([
+                'rates' => [],
+                'error' => 'Ongkir sementara tidak tersedia. Silakan hubungi admin via WhatsApp untuk konfirmasi ongkir.',
+            ], 200);
         }
+    }
+
+    /**
+     * Autocomplete kota/kecamatan via Agenwebsite /shipping/data.
+     * Throttle ringan supaya tidak abuse cache + API.
+     */
+    public function destinations(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:3', 'max:60'],
+        ], [
+            'q.min' => 'Minimal 3 karakter untuk pencarian.',
+        ]);
+
+        try {
+            $results = $this->agenwebsite->searchData($validated['q']);
+        } catch (\Throwable) {
+            $results = [];
+        }
+
+        return response()->json(['results' => $results]);
     }
 }

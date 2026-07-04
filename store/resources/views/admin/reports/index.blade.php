@@ -5,9 +5,10 @@
 @section('content')
     <x-admin.page-header
         title="Laporan Penjualan"
-        subtitle="Ringkasan revenue, produk terlaris, status pesanan, dan pembayaran.">
+        :subtitle="'Periode: ' . $periodLabel">
         <x-slot:actions>
             <a href="{{ route('admin.reports.export', $filters) }}"
+               title="Export CSV untuk periode {{ $periodLabel }}"
                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
                 <x-admin.icon name="download" class="h-4 w-4" />
                 Export CSV
@@ -16,7 +17,30 @@
     </x-admin.page-header>
 
     {{-- Filter form --}}
+    @php
+        // Preset periode cepat — admin non-teknis tinggal klik, tanpa isi tanggal.
+        $today = now()->toDateString();
+        $presets = [
+            'Hari Ini' => ['from' => $today, 'to' => $today],
+            '7 Hari' => ['from' => now()->subDays(6)->toDateString(), 'to' => $today],
+            '30 Hari' => ['from' => now()->subDays(29)->toDateString(), 'to' => $today],
+            'Bulan Ini' => ['from' => now()->startOfMonth()->toDateString(), 'to' => $today],
+            'Bulan Lalu' => [
+                'from' => now()->subMonthNoOverflow()->startOfMonth()->toDateString(),
+                'to' => now()->subMonthNoOverflow()->endOfMonth()->toDateString(),
+            ],
+        ];
+    @endphp
     <x-admin.card class="mb-6" :padded="false">
+        <div class="flex flex-wrap items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+            @foreach ($presets as $label => $range)
+                @php $isActive = $filters['from'] === $range['from'] && $filters['to'] === $range['to']; @endphp
+                <a href="{{ route('admin.reports.index', $range) }}"
+                   class="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition {{ $isActive ? 'border-brand-500 bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-white/[0.03] dark:text-gray-400' }}">
+                    {{ $label }}
+                </a>
+            @endforeach
+        </div>
         <form method="GET" action="{{ route('admin.reports.index') }}" class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
                 <label for="from" class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Dari Tanggal</label>
@@ -25,6 +49,7 @@
                     type="date"
                     name="from"
                     value="{{ $filters['from'] }}"
+                    max="{{ $today }}"
                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                 />
             </div>
@@ -35,6 +60,7 @@
                     type="date"
                     name="to"
                     value="{{ $filters['to'] }}"
+                    max="{{ $today }}"
                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                 />
             </div>
@@ -48,7 +74,7 @@
             <div class="flex items-end">
                 <a href="{{ route('admin.reports.index') }}"
                    class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
-                    Reset
+                    Reset (Bulan Ini)
                 </a>
             </div>
         </form>
@@ -147,27 +173,44 @@
                     axisTicks: { show: false },
                     labels: { style: { colors: labelColor } }
                 },
-                yaxis: {
-                    title: false,
-                    labels: {
-                        style: { colors: labelColor },
-                        formatter: function (val) {
-                            return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(val));
+                // Dua sumbu Y: revenue (jutaan) & jumlah pesanan (satuan) beda skala —
+                // satu sumbu bikin garis Pesanan rata nol & tak terbaca.
+                yaxis: [
+                    {
+                        seriesName: 'Revenue',
+                        labels: {
+                            style: { colors: labelColor },
+                            formatter: function (val) {
+                                return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(val));
+                            }
+                        }
+                    },
+                    {
+                        seriesName: 'Pesanan',
+                        opposite: true,
+                        labels: {
+                            style: { colors: labelColor },
+                            formatter: function (val) { return Math.round(val); }
                         }
                     }
-                },
+                ],
                 grid: {
                     borderColor: borderColor,
                     yaxis: { lines: { show: true } }
                 },
                 tooltip: {
-                    y: {
-                        formatter: function (val) {
-                            return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(val));
+                    y: [
+                        {
+                            formatter: function (val) {
+                                return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(val));
+                            }
+                        },
+                        {
+                            formatter: function (val) { return Math.round(val) + ' pesanan'; }
                         }
-                    }
+                    ]
                 },
-                colors: ['#465fff']
+                colors: ['#465fff', '#12b76a']
             }).render();
 
             // Order status pie chart
@@ -188,7 +231,9 @@
                             position: 'bottom',
                             fontFamily: 'Outfit',
                         },
-                        colors: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#22c55e', '#ef4444', '#6b7280'],
+                        // Warna dari payload — SATU sumber dengan legend di bawah chart.
+                        // (Dulu hardcoded dgn urutan beda → warna Cicilan/Dikirim tertukar.)
+                        colors: statusData.colors,
                         dataLabels: {
                             formatter: function (val, opts) {
                                 return opts.w.config.series[opts.seriesIndex];

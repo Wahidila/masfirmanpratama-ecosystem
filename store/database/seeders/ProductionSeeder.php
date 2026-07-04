@@ -24,6 +24,7 @@ class ProductionSeeder extends Seeder
             ProductSeeder::class,          // katalog buku
             CourseSeeder::class,           // katalog kelas
             InstallmentSchemeSeeder::class, // skema cicilan
+            PromoBannerSeeder::class,      // banner jadwal terdekat homepage
         ]);
     }
 }

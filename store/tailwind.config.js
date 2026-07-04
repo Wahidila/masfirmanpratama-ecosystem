@@ -9,6 +9,16 @@ export default {
         './resources/**/*.js',
         './resources/**/*.vue',
     ],
+    // Warna ikon kartu kelas (card_icon_color) di-render sebagai class dinamis di
+    // storefront, jadi JIT tak bisa mendeteksinya — safelist agar selalu ter-compile.
+    // Harus sinkron dengan palet di components/admin/color-picker.blade.php.
+    safelist: [
+        'text-primary-500', 'text-primary-600',
+        'text-secondary-400', 'text-secondary-600',
+        'text-accent-500', 'text-accent-600',
+        'text-rose-500', 'text-pink-500', 'text-violet-500',
+        'text-blue-600', 'text-sky-500', 'text-emerald-500', 'text-slate-700',
+    ],
     theme: {
         extend: {
             fontFamily: {

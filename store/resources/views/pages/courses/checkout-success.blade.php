@@ -1,124 +1,285 @@
+@php
+    /** @var \App\Models\Course $course */
+    /** @var \App\Models\Order $order */
+    /** @var string $paymentType */ // 'lunas' | 'cicilan'
+    /** @var int $totalTransfer */
+    /** @var array<int, array{label?: string, due_label?: string, amount?: int}> $schedule */
+    /** @var string $uploadUrl */
+    /** @var string $trackUrl */
+    /** @var array<int, array{bank: string, number: string, holder: string, logo_color?: string}> $bankAccounts */
+    /** @var array{number: string, label: string} $waAdmin */
+
+    $bankAccounts = $bankAccounts ?? \App\Services\Settings::getBankAccounts();
+    $waAdmin = $waAdmin ?? \App\Services\Settings::getWaAdmin();
+
+    $isInstallment = $paymentType === 'cicilan';
+    $waText = rawurlencode("Halo Admin, saya baru daftar kelas {$course->title} (order {$order->order_number}). Mau konfirmasi pembayaran.");
+    $waLink = "https://wa.me/{$waAdmin['number']}?text={$waText}";
+    $imageUrl = $course->image_path ? asset($course->image_path) : null;
+
+    $logoPalette = [
+        'sky' => 'bg-sky-50 text-sky-700 ring-sky-200',
+        'amber' => 'bg-amber-50 text-amber-700 ring-amber-200',
+        'emerald' => 'bg-secondary-50 text-secondary-700 ring-secondary-200',
+        'rose' => 'bg-rose-50 text-rose-700 ring-rose-200',
+        'indigo' => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+    ];
+@endphp
+
 <x-layouts.store
     title="Pendaftaran Berhasil — {{ $course->title }}"
-    description="Pendaftaran kelas berhasil. Lakukan pembayaran untuk konfirmasi."
+    description="Pendaftaran kelas berhasil. Selesaikan pembayaran lalu upload bukti untuk diverifikasi tim kami."
+    bodyClass="relative"
 >
-<div class="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8 sm:py-12">
-    <div class="mx-auto max-w-2xl px-4 sm:px-6">
+    {{-- Decorative blobs --}}
+    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <div class="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-primary-200/70 blur-3xl animate-blob"></div>
+        <div class="absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-secondary-200/70 blur-3xl animate-blob"></div>
+    </div>
 
-        {{-- Success icon --}}
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                <i data-lucide="check-circle" class="w-8 h-8 text-green-600"></i>
+    <section
+        class="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 lg:py-16"
+        x-data="checkoutSuccessPage({ orderNumber: @js($order->order_number) })"
+    >
+        {{-- Hero --}}
+        <header class="text-center">
+            <span class="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary-50 text-secondary-600 ring-1 ring-secondary-200" aria-hidden="true">
+                <i data-lucide="badge-check" class="h-8 w-8"></i>
+            </span>
+            <p class="mt-5 text-xs font-extrabold uppercase tracking-[0.2em] text-primary-600">Pendaftaran Kelas</p>
+            <h1 class="mt-3 text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl">Pendaftaran berhasil! 🎉</h1>
+            <p class="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
+                Terima kasih sudah mendaftar. Selesaikan pembayaran ke salah satu rekening di bawah, lalu upload bukti bayar untuk diverifikasi tim kami. Detail juga dikirim ke WhatsApp kamu.
+            </p>
+        </header>
+
+        {{-- Course chip --}}
+        <div class="mt-8 flex items-center gap-4 rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+            @if ($imageUrl)
+                <img src="{{ $imageUrl }}" alt="{{ $course->title }}"
+                     class="h-14 w-14 rounded-xl object-cover shrink-0 ring-1 ring-slate-100"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-primary-500 to-blue-600 shrink-0 items-center justify-center text-white" style="display:none">
+                    <i data-lucide="{{ $course->card_icon ?: 'graduation-cap' }}" class="h-6 w-6"></i>
+                </div>
+            @else
+                <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-primary-500 to-blue-600 shrink-0 flex items-center justify-center text-white">
+                    <i data-lucide="{{ $course->card_icon ?: 'graduation-cap' }}" class="h-6 w-6"></i>
+                </div>
+            @endif
+            <div class="min-w-0">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Kelas terdaftar</p>
+                <h2 class="font-bold text-slate-900 text-sm leading-snug">{{ $course->title }}</h2>
+                <p class="text-xs text-slate-500 mt-0.5">a.n {{ $order->customer_name }} · {{ $order->phone }}</p>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Pendaftaran Berhasil! 🎉</h1>
-            <p class="mt-2 text-slate-500 text-sm">Detail pembayaran sudah dikirim ke WhatsApp kamu.</p>
         </div>
 
-        {{-- Order info --}}
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 sm:p-8 shadow-sm space-y-5 mb-6">
-            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-                <span class="text-sm text-slate-500">Order ID</span>
-                <span class="font-mono font-bold text-sm text-slate-900">{{ $order->order_number }}</span>
+        {{-- Order number + copy --}}
+        <section class="mt-6 rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm sm:p-7">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Nomor Pendaftaran</p>
+            <p class="mt-3 break-all font-mono text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl" data-testid="order-number">
+                {{ $order->order_number }}
+            </p>
+            <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <button type="button" @click="copyOrderNumber()" :disabled="copied"
+                        class="ripple inline-flex items-center justify-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition hover:-translate-y-0.5 hover:bg-primary-700 disabled:opacity-90">
+                    <i :data-lucide="copied ? 'check' : 'copy'" class="h-4 w-4"></i>
+                    <span x-text="copied ? 'Tersalin!' : 'Salin nomor'"></span>
+                </button>
+                <a href="{{ $trackUrl }}" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:text-primary-600">
+                    <i data-lucide="package-search" class="h-4 w-4"></i>
+                    Lacak status
+                </a>
             </div>
+        </section>
 
-            <div class="flex items-center gap-4">
-                @if ($course->image_path)
-                    <img src="{{ asset('storage/' . $course->image_path) }}" alt="{{ $course->title }}"
-                         class="w-14 h-14 rounded-xl object-cover shrink-0">
-                @endif
+        {{-- Total transfer / DP --}}
+        <section class="mt-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-7">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+                    <i data-lucide="wallet" class="h-5 w-5"></i>
+                </span>
                 <div class="min-w-0 flex-1">
-                    <h3 class="font-bold text-slate-900 text-sm">{{ $course->title }}</h3>
-                    @if ($course->subtitle)
-                        <p class="text-xs text-slate-500">{{ $course->subtitle }}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        {{ $isInstallment ? 'Transfer sekarang (DP)' : 'Transfer sekarang (Lunas)' }}
+                    </p>
+                    <p class="mt-1 text-3xl font-extrabold leading-tight text-primary-600 sm:text-4xl" data-testid="total-transfer">
+                        Rp {{ number_format($totalTransfer, 0, ',', '.') }}
+                    </p>
+                    @if ($isInstallment)
+                        <p class="mt-2 text-sm text-slate-600">
+                            Total investasi <span class="font-semibold text-slate-900">Rp {{ number_format((int) $order->total, 0, ',', '.') }}</span> —
+                            cukup bayar DP dulu sekarang, sisanya dicicil sesuai jadwal di bawah.
+                        </p>
+                    @else
+                        <p class="mt-2 text-sm text-slate-600">Bayar sekali penuh. Kelas langsung diproses setelah bukti diverifikasi.</p>
                     @endif
                 </div>
             </div>
 
-            <div class="bg-slate-50 rounded-xl p-4 space-y-2">
-                <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">Nama</span>
-                    <span class="font-medium text-slate-900">{{ $order->customer_name }}</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">WhatsApp</span>
-                    <span class="font-medium text-slate-900">{{ $order->phone }}</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">Email</span>
-                    <span class="font-medium text-slate-900">{{ $order->email }}</span>
-                </div>
-                <hr class="border-slate-200">
-                <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">Total Pembayaran</span>
-                    <span class="font-extrabold text-slate-900">Rp {{ number_format((int) $order->total, 0, ',', '.') }}</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">Metode</span>
-                    <span class="font-medium text-slate-900">{{ $isCicilan ? 'Cicilan (' . $order->payments->count() . 'x)' : 'Lunas' }}</span>
-                </div>
-                @if ($isCicilan && $firstPayment)
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">Bayar Sekarang (DP)</span>
-                        <span class="font-bold text-primary-600">Rp {{ number_format((int) $firstPayment->amount, 0, ',', '.') }}</span>
+            @if ($isInstallment && count($schedule) > 0)
+                <div class="mt-5 overflow-hidden rounded-2xl border border-slate-100">
+                    <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-4 py-3">
+                        <p class="text-sm font-bold text-slate-900">Jadwal pembayaran</p>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-bold text-primary-700">
+                            {{ count($schedule) }}× transfer
+                        </span>
                     </div>
-                @endif
-                <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">Status</span>
-                    <span class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                        {{ $isCicilan ? 'Menunggu DP' : 'Menunggu Pembayaran' }}
-                    </span>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                @foreach ($schedule as $i => $row)
+                                    <tr @class(['bg-primary-50/40' => $i === 0])>
+                                        <td class="px-4 py-3">
+                                            <span class="inline-flex items-center gap-2">
+                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold {{ $i === 0 ? 'bg-primary-100 text-primary-700' : 'bg-slate-200 text-slate-600' }}">{{ $i === 0 ? 'DP' : $i }}</span>
+                                                <span class="font-semibold text-slate-900">{{ $row['label'] ?? 'Pembayaran' }}</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-slate-500">{{ $row['due_label'] ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-right font-bold text-slate-900">Rp {{ number_format((int) ($row['amount'] ?? 0), 0, ',', '.') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-        </div>
+            @endif
+        </section>
 
         {{-- Bank accounts --}}
         @if (count($bankAccounts) > 0)
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 sm:p-8 shadow-sm mb-6">
-                <h3 class="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
-                    <i data-lucide="landmark" class="w-5 h-5 text-primary-500"></i>
-                    Transfer ke Rekening
-                </h3>
-                <div class="space-y-3">
-                    @foreach ($bankAccounts as $acc)
-                        <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                            <div class="w-10 h-10 rounded-lg bg-{{ $acc['logo_color'] ?? 'slate' }}-100 flex items-center justify-center shrink-0">
-                                <i data-lucide="building-2" class="w-5 h-5 text-{{ $acc['logo_color'] ?? 'slate' }}-600"></i>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="font-bold text-sm text-slate-900">{{ $acc['bank'] }}</p>
-                                <p class="text-xs text-slate-500">{{ $acc['number'] }} — a.n {{ $acc['holder'] }}</p>
-                            </div>
-                        </div>
-                    @endforeach
+            <section class="mt-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-7">
+                <div class="flex items-start gap-3">
+                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary-50 text-secondary-600">
+                        <i data-lucide="landmark" class="h-5 w-5"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-lg font-bold leading-tight text-slate-900">Transfer ke salah satu rekening</h2>
+                        <p class="mt-1 text-sm text-slate-500">Pilih bank yang paling nyaman, transfer sesuai nominal di atas.</p>
+                    </div>
                 </div>
-            </div>
+
+                <ul class="mt-5 grid gap-3 sm:grid-cols-2" role="list">
+                    @foreach ($bankAccounts as $idx => $bank)
+                        @php $logoClass = $logoPalette[$bank['logo_color'] ?? 'indigo'] ?? $logoPalette['indigo']; @endphp
+                        <li class="rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-primary-200 hover:shadow-md" data-testid="bank-account">
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex h-11 w-14 items-center justify-center rounded-xl text-xs font-extrabold uppercase tracking-wider ring-1 {{ $logoClass }}">{{ $bank['bank'] }}</span>
+                                <div class="min-w-0">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Bank {{ $bank['bank'] }}</p>
+                                    <p class="text-sm font-semibold text-slate-900 truncate">a.n. {{ $bank['holder'] }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5">
+                                <p class="font-mono text-base font-bold tracking-wider text-slate-900">{{ $bank['number'] }}</p>
+                                <button type="button"
+                                        @click="copyBank({{ $idx }}, @js(preg_replace('/[^0-9]/', '', $bank['number'])))"
+                                        class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-primary-300 hover:text-primary-600">
+                                    <i :data-lucide="bankCopied === {{ $idx }} ? 'check' : 'copy'" class="h-3.5 w-3.5"></i>
+                                    <span x-text="bankCopied === {{ $idx }} ? 'Tersalin' : 'Salin'"></span>
+                                </button>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+
+                <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <p class="flex items-start gap-2 leading-relaxed">
+                        <i data-lucide="alert-triangle" class="mt-0.5 h-4 w-4 shrink-0"></i>
+                        <span>Transfer nominal <strong>persis</strong> supaya verifikasi lebih cepat. Selesaikan dalam 1×24 jam.</span>
+                    </p>
+                </div>
+            </section>
         @endif
 
-        {{-- Info box --}}
-        <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-800 mb-6">
-            <p class="font-semibold mb-2">📌 Langkah selanjutnya:</p>
-            <ol class="list-decimal list-inside space-y-1 text-blue-700">
-                <li>Transfer sesuai total pembayaran ke salah satu rekening di atas.</li>
-                <li>Simpan bukti transfer (screenshot/foto).</li>
-                <li>Klik tombol "Upload Bukti Bayar" di bawah ini.</li>
-                <li>Konfirmasi akan dikirim ke WhatsApp setelah diverifikasi.</li>
-            </ol>
-        </div>
+        {{-- CTAs --}}
+        <section class="mt-7 grid gap-3 sm:grid-cols-2">
+            <a href="{{ $uploadUrl }}" data-testid="cta-upload"
+               class="ripple inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-600 px-6 py-4 text-base font-bold text-white shadow-lg shadow-primary-500/30 transition hover:-translate-y-0.5 hover:bg-primary-700">
+                <i data-lucide="upload-cloud" class="h-5 w-5"></i>
+                Upload bukti bayar
+            </a>
+            <a href="{{ $trackUrl }}"
+               class="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-6 py-4 text-base font-bold text-slate-700 transition hover:border-primary-300 hover:text-primary-600">
+                <i data-lucide="package-search" class="h-5 w-5"></i>
+                Lacak status
+            </a>
+        </section>
 
-        {{-- CTA Upload --}}
-        <div class="text-center space-y-3">
-            <a href="{{ $uploadUrl }}"
-               class="inline-flex items-center gap-2 rounded-full bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700 transition">
-                <i data-lucide="upload" class="w-4 h-4"></i>
-                Upload Bukti Bayar
+        {{-- WA admin --}}
+        <aside class="mt-6 flex flex-col items-start gap-4 rounded-3xl border border-secondary-200 bg-secondary-50/70 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary-100 text-secondary-700">
+                    <i data-lucide="message-circle-more" class="h-5 w-5"></i>
+                </span>
+                <div>
+                    <p class="text-sm font-bold text-secondary-900">Butuh bantuan?</p>
+                    <p class="mt-0.5 text-sm text-secondary-800">Chat {{ $waAdmin['label'] }} untuk konfirmasi atau pertanyaan.</p>
+                </div>
+            </div>
+            <a href="{{ $waLink }}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex shrink-0 items-center gap-2 rounded-full bg-secondary-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-secondary-500/30 transition hover:-translate-y-0.5 hover:bg-secondary-700">
+                <i data-lucide="message-circle" class="h-4 w-4"></i>
+                Chat admin
             </a>
-            <br>
-            <a href="{{ route('courses.show', $course->slug) }}"
-               class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700 transition">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                Kembali ke halaman kelas
-            </a>
-        </div>
-    </div>
-</div>
+        </aside>
+
+        <p class="mt-8 text-center text-sm text-slate-500">
+            <a href="{{ route('courses.show', $course->slug) }}" class="font-semibold text-primary-600 hover:underline">← Kembali ke halaman kelas</a>
+        </p>
+    </section>
+
+    <x-slot name="scripts">
+        <script>
+            window.checkoutSuccessPage = function (cfg) {
+                return {
+                    orderNumber: cfg.orderNumber || '',
+                    copied: false,
+                    bankCopied: null,
+                    _copyTimer: null,
+                    _bankTimer: null,
+
+                    init() {
+                        this.$watch('copied', () => this.$nextTick(() => window.lucide && window.lucide.createIcons()));
+                        this.$watch('bankCopied', () => this.$nextTick(() => window.lucide && window.lucide.createIcons()));
+                    },
+
+                    async copyOrderNumber() {
+                        await this._copyToClipboard(this.orderNumber);
+                        this.copied = true;
+                        clearTimeout(this._copyTimer);
+                        this._copyTimer = setTimeout(() => { this.copied = false; }, 2000);
+                    },
+
+                    async copyBank(idx, digits) {
+                        await this._copyToClipboard(String(digits || ''));
+                        this.bankCopied = idx;
+                        clearTimeout(this._bankTimer);
+                        this._bankTimer = setTimeout(() => { this.bankCopied = null; }, 2000);
+                    },
+
+                    async _copyToClipboard(value) {
+                        const text = String(value || '');
+                        if (!text) return;
+                        try {
+                            if (navigator.clipboard && window.isSecureContext) {
+                                await navigator.clipboard.writeText(text);
+                                return;
+                            }
+                        } catch (e) { /* fall through */ }
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.setAttribute('readonly', '');
+                        ta.style.position = 'absolute';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        try { document.execCommand('copy'); } catch (e) { window.prompt('Salin manual:', text); }
+                        finally { document.body.removeChild(ta); }
+                    },
+                };
+            };
+        </script>
+    </x-slot>
 </x-layouts.store>

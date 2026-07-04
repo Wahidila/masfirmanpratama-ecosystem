@@ -22,6 +22,7 @@ class TrackingTest extends TestCase
 
         $this->order = Order::factory()->create([
             'status' => 'shipped',
+            'phone' => '628123456789',
             'shipping_courier' => 'JNE',
             'shipping_resi' => 'JNE1234567890',
             'shipped_at' => now()->subDay(),
@@ -39,23 +40,19 @@ class TrackingTest extends TestCase
 
     private function fakeTrackingApi(): void
     {
+        // Bentuk RESPONS ASLI API Agenwebsite: result.data = { header, history[] },
+        // tiap row history = { date, description, location }.
         Http::fake([
             '*/shipping/tracking' => Http::response([
                 'data' => [
-                    [
-                        'datetime' => '2026-05-30 10:00',
-                        'status' => 'Paket diterima di agen JNE',
-                        'location' => 'Surabaya',
+                    'header' => [
+                        'shipment_date' => '2026-05-30 10:00',
+                        'receiver_name' => 'Budi',
                     ],
-                    [
-                        'datetime' => '2026-05-30 14:30',
-                        'status' => 'Paket dalam pengiriman',
-                        'location' => 'Surabaya',
-                    ],
-                    [
-                        'datetime' => '2026-05-31 09:15',
-                        'status' => 'Paket telah sampai',
-                        'location' => 'Jakarta',
+                    'history' => [
+                        ['date' => '2026-05-30 10:00', 'description' => 'Paket diterima di agen JNE', 'location' => 'Surabaya'],
+                        ['date' => '2026-05-30 14:30', 'description' => 'Paket dalam pengiriman', 'location' => 'Surabaya'],
+                        ['date' => '2026-05-31 09:15', 'description' => 'Paket telah sampai', 'location' => 'Jakarta'],
                     ],
                 ],
                 'message' => 'OK',
@@ -131,10 +128,8 @@ class TrackingTest extends TestCase
         Http::fake([
             '*/shipping/tracking' => Http::response([
                 'data' => [
-                    [
-                        'datetime' => '2026-05-30 10:00',
-                        'status' => 'Paket diterima',
-                        'location' => 'Surabaya',
+                    'history' => [
+                        ['date' => '2026-05-30 10:00', 'description' => 'Paket diterima', 'location' => 'Surabaya'],
                     ],
                 ],
                 'message' => 'OK',
@@ -147,5 +142,19 @@ class TrackingTest extends TestCase
         $this->get($url)->assertStatus(200);
 
         Http::assertSentCount(1);
+    }
+
+    // ─── Test (f): request tracking menyertakan verifikasi 5 digit no HP ───
+
+    public function test_tracking_request_includes_phone_verification(): void
+    {
+        $this->fakeTrackingApi();
+
+        $this->get($this->signedTrack($this->order->order_number))->assertStatus(200);
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/shipping/tracking')
+                && ($request['verification'] ?? null) === '56789'; // 5 digit terakhir 628123456789
+        });
     }
 }

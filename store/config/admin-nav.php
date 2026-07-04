@@ -19,6 +19,8 @@ return [
         ['key' => 'products', 'label' => 'Produk', 'icon' => 'package', 'route' => 'admin.products.index', 'enabled' => true],
         ['key' => 'courses', 'label' => 'Kelas', 'icon' => 'graduation-cap', 'route' => 'admin.courses.index', 'enabled' => true],
         ['key' => 'posts', 'label' => 'Blog', 'icon' => 'file-text', 'route' => 'admin.posts.index', 'enabled' => true],
+        ['key' => 'video-testimonials', 'label' => 'Testimoni Video', 'icon' => 'video', 'route' => 'admin.video-testimonials.index', 'enabled' => true],
+        ['key' => 'promo-banners', 'label' => 'Banner Promo', 'icon' => 'image', 'route' => 'admin.promo-banners.index', 'enabled' => true],
         ['key' => 'orders', 'label' => 'Pesanan', 'icon' => 'shopping-bag', 'route' => 'admin.orders.index', 'enabled' => true],
         ['key' => 'reports', 'label' => 'Laporan', 'icon' => 'bar-chart', 'route' => 'admin.reports.index', 'enabled' => true],
         ['key' => 'wa-notifications', 'label' => 'WA Notifikasi', 'icon' => 'message-square', 'route' => 'admin.wa-notifications.index', 'enabled' => true],

@@ -36,6 +36,9 @@ class CheckoutStoreTest extends TestCase
             'price' => 185_000,
             'status' => 'active',
             'type' => 'book',
+            // Test ini fokus ke mekanik order/subtotal, bukan ongkir. Non-shippable
+            // supaya tidak butuh metode pengiriman (lihat CheckoutController FIX-A).
+            'is_shippable' => false,
         ]);
     }
 
@@ -89,10 +92,8 @@ class CheckoutStoreTest extends TestCase
         $this->assertSame('pending', $payments[0]->status);
         $this->assertSame('transfer', $payments[0]->method);
 
-        // Redirect to signed URL upload page
-        $response->assertRedirect();
-        $this->assertStringContainsString('/upload/'.$order->order_number, $response->headers->get('Location'));
-        $this->assertStringContainsString('signature=', $response->headers->get('Location'));
+        // Redirect ke halaman "Order berhasil dibuat" (bukan langsung upload).
+        $response->assertRedirect(route('checkout.success', ['order' => $order->order_number]));
     }
 
     public function test_validation_rejects_missing_required_fields(): void
@@ -108,6 +109,24 @@ class CheckoutStoreTest extends TestCase
             ]);
 
         $this->assertSame(0, Order::count());
+    }
+
+    public function test_checkout_flashes_one_time_clear_cart_signal(): void
+    {
+        // Tepat setelah checkout, success page dapat sinyal reset cart (one-time).
+        $response = $this->post('/checkout', $this->validPayload());
+        $response->assertSessionHas('checkout.clear_cart', true);
+
+        $order = Order::first();
+        // GET success pertama: sinyal masih ada → view render clearCart: true.
+        $this->get(route('checkout.success', ['order' => $order->order_number]))
+            ->assertOk()
+            ->assertSee('clearCart: true', false);
+
+        // Refresh: flash sudah hilang → clearCart: false (cart baru user tidak ikut terhapus).
+        $this->get(route('checkout.success', ['order' => $order->order_number]))
+            ->assertOk()
+            ->assertSee('clearCart: false', false);
     }
 
     public function test_validation_rejects_invalid_payment_type(): void
@@ -194,15 +213,23 @@ class CheckoutStoreTest extends TestCase
         $this->assertSame('AFF-PURNOMO-2026', $order->ref_code);
     }
 
-    public function test_redirect_url_is_signed_and_valid_for_24h(): void
+    public function test_checkout_to_success_to_upload_flow_end_to_end(): void
     {
+        // POST /checkout → redirect ke success page.
         $response = $this->post('/checkout', $this->validPayload());
+        $order = Order::first();
+        $response->assertRedirect(route('checkout.success', ['order' => $order->order_number]));
 
-        $location = $response->headers->get('Location');
-        $this->assertStringContainsString('signature=', $location);
+        // Success page: 200 + tombol upload pakai signed URL.
+        $success = $this->get(route('checkout.success', ['order' => $order->order_number]));
+        $success->assertOk()->assertSee('Order berhasil dibuat', false);
 
-        // Hit the signed URL — should be 200 (signed URL valid).
-        $this->get($location)->assertOk();
+        // Ekstrak signed upload URL dari tombol cta-upload, lalu GET → 200 (bukan 403).
+        preg_match('/href="([^"]*\/upload\/'.preg_quote($order->order_number, '/').'[^"]*)"/', $success->getContent(), $m);
+        $this->assertNotEmpty($m, 'Tombol upload signed harus ada di success page');
+        $uploadUrl = html_entity_decode($m[1]);
+        $this->assertStringContainsString('signature=', $uploadUrl);
+        $this->get($uploadUrl)->assertOk();
     }
 
     public function test_order_number_format_matches_spec(): void

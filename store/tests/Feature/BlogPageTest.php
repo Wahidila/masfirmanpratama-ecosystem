@@ -24,6 +24,24 @@ class BlogPageTest extends TestCase
             ->assertDontSee('Artikel Terjadwal');
     }
 
+    /**
+     * Regresi: post 'published' dengan published_at masa depan HARUS tetap tayang
+     * (status 'published' = sumber kebenaran visibilitas). Untuk menunda tayang,
+     * gunakan status 'scheduled'. Cegah bug "Published tapi hilang dari /blog".
+     */
+    public function test_blog_index_shows_published_even_with_future_date(): void
+    {
+        Post::factory()->published()->create([
+            'title' => 'Published Tanggal Depan',
+            'slug' => 'published-tanggal-depan',
+            'published_at' => now()->addDays(10),
+        ]);
+
+        $this->get(route('blog.index'))
+            ->assertOk()
+            ->assertSee('Published Tanggal Depan');
+    }
+
     public function test_blog_index_filters_by_category(): void
     {
         // Unique excerpt is rendered only in the main article cards (not the

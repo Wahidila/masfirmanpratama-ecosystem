@@ -1,10 +1,23 @@
 @php
     /** @var array<int, array{code: string, label: string, price: int}> $shippingMethods */
     $shippingMethods = config('store.shipping_methods', []);
-    /** @var array<int, string> $provinces */
-    $provinces = config('store.provinces', []);
-    /** @var array<int, string> $cities */
-    $cities = config('store.cities', []);
+    /** @var array<int, string> $provinces — penamaan kanonik API Agenwebsite */
+    $provinces = config('shipping.destination_provinces', []);
+
+    // Old input untuk re-hydrate form setelah redirect-back validasi. Disusun di
+    // PHP (bukan inline @json multi-baris di <script>) supaya tidak memicu parse.
+    $checkoutOld = [
+        'customer_name' => old('customer_name', ''),
+        'customer_email' => old('customer_email', ''),
+        'customer_phone' => old('customer_phone', ''),
+        'address_line' => old('address_line', ''),
+        'address_province' => old('address_province', ''),
+        'address_city' => old('address_city', ''),
+        'address_district' => old('address_district', ''),
+        'address_village' => old('address_village', ''),
+        'address_postal' => old('address_postal', ''),
+        'shipping_method' => old('shipping_method', ''),
+    ];
 @endphp
 
 <x-layouts.store
@@ -32,21 +45,6 @@
         class="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20"
         x-data="checkoutPage()"
         x-init="
-            // Hydrate server-side validation errors into Alpine
-            const serverErrors = @json($errors->messages());
-            if (Object.keys(serverErrors).length > 0) {
-                errors = serverErrors;
-                touched = { __all: true };
-                // Hydrate form from old input
-                form.customer_name = '{{ old('customer_name', '') }}';
-                form.customer_email = '{{ old('customer_email', '') }}';
-                form.customer_phone = '{{ old('customer_phone', '') }}';
-                form.address_line = '{{ old('address_line', '') }}';
-                form.address_city = '{{ old('address_city', '') }}';
-                form.address_province = '{{ old('address_province', '') }}';
-                form.address_postal = '{{ old('address_postal', '') }}';
-                form.shipping_method = '{{ old('shipping_method', '') }}';
-            }
             $nextTick(() => window.lucide && window.lucide.createIcons());
         "
     >
@@ -226,46 +224,9 @@
                     </header>
 
                     <div class="mt-6 grid gap-4 sm:grid-cols-2">
-                        <div class="sm:col-span-2">
-                            <label for="address_line" class="mb-1.5 block text-sm font-semibold text-slate-700">
-                                Alamat Lengkap <span class="text-rose-500">*</span>
-                            </label>
-                            <textarea
-                                id="address_line"
-                                name="address_line"
-                                rows="3"
-                                autocomplete="street-address"
-                                x-model="form.address_line"
-                                @blur="touch('address_line')"
-                                :class="errorClasses('address_line')"
-                                class="w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 transition focus:outline-none focus:ring-2"
-                                placeholder="Jalan, nomor rumah, RT/RW, kelurahan, kecamatan"
-                                required
-                            ></textarea>
-                            <p x-text="errors.address_line || '\u00A0'" class="mt-1.5 min-h-[1.25rem] text-xs font-medium text-rose-600" :class="errors.address_line ? 'opacity-100' : 'opacity-0'" aria-live="polite"></p>
-                        </div>
-
-                        <div>
-                            <label for="address_city" class="mb-1.5 block text-sm font-semibold text-slate-700">
-                                Kota <span class="text-rose-500">*</span>
-                            </label>
-                            <select
-                                id="address_city"
-                                name="address_city"
-                                x-model="form.address_city"
-                                @change="touch('address_city')"
-                                :class="errorClasses('address_city')"
-                                class="w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 transition focus:outline-none focus:ring-2"
-                                required
-                            >
-                                <option value="">Pilih kota</option>
-                                @foreach ($cities as $city)
-                                    <option value="{{ $city }}">{{ $city }}</option>
-                                @endforeach
-                            </select>
-                            <p x-text="errors.address_city || '\u00A0'" class="mt-1.5 min-h-[1.25rem] text-xs font-medium text-rose-600" :class="errors.address_city ? 'opacity-100' : 'opacity-0'" aria-live="polite"></p>
-                        </div>
-
+                        {{-- 1. Provinsi \u2014 dropdown kanonik (filter autocomplete + struktur).
+                            Provinsi yang dikirim ke API ongkir tetap diambil dari hasil
+                            pilih autocomplete (kanonik), dropdown ini memfilter saja. --}}
                         <div>
                             <label for="address_province" class="mb-1.5 block text-sm font-semibold text-slate-700">
                                 Provinsi <span class="text-rose-500">*</span>
@@ -274,7 +235,7 @@
                                 id="address_province"
                                 name="address_province"
                                 x-model="form.address_province"
-                                @change="touch('address_province')"
+                                @change="onProvinceChange()"
                                 :class="errorClasses('address_province')"
                                 class="w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 transition focus:outline-none focus:ring-2"
                                 required
@@ -287,6 +248,91 @@
                             <p x-text="errors.address_province || '\u00A0'" class="mt-1.5 min-h-[1.25rem] text-xs font-medium text-rose-600" :class="errors.address_province ? 'opacity-100' : 'opacity-0'" aria-live="polite"></p>
                         </div>
 
+                        {{-- 2. Kota / Kecamatan \u2014 autocomplete API (Agenwebsite /shipping/data).
+                            Difilter ke provinsi terpilih bila ada. Pilih satu \u2192 set
+                            kota + kecamatan + sinkron provinsi. --}}
+                        <div class="relative">
+                            <label for="dest_search" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                                Kota / Kabupaten &amp; Kecamatan <span class="text-rose-500">*</span>
+                            </label>
+                            <input
+                                id="dest_search"
+                                type="text"
+                                x-model="destSearch"
+                                @input.debounce.300ms="fetchDestinations()"
+                                @focus="destOpen = destResults.length > 0"
+                                @keydown.escape.prevent="destOpen = false"
+                                :class="errorClasses('address_city')"
+                                class="w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 transition focus:outline-none focus:ring-2"
+                                placeholder="Ketik kota/kecamatan (min. 3 huruf)"
+                                autocomplete="off"
+                            >
+                            <div
+                                x-show="destOpen && (destLoading || destResults.length > 0 || destNoResults)"
+                                @click.outside="destOpen = false"
+                                x-cloak
+                                class="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+                            >
+                                <template x-if="destLoading">
+                                    <div class="px-4 py-3 text-sm text-slate-500">Mencari...</div>
+                                </template>
+                                <template x-if="!destLoading && destNoResults">
+                                    <div class="px-4 py-3 text-sm text-slate-500">Tidak ada hasil. Coba kata kunci lain.</div>
+                                </template>
+                                <template x-for="(d, i) in destResults" :key="i">
+                                    <button
+                                        type="button"
+                                        @click="pickDestination(d)"
+                                        class="block w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-primary-50"
+                                    >
+                                        <p class="font-medium text-slate-900" x-text="d.district + ', ' + d.city"></p>
+                                        <p class="text-xs text-slate-500" x-text="d.province"></p>
+                                    </button>
+                                </template>
+                            </div>
+
+                            {{-- Hidden inputs untuk form submit native (kanonik dari API) --}}
+                            <input type="hidden" name="address_city" id="address_city" x-model="form.address_city">
+                            <input type="hidden" name="address_district" id="address_district" x-model="form.address_district">
+
+                            <p x-text="errors.address_city || '\u00A0'" class="mt-1.5 min-h-[1.25rem] text-xs font-medium text-rose-600" :class="errors.address_city ? 'opacity-100' : 'opacity-0'" aria-live="polite"></p>
+                        </div>
+
+                        {{-- Konfirmasi pilihan kota/kecamatan terstruktur --}}
+                        <template x-if="form.address_city">
+                            <div class="sm:col-span-2 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3">
+                                <div class="grid gap-2 sm:grid-cols-3">
+                                    <div>
+                                        <p class="text-xs font-medium text-slate-500">Kota / Kabupaten</p>
+                                        <p class="text-sm font-semibold text-slate-900" x-text="form.address_city"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-medium text-slate-500">Kecamatan</p>
+                                        <p class="text-sm font-semibold text-slate-900" x-text="form.address_district || '-'"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-medium text-slate-500">Provinsi</p>
+                                        <p class="text-sm font-semibold text-slate-900" x-text="form.address_province"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- 3. Desa / Kelurahan \u2014 kelengkapan alamat (API tak punya level ini) --}}
+                        <div>
+                            <label for="address_village" class="mb-1.5 block text-sm font-semibold text-slate-700">Desa / Kelurahan</label>
+                            <input
+                                id="address_village"
+                                name="address_village"
+                                type="text"
+                                x-model="form.address_village"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
+                                placeholder="Nama desa/kelurahan"
+                            >
+                            <p class="mt-1.5 text-xs text-slate-500">Bantu kurir menemukan alamat.</p>
+                        </div>
+
+                        {{-- 4. Kode Pos --}}
                         <div>
                             <label for="address_postal" class="mb-1.5 block text-sm font-semibold text-slate-700">Kode Pos</label>
                             <input
@@ -299,6 +345,27 @@
                                 class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
                                 placeholder="60111"
                             >
+                            <p class="mt-1.5 text-xs text-slate-500">Opsional.</p>
+                        </div>
+
+                        {{-- 5. Detail alamat lengkap (jalan, no rumah, RT/RW, patokan) --}}
+                        <div class="sm:col-span-2">
+                            <label for="address_line" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                                Detail Alamat Lengkap <span class="text-rose-500">*</span>
+                            </label>
+                            <textarea
+                                id="address_line"
+                                name="address_line"
+                                rows="3"
+                                autocomplete="street-address"
+                                x-model="form.address_line"
+                                @blur="touch('address_line')"
+                                :class="errorClasses('address_line')"
+                                class="w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 transition focus:outline-none focus:ring-2"
+                                placeholder="Nama jalan, nomor rumah, RT/RW, patokan"
+                                required
+                            ></textarea>
+                            <p x-text="errors.address_line || '\u00A0'" class="mt-1.5 min-h-[1.25rem] text-xs font-medium text-rose-600" :class="errors.address_line ? 'opacity-100' : 'opacity-0'" aria-live="polite"></p>
                         </div>
 
                         {{-- Ongkir method --}}
@@ -325,16 +392,16 @@
                                 </div>
                             </template>
 
-                            {{-- Empty — address not filled --}}
-                            <template x-if="!loadingRates && shippingRates.length === 0 && !rateError && form.address_city && form.address_province && form.address_postal">
+                            {{-- Empty — address sudah lengkap tapi tak ada tarif (kode pos opsional) --}}
+                            <template x-if="!loadingRates && shippingRates.length === 0 && !rateError && form.address_city && form.address_province">
                                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                                     Tidak ada tarif tersedia untuk alamat ini.
                                 </div>
                             </template>
 
-                            <template x-if="!loadingRates && shippingRates.length === 0 && !rateError && (!form.address_city || !form.address_province || !form.address_postal)">
+                            <template x-if="!loadingRates && shippingRates.length === 0 && !rateError && (!form.address_city || !form.address_province)">
                                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                                    Masukkan alamat lengkap untuk cek ongkir.
+                                    Pilih provinsi &amp; kota/kecamatan untuk cek ongkir.
                                 </div>
                             </template>
 
@@ -370,8 +437,12 @@
                                 </div>
                             </template>
 
-                            {{-- Hidden select for backward compat (keeps id for tests) --}}
-                            <select id="shipping_method" name="shipping_method" x-model="form.shipping_method" class="hidden" aria-hidden="true">
+                            {{-- Anchor id untuk test/scroll-to-error. SENGAJA tanpa
+                                name= dan tanpa x-model: kalau punya name, select ini
+                                ikut ter-submit dengan value "" dan MENIMPA nilai radio
+                                di atas (keduanya name="shipping_method") → server
+                                terima kosong. Metode dikirim murni lewat radio. --}}
+                            <select id="shipping_method" class="hidden" aria-hidden="true" tabindex="-1">
                                 <option value="">Pilih</option>
                             </select>
 
@@ -549,8 +620,10 @@
                         customer_email: '',
                         customer_phone: '',
                         address_line: '',
-                        address_city: '',
                         address_province: '',
+                        address_city: '',
+                        address_district: '',
+                        address_village: '',
                         address_postal: '',
                         shipping_method: '',
                     },
@@ -562,6 +635,13 @@
                     shippingRates: [],
                     loadingRates: false,
                     rateError: '',
+
+                    // Destination autocomplete (Agenwebsite /shipping/data)
+                    destSearch: '',
+                    destResults: [],
+                    destLoading: false,
+                    destOpen: false,
+                    destNoResults: false,
 
                     // ── Computed ────────────────────────────────────────
                     get requiresShipping() {
@@ -690,9 +770,74 @@
                         return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
                     },
 
+                    // ── Destination autocomplete ────────────────────────
+                    onProvinceChange() {
+                        // Provinsi diganti manual → reset pilihan kota/kecamatan yang
+                        // mungkin milik provinsi lain, lalu bersihkan tarif.
+                        this.form.address_city = '';
+                        this.form.address_district = '';
+                        this.destSearch = '';
+                        this.destResults = [];
+                        this.destOpen = false;
+                        this.shippingRates = [];
+                        this.form.shipping_method = '';
+                        this.touch('address_province');
+                    },
+
+                    fetchDestinations() {
+                        const q = (this.destSearch || '').trim();
+                        if (q.length < 3) {
+                            this.destResults = [];
+                            this.destOpen = false;
+                            this.destNoResults = false;
+                            return;
+                        }
+                        this.destLoading = true;
+                        this.destOpen = true;
+                        this.destNoResults = false;
+                        fetch('/shipping/destinations?q=' + encodeURIComponent(q), {
+                            headers: { 'Accept': 'application/json' },
+                        })
+                            .then((r) => r.json())
+                            .then((data) => {
+                                let results = Array.isArray(data.results) ? data.results : [];
+                                // Filter ke provinsi terpilih (kalau ada) — biar hasil
+                                // tidak campur antar provinsi yang namanya mirip.
+                                if (this.form.address_province) {
+                                    const p = this.form.address_province.toLowerCase();
+                                    const filtered = results.filter((r) => (r.province || '').toLowerCase() === p);
+                                    if (filtered.length > 0) results = filtered;
+                                }
+                                this.destResults = results;
+                                this.destNoResults = results.length === 0;
+                            })
+                            .catch(() => {
+                                this.destResults = [];
+                                this.destNoResults = true;
+                            })
+                            .finally(() => { this.destLoading = false; });
+                    },
+
+                    pickDestination(d) {
+                        // Provinsi kanonik dari API — sinkron ke dropdown (opsi pasti ada
+                        // karena daftar provinsi = penamaan kanonik API).
+                        this.form.address_province = d.province || '';
+                        this.form.address_city = d.city || '';
+                        this.form.address_district = d.district || '';
+                        this.destSearch = (d.district ? d.district + ', ' : '') + d.city;
+                        this.destOpen = false;
+                        this.touched.address_city = true;
+                        this.touched.address_province = true;
+                        this.validate();
+                        // Trigger rate refresh immediately on selection.
+                        this.fetchRates();
+                    },
+
                     // ── Dynamic shipping rates ──────────────────────────
                     fetchRates() {
-                        if (! this.form.address_city || ! this.form.address_province || ! this.form.address_postal) {
+                        // Zipcode optional (relaxed) — city+province dari autocomplete
+                        // cukup buat API tarif.
+                        if (! this.form.address_city || ! this.form.address_province) {
                             this.shippingRates = [];
                             return;
                         }
@@ -707,6 +852,7 @@
                             body: JSON.stringify({
                                 city: this.form.address_city,
                                 province: this.form.address_province,
+                                district: this.form.address_district,
                                 zipcode: this.form.address_postal,
                                 cart_json: JSON.stringify(this.$store.cart.items.map((i) => ({ slug: i.slug, qty: i.qty }))),
                             }),
@@ -729,18 +875,27 @@
                     },
 
                     init() {
-                        this.$watch('form.address_city', () => {
-                            clearTimeout(this._rateTimer);
-                            this._rateTimer = setTimeout(() => this.fetchRates(), 500);
-                        });
-                        this.$watch('form.address_province', () => {
-                            clearTimeout(this._rateTimer);
-                            this._rateTimer = setTimeout(() => this.fetchRates(), 500);
-                        });
+                        // Rate refresh hanya saat triple (province+city+district) berubah,
+                        // bukan tiap keystroke postal — postal sekarang opsional.
                         this.$watch('form.address_postal', () => {
                             clearTimeout(this._rateTimer);
                             this._rateTimer = setTimeout(() => this.fetchRates(), 500);
                         });
+
+                        // Hydrasi error validasi + old input setelah redirect-back.
+                        // Aman di konteks script: JSON boleh mengandung tanda kutip
+                        // tanpa merusak apa pun (beda dgn atribut x-init).
+                        const serverErrors = @json($errors->messages());
+                        if (Object.keys(serverErrors).length > 0) {
+                            this.errors = serverErrors;
+                            this.touched = { __all: true };
+                            Object.assign(this.form, @json($checkoutOld));
+                            if (this.form.address_city && this.form.address_province) {
+                                this.destSearch = (this.form.address_district ? this.form.address_district + ', ' : '') + this.form.address_city;
+                                // Muat ulang opsi ongkir supaya user bisa pilih metode lagi.
+                                this.$nextTick(() => this.fetchRates());
+                            }
+                        }
                     },
                 };
             };

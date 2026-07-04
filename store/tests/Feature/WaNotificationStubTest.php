@@ -2,16 +2,21 @@
 
 namespace Tests\Feature;
 
+use App\Events\OrderCompleted;
+use App\Events\OrderCreated;
 use App\Events\OrderShipped;
 use App\Events\PaymentRejected;
 use App\Events\PaymentSubmitted;
 use App\Events\PaymentVerified;
 use App\Models\Admin;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderPayment;
+use App\Models\Product;
 use App\Models\WaNotification;
 use App\Services\Settings;
 use App\Services\WhatsappNotifier;
+use App\Services\XSenderService;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -200,6 +205,111 @@ class WaNotificationStubTest extends TestCase
         $this->assertNotNull($row->payload_json['shipped_at']);
     }
 
+    public function test_order_created_event_queues_customer_notif_with_upload_link(): void
+    {
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-NEW01',
+            'phone' => '628999111222',
+            'total' => 165000,
+        ]);
+
+        event(new OrderCreated($order));
+
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'recipient' => '628999111222',
+            'template' => 'customer_order_created',
+            'status' => 'queued',
+        ]);
+
+        $row = WaNotification::where('template', 'customer_order_created')->first();
+        $this->assertStringContainsString('/upload/MFP-WA-NEW01', $row->payload_json['upload_url']);
+        $this->assertStringContainsString('signature=', $row->payload_json['upload_url']);
+        $this->assertSame('165.000', $row->payload_json['amount']);
+    }
+
+    public function test_payment_submitted_also_queues_customer_received_notif(): void
+    {
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-RCV01',
+            'phone' => '628999111222',
+        ]);
+        $payment = OrderPayment::factory()->create([
+            'order_id' => $order->id,
+            'amount' => 165000,
+            'status' => 'pending',
+        ]);
+
+        event(new PaymentSubmitted($order, $payment, 0));
+
+        // Dua notif: alert admin + konfirmasi ke pembeli.
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'template' => 'admin_payment_review_alert',
+        ]);
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'recipient' => '628999111222',
+            'template' => 'customer_payment_received',
+            'status' => 'queued',
+        ]);
+
+        // Link track order ikut dikirim ke pembeli (signed, menunjuk order ini).
+        $payload = WaNotification::where('order_id', $order->id)
+            ->where('template', 'customer_payment_received')
+            ->value('payload_json');
+        $this->assertArrayHasKey('track_url', $payload);
+        $this->assertStringContainsString('/track/MFP-WA-RCV01', $payload['track_url']);
+    }
+
+    public function test_order_completed_event_queues_customer_thankyou(): void
+    {
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-DONE1',
+            'phone' => '628999111222',
+            'status' => 'completed',
+        ]);
+
+        event(new OrderCompleted($order));
+
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'recipient' => '628999111222',
+            'template' => 'customer_order_completed',
+            'status' => 'queued',
+        ]);
+    }
+
+    public function test_delivered_awb_callback_dispatches_order_completed(): void
+    {
+        config(['shipping.license' => 'test-license-key']);
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-DLVR1',
+            'phone' => '628999111222',
+            'status' => 'shipped',
+            'fulfillment_api_order_id' => 'ORD-DLVR-1',
+            'fulfillment_reference_id' => 'REF-DLVR-1',
+        ]);
+
+        $payload = [
+            'status' => 'status_update',
+            'order_id' => 'ORD-DLVR-1',
+            'reference_id' => 'REF-DLVR-1',
+            'tracking_status' => 'DELIVERED',
+        ];
+        $signature = hash('sha256', 'test-license-key'.json_encode($payload));
+
+        $this->postJson(route('webhooks.agenwebsite.awb'), $payload, ['AW-Signature' => $signature])
+            ->assertOk();
+
+        // Order completed + WA terima kasih ke pembeli ter-queue.
+        $this->assertSame('completed', $order->fresh()->status);
+        $this->assertDatabaseHas('wa_notifications', [
+            'order_id' => $order->id,
+            'template' => 'customer_order_completed',
+        ]);
+    }
+
     public function test_listener_skips_when_recipient_empty(): void
     {
         // Order tanpa phone → customer notif harus skip (defensive).
@@ -273,7 +383,7 @@ class WaNotificationStubTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.ship', $order), [
-                'shipping_courier' => 'JNE',
+                'shipping_courier' => 'jne',
                 'shipping_resi' => 'JNE12345678',
             ])
             ->assertRedirect(route('admin.orders.show', $order));
@@ -283,6 +393,108 @@ class WaNotificationStubTest extends TestCase
             'template' => 'customer_order_shipped',
             'status' => 'queued',
         ]);
+
+        // Payload HARUS berisi data real dengan kunci yang cocok placeholder
+        // template ({courier}, {tracking_number}, {track_url}) — bukan placeholder.
+        $payload = WaNotification::where('order_id', $order->id)
+            ->where('template', 'customer_order_shipped')
+            ->value('payload_json');
+
+        $this->assertSame('JNE', $payload['courier']); // label dari courier_id 'jne'
+        $this->assertSame('JNE12345678', $payload['tracking_number']);
+        $this->assertArrayHasKey('track_url', $payload);
+        $this->assertStringContainsString('/track', $payload['track_url']);
+    }
+
+    public function test_order_shipped_message_has_dynamic_courier_resi_and_track_link(): void
+    {
+        // Tangkap pesan yang benar-benar dibangun & dikirim ke gateway.
+        $captured = null;
+        $this->mock(XSenderService::class, function ($mock) use (&$captured) {
+            $mock->shouldReceive('send')->andReturnUsing(function ($to, $msg) use (&$captured) {
+                $captured = $msg;
+
+                return ['ok' => true, 'status' => 1, 'body' => 'sent'];
+            });
+        });
+
+        $order = Order::factory()->create([
+            'phone' => '628999111222',
+            'customer_name' => 'WAHIDILA SP',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.ship', $order), [
+                'shipping_courier' => 'jne',
+                'shipping_resi' => 'JNE0099887766',
+            ])
+            ->assertRedirect();
+
+        $this->assertNotNull($captured, 'Pesan WA harus terbentuk & terkirim.');
+        // Nilai DINAMIS, bukan literal placeholder.
+        $this->assertStringContainsString('Kurir: JNE', $captured);
+        $this->assertStringContainsString('Resi: JNE0099887766', $captured);
+        $this->assertStringContainsString('/track', $captured); // link tracking ada
+        $this->assertStringNotContainsString('{courier}', $captured);
+        $this->assertStringNotContainsString('{tracking_number}', $captured);
+        $this->assertStringNotContainsString('{track_url}', $captured);
+    }
+
+    public function test_order_created_message_lists_products_and_courier(): void
+    {
+        // Tangkap pesan "Pesanan Diterima" yang benar-benar dikirim ke gateway.
+        $captured = null;
+        $this->mock(XSenderService::class, function ($mock) use (&$captured) {
+            $mock->shouldReceive('send')->andReturnUsing(function ($to, $msg) use (&$captured) {
+                $captured = $msg;
+
+                return ['ok' => true, 'status' => 1, 'body' => 'sent'];
+            });
+        });
+
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-WA-CREATE1',
+            'phone' => '628999111222',
+            'customer_name' => 'WAHIDILA SP',
+            'total' => 210_000,
+            'shipping_courier' => 'jne',
+            'shipping_service' => 'REG',
+        ]);
+
+        $book = Product::factory()->create(['title' => 'Kitab Kunci Penarik Rezeki']);
+        $second = Product::factory()->create(['title' => 'Buku Doa Harian']);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $book->id,
+            'qty' => 2,
+            'unit_price' => 90_000,
+            'subtotal' => 180_000,
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $second->id,
+            'qty' => 1,
+            'unit_price' => 30_000,
+            'subtotal' => 30_000,
+        ]);
+
+        event(new OrderCreated($order->fresh()));
+
+        $this->assertNotNull($captured, 'Pesan WA harus terbentuk & terkirim.');
+        // Detail tiap produk: nama + qty + subtotal.
+        $this->assertStringContainsString('Kitab Kunci Penarik Rezeki', $captured);
+        $this->assertStringContainsString('(2×)', $captured);
+        $this->assertStringContainsString('Buku Doa Harian', $captured);
+        $this->assertStringContainsString('(1×)', $captured);
+        // Kurir dinamis (label + layanan), bukan id mentah.
+        $this->assertStringContainsString('Kurir: JNE — REG', $captured);
+        $this->assertStringNotContainsString('Kurir: jne', $captured);
+        // Total tetap ada.
+        $this->assertStringContainsString('Rp 210.000', $captured);
+        // Tidak ada placeholder tersisa.
+        $this->assertStringNotContainsString('{items}', $captured);
+        $this->assertStringNotContainsString('{courier}', $captured);
     }
 
     public function test_customer_upload_proof_dispatches_payment_submitted_event(): void

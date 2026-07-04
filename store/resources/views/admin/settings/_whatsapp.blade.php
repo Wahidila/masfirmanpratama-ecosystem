@@ -45,6 +45,21 @@
             @enderror
         </x-admin.form-group>
 
+        {{-- Nomor WhatsApp Admin (penerima alert) --}}
+        <x-admin.form-group label="Nomor WhatsApp Admin (penerima notifikasi)" hint="Nomor WA admin untuk menerima alert (mis. bukti bayar baru masuk). WAJIB nomor WA aktif — kalau kosong/placeholder, alert admin akan gagal terkirim.">
+            <input
+                type="text"
+                name="wa_admin_number"
+                value="{{ old('wa_admin_number', $whatsappData['admin_number'] ?? '') }}"
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition"
+                placeholder="628xxxxxxxxxx"
+                inputmode="numeric"
+            >
+            @error('wa_admin_number')
+                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+            @enderror
+        </x-admin.form-group>
+
         {{-- Endpoint (optional override) --}}
         <x-admin.form-group label="Endpoint URL" hint="Default: https://xsender.id/id/send-message. Ubah jika pakai custom endpoint.">
             <input
