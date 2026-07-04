@@ -183,6 +183,7 @@ use App\Http\Controllers\Admin\InstallmentSchemeController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\PromoBannerController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\VideoTestimonialController;
@@ -238,6 +239,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('video-testimonials', VideoTestimonialController::class)
             ->except(['show'])
             ->parameters(['video-testimonials' => 'videoTestimonial']);
+
+        // Banner promo/jadwal terdekat homepage (sering ganti per event).
+        Route::post('promo-banners/{promo_banner}/toggle', [PromoBannerController::class, 'toggle'])
+            ->name('promo-banners.toggle');
+        Route::resource('promo-banners', PromoBannerController::class)
+            ->except(['show'])
+            ->parameters(['promo-banners' => 'promo_banner']);
 
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');

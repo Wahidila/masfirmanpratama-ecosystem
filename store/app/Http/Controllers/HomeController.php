@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Product;
+use App\Models\PromoBanner;
 use App\Models\VideoTestimonial;
 use Illuminate\View\View;
 
@@ -74,6 +75,12 @@ class HomeController extends Controller
             ])
             ->all();
 
-        return view('pages.home', compact('products', 'welcomeBooks', 'classFormats', 'videoTestimonials'));
+        // Banner promo/jadwal terdekat — dikelola admin (aktif + dalam jendela tayang).
+        $promoBanners = PromoBanner::visible()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        return view('pages.home', compact('products', 'welcomeBooks', 'classFormats', 'videoTestimonials', 'promoBanners'));
     }
 }
