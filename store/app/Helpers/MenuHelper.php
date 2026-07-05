@@ -7,25 +7,47 @@ class MenuHelper
     /**
      * Build menu groups from admin-nav config for TailAdmin sidebar.
      *
-     * Returns a flat single-group structure compatible with TailAdmin sidebar template.
+     * Item props live in `admin-nav.primary` (single source), grouping in
+     * `admin-nav.groups` (title + referenced keys). Disabled items and unknown
+     * keys are skipped; empty groups are dropped. Falls back to one "Menu" group
+     * (legacy behaviour) when `groups` is not defined.
      *
      * @return array<int, array{title: string, items: list<array{name: string, icon: string, path: string}>}>
      */
     public static function getMenuGroups(): array
     {
-        $primary = collect(config('admin-nav.primary', []))
+        $byKey = collect(config('admin-nav.primary', []))
             ->filter(fn ($item) => $item['enabled'] ?? true)
-            ->map(fn ($item) => [
-                'name' => $item['label'],
-                'icon' => $item['icon'],
-                'path' => route($item['route']),
-            ])
-            ->values()
-            ->all();
+            ->keyBy('key');
 
-        return [
-            ['title' => 'Menu', 'items' => $primary],
+        $toItem = fn (array $item) => [
+            'name' => $item['label'],
+            'icon' => $item['icon'],
+            'path' => route($item['route']),
         ];
+
+        $groups = config('admin-nav.groups', []);
+
+        // Legacy fallback: satu grup berisi semua item, urutan config.
+        if (empty($groups)) {
+            return [['title' => 'Menu', 'items' => $byKey->map($toItem)->values()->all()]];
+        }
+
+        $result = [];
+        foreach ($groups as $group) {
+            $items = collect($group['items'] ?? [])
+                ->map(fn ($key) => $byKey->get($key)) // null kalau disabled / tak dikenal
+                ->filter()
+                ->map($toItem)
+                ->values()
+                ->all();
+
+            if ($items !== []) {
+                $result[] = ['title' => $group['title'], 'items' => $items];
+            }
+        }
+
+        return $result;
     }
 
     /**

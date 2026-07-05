@@ -7,10 +7,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Single source of truth untuk struktur nav admin panel. Dipakai oleh:
-    | - resources/views/components/admin/sidebar.blade.php (desktop sidebar)
-    | - resources/views/layouts/admin.blade.php (mobile drawer)
+    | - resources/views/layouts/partials/admin-sidebar.blade.php (via MenuHelper::getMenuGroups, dikelompokkan)
+    | - resources/views/components/admin/sidebar.blade.php + _nav-links (flat, pakai `primary`)
     |
-    | `primary` = nav links utama (semua viewport)
+    | `primary` = definisi tiap item (satu sumber props: label/icon/route).
+    | `groups`  = pengelompokan sidebar; tiap grup punya judul (jadi header <h2>
+    |             seperti "MENU") + daftar `key` yang merujuk ke `primary`.
     |
     */
 
@@ -26,5 +28,15 @@ return [
         ['key' => 'wa-notifications', 'label' => 'WA Notifikasi', 'icon' => 'message-square', 'route' => 'admin.wa-notifications.index', 'enabled' => true],
         ['key' => 'installments', 'label' => 'Skema Cicilan', 'icon' => 'layers', 'route' => 'admin.installment-schemes.index', 'enabled' => true],
         ['key' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'route' => 'admin.settings.index', 'enabled' => true],
+    ],
+
+    // Pengelompokan sidebar berdasarkan fungsi/kepentingan. Urutan grup & item
+    // = urutan tampil. Item yang enabled=false atau key tak dikenal dilewati;
+    // grup yang jadi kosong tidak dirender.
+    'groups' => [
+        ['title' => 'Utama', 'items' => ['dashboard', 'orders', 'reports']],
+        ['title' => 'Katalog', 'items' => ['products', 'courses', 'installments']],
+        ['title' => 'Konten & Promosi', 'items' => ['posts', 'video-testimonials', 'promo-banners']],
+        ['title' => 'Sistem', 'items' => ['wa-notifications', 'settings']],
     ],
 ];
