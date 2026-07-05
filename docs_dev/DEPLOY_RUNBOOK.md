@@ -46,6 +46,9 @@ php artisan db:seed --force
 
 # 6. Build asset frontend
 npm ci && npm run build
+#    WAJIB untuk kedua app. Affiliate kini pakai Vite (Tailwind di-compile,
+#    bukan lagi CDN runtime) — tanpa `npm run build`, CSS/JS tidak ter-serve
+#    (@vite mencari public/build/manifest.json).
 
 # 7. Optimisasi cache produksi
 php artisan config:cache

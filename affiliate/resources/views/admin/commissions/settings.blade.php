@@ -1,38 +1,42 @@
 @extends('admin.layouts.admin')
 
 @section('content')
-<h1 class="text-xl font-bold text-slate-800 mb-6">Pengaturan Komisi</h1>
+<x-page-header title="Pengaturan Komisi" subtitle="Atur rate komisi dan masa cooling per tipe & produk." />
 
-<div class="bg-white rounded-2xl border border-slate-100 p-6">
+<x-card>
     <form method="POST" action="{{ route('admin.commissions.settings.update') }}">
         @csrf @method('PUT')
-        <table class="w-full text-sm mb-4">
-            <thead>
-                <tr class="border-b border-slate-100">
-                    <th class="text-left py-2 font-medium text-slate-600">Tipe</th>
-                    <th class="text-left py-2 font-medium text-slate-600">Produk</th>
-                    <th class="text-center py-2 font-medium text-slate-600">Rate (%)</th>
-                    <th class="text-center py-2 font-medium text-slate-600">Cooling (hari)</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-                @foreach($settings as $setting)
-                <tr>
-                    <td class="py-3">{{ $setting->affiliatorType->name ?? 'Global' }}</td>
-                    <td class="py-3">{{ $setting->product_type ?? 'Semua' }}</td>
-                    <td class="py-3 text-center">
-                        <input type="number" step="0.01" name="settings[{{ $setting->id }}][rate]" value="{{ $setting->rate }}"
-                               class="w-20 px-2 py-1 border border-slate-200 rounded-lg text-center text-sm">
-                    </td>
-                    <td class="py-3 text-center">
-                        <input type="number" name="settings[{{ $setting->id }}][cooling_days]" value="{{ $setting->cooling_days }}"
-                               class="w-16 px-2 py-1 border border-slate-200 rounded-lg text-center text-sm">
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        <button type="submit" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-xl hover:bg-primary-700">Simpan Pengaturan</button>
+        <div class="overflow-x-auto -mx-5">
+            <table class="min-w-full text-sm">
+                <thead class="border-b border-slate-100">
+                    <tr>
+                        <th class="text-left px-5 py-2.5 font-semibold text-xs uppercase tracking-wide text-slate-500">Tipe</th>
+                        <th class="text-left px-5 py-2.5 font-semibold text-xs uppercase tracking-wide text-slate-500">Produk</th>
+                        <th class="text-left px-5 py-2.5 font-semibold text-xs uppercase tracking-wide text-slate-500">Rate (%)</th>
+                        <th class="text-left px-5 py-2.5 font-semibold text-xs uppercase tracking-wide text-slate-500">Cooling (hari)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach ($settings as $setting)
+                        <tr>
+                            <td class="px-5 py-3 text-slate-700 font-medium">{{ $setting->affiliatorType->name ?? 'Global' }}</td>
+                            <td class="px-5 py-3 text-slate-600">{{ $setting->product_type ?? 'Semua' }}</td>
+                            <td class="px-5 py-3">
+                                <input type="number" step="0.01" name="settings[{{ $setting->id }}][rate]" value="{{ $setting->rate }}"
+                                       class="w-24 h-10 px-3 rounded-lg border border-slate-200 text-sm text-slate-800 shadow-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
+                            </td>
+                            <td class="px-5 py-3">
+                                <input type="number" name="settings[{{ $setting->id }}][cooling_days]" value="{{ $setting->cooling_days }}"
+                                       class="w-20 h-10 px-3 rounded-lg border border-slate-200 text-sm text-slate-800 shadow-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-5">
+            <x-button type="submit" icon="save">Simpan Pengaturan</x-button>
+        </div>
     </form>
-</div>
+</x-card>
 @endsection

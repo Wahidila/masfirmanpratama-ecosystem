@@ -33,6 +33,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/ref/{code}', [ReferralController::class, 'track'])->name('referral.track');
 
+// Living style guide — hanya di environment non-produksi.
+if (! app()->environment('production')) {
+    Route::view('/design-system', 'design-system')->name('design-system');
+}
+
 /*
 |--------------------------------------------------------------------------
 | Guest Routes (unauthenticated only)

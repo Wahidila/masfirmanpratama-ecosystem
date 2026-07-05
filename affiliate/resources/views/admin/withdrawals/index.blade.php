@@ -1,72 +1,61 @@
 @extends('admin.layouts.admin')
 
 @section('content')
-<h1 class="text-xl font-bold text-slate-800 mb-6">Kelola Penarikan</h1>
+<x-page-header title="Kelola Penarikan" subtitle="Setujui atau tolak permintaan penarikan komisi." />
 
-<div class="mb-4">
-    <form method="GET" class="flex items-center gap-2">
-        <select name="status" onchange="this.form.submit()" class="text-sm border border-slate-200 rounded-xl px-3 py-2">
-            <option value="all" {{ request('status') === 'all' ? 'selected' : '' }}>Semua</option>
-            <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
-            <option value="processing" {{ request('status') === 'processing' ? 'selected' : '' }}>Processing</option>
-            <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-            <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
-        </select>
-    </form>
-</div>
+<form method="GET" class="mb-4 flex items-center gap-2">
+    <x-form.select name="status" onchange="this.form.submit()" class="max-w-xs">
+        <option value="all" @selected(request('status') === 'all')>Semua Status</option>
+        <option value="pending" @selected(request('status') === 'pending')>Pending</option>
+        <option value="processing" @selected(request('status') === 'processing')>Processing</option>
+        <option value="completed" @selected(request('status') === 'completed')>Completed</option>
+        <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
+    </x-form.select>
+</form>
 
-<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-    <table class="w-full text-sm">
-        <thead class="bg-slate-50 border-b border-slate-100">
-            <tr>
-                <th class="text-left px-4 py-3 font-medium text-slate-600">Affiliator</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600">Metode</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-600">Rekening</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600">Jumlah</th>
-                <th class="text-center px-4 py-3 font-medium text-slate-600">Status</th>
-                <th class="text-right px-4 py-3 font-medium text-slate-600">Aksi</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">
-            @forelse($withdrawals as $wd)
-            <tr>
-                <td class="px-4 py-3 text-slate-700">{{ $wd->affiliator->name }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ $wd->method->name }}</td>
-                <td class="px-4 py-3 text-slate-600 text-xs">{{ $wd->account_name }}<br>{{ $wd->account_number }}</td>
-                <td class="px-4 py-3 text-right font-medium">Rp {{ number_format($wd->amount, 0, ',', '.') }}</td>
-                <td class="px-4 py-3 text-center">
-                    <span class="text-xs px-2 py-1 rounded-full font-medium
-                        {{ $wd->status === 'completed' ? 'bg-secondary-50 text-secondary-700' : '' }}
-                        {{ $wd->status === 'pending' ? 'bg-accent-50 text-accent-700' : '' }}
-                        {{ $wd->status === 'rejected' ? 'bg-rose-50 text-rose-700' : '' }}">
-                        {{ ucfirst($wd->status) }}
-                    </span>
-                </td>
-                <td class="px-4 py-3 text-right">
-                    @if($wd->status === 'pending')
-                    <div class="flex items-center justify-end gap-1">
-                        <form method="POST" action="{{ route('admin.withdrawals.approve', $wd) }}" class="inline">@csrf
-                            <button class="text-xs px-2 py-1 bg-secondary-50 text-secondary-700 rounded-lg">Approve</button>
-                        </form>
-                        <form method="POST" action="{{ route('admin.withdrawals.reject', $wd) }}" class="inline"
-                              x-data @submit.prevent="if(confirm('Alasan reject?')) { $el.querySelector('[name=admin_note]').value = prompt('Alasan:'); $el.submit(); }">
-                            @csrf
-                            <input type="hidden" name="admin_note" value="">
-                            <button class="text-xs px-2 py-1 bg-rose-50 text-rose-700 rounded-lg">Reject</button>
-                        </form>
-                    </div>
+@if ($withdrawals->isEmpty())
+    <x-card :padded="false"><x-empty-state icon="wallet" title="Belum ada penarikan" /></x-card>
+@else
+    <x-table :heads="['Affiliator', 'Metode', 'Rekening', 'Jumlah', 'Status', 'Aksi']">
+        @foreach ($withdrawals as $wd)
+            <tr class="hover:bg-slate-50/70 transition-colors">
+                <td class="px-5 py-3.5 font-medium text-slate-700">{{ $wd->affiliator->name }}</td>
+                <td class="px-5 py-3.5 text-slate-600">{{ $wd->method->name }}</td>
+                <td class="px-5 py-3.5 text-slate-600 text-xs">{{ $wd->account_name }}<br>{{ $wd->account_number }}</td>
+                <td class="px-5 py-3.5 font-semibold text-slate-800 whitespace-nowrap">Rp {{ number_format($wd->amount, 0, ',', '.') }}</td>
+                <td class="px-5 py-3.5"><x-status-badge :status="$wd->status" /></td>
+                <td class="px-5 py-3.5">
+                    @if ($wd->status === 'pending')
+                        <div class="flex items-center justify-end gap-2">
+                            <form method="POST" action="{{ route('admin.withdrawals.approve', $wd) }}" class="inline">@csrf
+                                <x-button type="submit" variant="secondary" size="sm">Approve</x-button>
+                            </form>
+                            <x-modal title="Tolak penarikan?" icon="x-circle" tone="danger">
+                                <x-slot:trigger>
+                                    <x-button variant="outline" size="sm">Reject</x-button>
+                                </x-slot:trigger>
+                                <form method="POST" action="{{ route('admin.withdrawals.reject', $wd) }}" class="space-y-4">
+                                    @csrf
+                                    <x-form.group label="Alasan penolakan" name="admin_note">
+                                        <x-form.textarea name="admin_note" rows="3" placeholder="Tulis alasan penolakan..." />
+                                    </x-form.group>
+                                    <div class="flex justify-end gap-2">
+                                        <x-button type="button" variant="ghost" x-on:click="open = false">Batal</x-button>
+                                        <x-button type="submit" variant="danger">Tolak Penarikan</x-button>
+                                    </div>
+                                </form>
+                            </x-modal>
+                        </div>
                     @else
-                    <span class="text-xs text-slate-400">{{ $wd->processed_at ? $wd->processed_at->format('d/m/Y') : '-' }}</span>
+                        <p class="text-right text-xs text-slate-400">{{ $wd->processed_at ? $wd->processed_at->format('d/m/Y') : '—' }}</p>
                     @endif
                 </td>
             </tr>
-            @empty
-            <tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">Belum ada penarikan</td></tr>
-            @endforelse
-        </tbody>
-    </table>
-    @if($withdrawals->hasPages())
-    <div class="px-4 py-3 border-t border-slate-100">{{ $withdrawals->withQueryString()->links() }}</div>
+        @endforeach
+    </x-table>
+
+    @if ($withdrawals->hasPages())
+        <div class="mt-4">{{ $withdrawals->withQueryString()->links() }}</div>
     @endif
-</div>
+@endif
 @endsection
