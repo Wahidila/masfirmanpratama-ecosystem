@@ -271,6 +271,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order}/refund', [OrderController::class, 'refund'])
             ->name('orders.refund');
 
+        // Kirim pengingat cicilan (status angsuran + tagihan berikutnya) ke
+        // customer via WhatsApp — hanya untuk order cicilan yang belum lunas.
+        Route::post('orders/{order}/remind-installment', [OrderController::class, 'remindInstallment'])
+            ->name('orders.remind-installment');
+
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::put('settings/store-info', [SettingsController::class, 'updateStoreInfo'])
             ->name('settings.store-info.update');

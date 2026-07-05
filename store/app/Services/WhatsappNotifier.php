@@ -136,6 +136,8 @@ class WhatsappNotifier
             'customer_order_shipped' => "📦 *Pesanan Dikirim*\n\nHalo {customer_name},\nOrder *{order_number}* sudah dikirim!\n\nKurir: {courier}\nResi: {tracking_number}\n\nLacak paket kamu di sini:\n{track_url}\n\nTerima kasih! 🙏",
 
             'course_registration_success' => "🎓 *PENDAFTARAN KELAS BERHASIL*\n\nHalo {customer_name},\nTerima kasih sudah mendaftar!\n\nKelas: {course_title}\nOrder ID: {order_number}\nTotal: Rp {amount}\n\nDetail pembayaran dan rekening sudah dikirim. Lakukan transfer dalam 1x24 jam. 🙏",
+
+            'customer_installment_reminder' => "⏰ *Pengingat Cicilan*\n\nHalo {customer_name},\nBerikut status cicilan untuk kelas *{course_title}* (order *{order_number}*):\n\n📊 *Rincian Cicilan*\n{progress}\n\n➡️ *Tagihan Berikutnya*\n{next_due}\n\n💰 Sisa yang belum dibayar: *Rp {remaining}*\n\n🏦 *Rekening Pembayaran*\n{bank_accounts}\n\n📤 Upload bukti bayar di sini:\n{upload_url}\n\nTerima kasih 🙏",
         ];
 
         $text = $templates[$template] ?? "Notifikasi: {$template}\n\n".json_encode($payload, JSON_PRETTY_PRINT);

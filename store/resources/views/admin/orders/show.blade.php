@@ -451,6 +451,81 @@
                 @endif
             </x-admin.card>
 
+            {{-- Cicilan: jadwal angsuran + tombol Reminder Cicilan via WhatsApp --}}
+            @if (! empty($installment))
+            <x-admin.card>
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cicilan</h2>
+                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400">
+                        {{ $installment['paid_count'] }}/{{ $installment['total_count'] }} lunas
+                    </span>
+                </div>
+
+                <ul class="space-y-2 text-sm">
+                    @foreach ($installment['schedule'] as $step)
+                        @php
+                            $stepBadge = match ($step['status']) {
+                                'verified' => 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
+                                'rejected' => 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
+                                default => 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
+                            };
+                            $stepStatus = ['verified' => 'Lunas', 'rejected' => 'Ditolak', 'pending' => 'Belum'][$step['status']] ?? $step['status'];
+                        @endphp
+                        <li class="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 {{ $step['is_next'] ? 'border-brand-300 bg-brand-50/60 dark:border-brand-500/40 dark:bg-brand-500/10' : 'border-gray-200 dark:border-gray-800' }}">
+                            <div class="min-w-0">
+                                <div class="font-medium text-gray-800 dark:text-white/90">
+                                    {{ $step['label'] }}
+                                    @if ($step['is_next'])
+                                        <span class="ml-1 text-[10px] font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Berikutnya</span>
+                                    @endif
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    Rp {{ number_format($step['amount'], 0, ',', '.') }}
+                                    @if ($step['due_date'])
+                                        · jatuh tempo {{ $step['due_date']->translatedFormat('d M Y') }}
+                                    @endif
+                                    @if ($step['overdue_days'] > 0)
+                                        <span class="font-medium text-error-600 dark:text-error-500">· lewat {{ $step['overdue_days'] }} hari</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $stepBadge }}">{{ $stepStatus }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+
+                <div class="mt-3 flex items-center justify-between border-t border-gray-200 pt-3 text-sm dark:border-gray-800">
+                    <span class="text-gray-500 dark:text-gray-400">Sisa belum dibayar</span>
+                    <span class="font-semibold {{ $installment['remaining'] > 0 ? 'text-warning-700 dark:text-warning-500' : 'text-gray-400 dark:text-gray-500' }}">
+                        Rp {{ number_format($installment['remaining'], 0, ',', '.') }}
+                    </span>
+                </div>
+
+                @if ($installment['can_remind'])
+                    <form method="POST" action="{{ route('admin.orders.remind-installment', $order) }}" class="mt-4"
+                          onsubmit="return confirm('Kirim reminder cicilan via WhatsApp ke customer?');">
+                        @csrf
+                        <button type="submit"
+                                class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10">
+                            <i data-lucide="bell-ring" class="h-4 w-4"></i>
+                            Kirim Reminder Cicilan
+                        </button>
+                        <p class="mt-1 text-[11px] leading-snug text-gray-400">
+                            Kirim WhatsApp ke {{ $order->phone }} berisi status cicilan, tagihan berikutnya, sisa, & link upload bukti bayar.
+                        </p>
+                    </form>
+                @elseif (in_array($order->status, ['cancelled', 'refunded'], true))
+                    <p class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
+                        Order {{ $order->status === 'refunded' ? 'sudah di-refund' : 'dibatalkan' }} — reminder cicilan dinonaktifkan.
+                    </p>
+                @else
+                    <p class="mt-4 rounded-lg border border-success-200 bg-success-50 px-3 py-2 text-xs text-success-700 dark:border-success-500/30 dark:bg-success-500/15 dark:text-success-500">
+                        🎉 Semua cicilan sudah lunas — tidak perlu reminder.
+                    </p>
+                @endif
+            </x-admin.card>
+            @endif
+
             @if (!$isCourseOrder)
             <x-admin.card>
                 <h2 class="text-sm font-semibold text-gray-700 mb-3 dark:text-gray-300">Aksi Pengiriman</h2>
@@ -760,6 +835,7 @@
                         'customer_order_completed' => 'Pesanan selesai',
                         'admin_payment_review_alert' => 'Alert admin (bukti baru)',
                         'course_registration_success' => 'Pendaftaran kelas',
+                        'customer_installment_reminder' => 'Pengingat cicilan',
                     ];
                     $waTone = [
                         'sent' => 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
@@ -794,22 +870,31 @@
                                     <div class="mt-1 text-xs text-error-600 dark:text-error-400">{{ $notif->error }}</div>
                                 @endif
 
-                                {{-- Kirim ulang manual (mitigasi gagal kirim). Tersedia untuk semua
-                                     status: gagal/antre jelas, "terkirim" pun kalau customer bilang
-                                     tak menerima. --}}
-                                <div class="mt-2">
-                                    <form method="POST" action="{{ route('admin.wa-notifications.resend', $notif) }}"
-                                          onsubmit="return confirm('Kirim ulang notifikasi WhatsApp ini ke {{ $notif->recipient }}?');">
-                                        @csrf
-                                        <button
-                                            type="submit"
-                                            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-white/[0.03]"
-                                        >
-                                            <i data-lucide="send" class="h-3.5 w-3.5"></i>
-                                            Kirim ulang
-                                        </button>
-                                    </form>
-                                </div>
+                                @if ($notif->template === 'customer_installment_reminder')
+                                    {{-- Reminder cicilan memuat status + jadwal + upload URL bertenggat.
+                                         Jangan replay payload lama (bisa basi / link kedaluwarsa) — arahkan
+                                         admin ke tombol "Kirim Reminder Cicilan" yang selalu hitung ulang. --}}
+                                    <p class="mt-2 text-[11px] leading-snug text-gray-400">
+                                        Untuk kirim ulang, pakai tombol <span class="font-medium">Kirim Reminder Cicilan</span> di kartu Cicilan — datanya selalu diperbarui.
+                                    </p>
+                                @else
+                                    {{-- Kirim ulang manual (mitigasi gagal kirim). Tersedia untuk semua
+                                         status: gagal/antre jelas, "terkirim" pun kalau customer bilang
+                                         tak menerima. --}}
+                                    <div class="mt-2">
+                                        <form method="POST" action="{{ route('admin.wa-notifications.resend', $notif) }}"
+                                              onsubmit="return confirm('Kirim ulang notifikasi WhatsApp ini ke customer?');">
+                                            @csrf
+                                            <button
+                                                type="submit"
+                                                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-white/[0.03]"
+                                            >
+                                                <i data-lucide="send" class="h-3.5 w-3.5"></i>
+                                                Kirim ulang
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

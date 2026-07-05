@@ -11,13 +11,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\TrackController;
 use App\Models\Order;
 use App\Models\OrderPayment;
+use App\Services\Installment\InstallmentReminder;
 use App\Services\Settings;
 use App\Services\Shipping\AgenwebsiteClient;
+use App\Services\WhatsappNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -114,7 +117,7 @@ class OrderController extends Controller
     /**
      * Show order detail with items, payments, customer info.
      */
-    public function show(Order $order): View
+    public function show(Order $order, InstallmentReminder $reminder): View
     {
         $order->load([
             'items' => fn ($q) => $q->orderBy('id'),
@@ -136,12 +139,27 @@ class OrderController extends Controller
             ->sum('amount');
         $remaining = max(0, (float) $order->total - $totalPaid);
 
+        // Ringkasan cicilan untuk kartu "Cicilan" + tombol Reminder Cicilan.
+        $installment = null;
+        if ($reminder->isInstallment($order)) {
+            $installment = [
+                'schedule' => $reminder->schedule($order),
+                'next_due' => $reminder->nextDue($order),
+                'remaining' => $reminder->remaining($order),
+                'paid_count' => $reminder->paidCount($order),
+                'total_count' => $reminder->totalCount($order),
+                'can_remind' => $reminder->hasOutstanding($order)
+                    && ! in_array($order->status, ['cancelled', 'refunded'], true),
+            ];
+        }
+
         return view('admin.orders.show', [
             'order' => $order,
             'totalPaid' => $totalPaid,
             'totalPending' => $totalPending,
             'totalRejected' => $totalRejected,
             'remaining' => $remaining,
+            'installment' => $installment,
             'statuses' => self::STATUSES,
             'couriers' => $this->courierOptions($order),
             'canShip' => in_array($order->status, self::SHIPPABLE_FROM, true),
@@ -477,5 +495,115 @@ class OrderController extends Controller
         return redirect()
             ->route('admin.orders.show', $order)
             ->with('status', 'Order berhasil di-refund.');
+    }
+
+    /**
+     * Kirim pengingat cicilan ke customer via WhatsApp: status tiap angsuran,
+     * tagihan berikutnya + jatuh tempo, sisa, rekening, dan link upload bukti
+     * bayar yang baru (signed). Manual dari tombol "Reminder Cicilan" di detail
+     * order — tiap klik membuat notifikasi baru (upload URL selalu segar).
+     *
+     * Guard: hanya untuk order cicilan yang masih ada angsuran belum lunas.
+     */
+    public function remindInstallment(Order $order, InstallmentReminder $reminder, WhatsappNotifier $notifier): RedirectResponse
+    {
+        $order->loadMissing(['items.course', 'payments']);
+
+        abort_if(! $reminder->isInstallment($order), 422, 'Order ini bukan pesanan cicilan.');
+        // Mirror the view-side can_remind guard: never dun a cancelled/refunded
+        // order (refund() flips status but leaves angsuran pending, so a direct
+        // POST would otherwise still pass hasOutstanding()).
+        abort_if(in_array($order->status, ['cancelled', 'refunded'], true), 422,
+            'Order sudah '.$order->status.' — reminder cicilan tidak dikirim.');
+        abort_if(! $reminder->hasOutstanding($order), 422, 'Semua cicilan sudah lunas — tidak ada yang perlu diingatkan.');
+
+        if (trim((string) $order->phone) === '') {
+            return back()->with('error', 'Order tidak punya nomor WhatsApp — reminder tidak bisa dikirim.');
+        }
+
+        $notification = $notifier->send(
+            'customer_installment_reminder',
+            (string) $order->phone,
+            $this->installmentReminderPayload($order, $reminder),
+            $order,
+        );
+
+        $message = match ($notification->status) {
+            'sent' => 'Reminder cicilan berhasil dikirim via WhatsApp.',
+            'failed' => 'Gagal mengirim reminder: '.($notification->error ?: 'error tidak diketahui').'.',
+            default => 'Reminder cicilan masuk antrean kirim (gateway WhatsApp belum dikonfigurasi).',
+        };
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with($notification->status === 'failed' ? 'error' : 'status', $message);
+    }
+
+    /**
+     * Susun payload template `customer_installment_reminder`: rincian tiap
+     * angsuran, tagihan berikutnya, sisa, rekening, dan upload URL baru.
+     *
+     * @return array<string, string>
+     */
+    protected function installmentReminderPayload(Order $order, InstallmentReminder $reminder): array
+    {
+        $courseTitle = $order->items->first(fn ($item) => $item->course_id !== null)?->course?->title
+            ?? 'Kelas';
+
+        $statusText = [
+            'verified' => '✅ Lunas',
+            'pending' => '⏳ Belum bayar',
+            'rejected' => '❌ Ditolak — upload ulang',
+        ];
+
+        $progress = collect($reminder->schedule($order))
+            ->map(fn (array $s) => $s['label'].': Rp '.number_format($s['amount'], 0, ',', '.')
+                .' — '.($statusText[$s['status']] ?? $s['status']))
+            ->implode("\n");
+
+        $next = $reminder->nextDue($order);
+        $nextDue = '—';
+        if ($next) {
+            $nextDue = $next['label'].' — Rp '.number_format($next['amount'], 0, ',', '.');
+            if ($next['due_date']) {
+                $nextDue .= "\nJatuh tempo: ".$next['due_date']->translatedFormat('d M Y');
+                if ($next['overdue_days'] > 0) {
+                    $nextDue .= ' (⚠️ lewat '.$next['overdue_days'].' hari)';
+                }
+            }
+        }
+
+        $banks = collect(Settings::getBankAccounts())
+            ->map(fn (array $a) => '• '.($a['bank'] ?? '').' - '.($a['number'] ?? '').' (a.n '.($a['holder'] ?? '').')')
+            ->implode("\n");
+        if ($banks === '') {
+            $banks = '(Rekening belum dikonfigurasi)';
+        }
+
+        return [
+            'customer_name' => (string) $order->customer_name,
+            'course_title' => (string) $courseTitle,
+            'order_number' => (string) $order->order_number,
+            'progress' => $progress,
+            'next_due' => $nextDue,
+            'remaining' => number_format($reminder->remaining($order), 0, ',', '.'),
+            'bank_accounts' => $banks,
+            'upload_url' => $this->generateUploadUrl($order->order_number),
+        ];
+    }
+
+    /**
+     * Signed upload URL untuk customer upload bukti bayar (TTL default 7 hari),
+     * konsisten dengan CourseCheckoutController::generateUploadUrl().
+     */
+    protected function generateUploadUrl(string $orderNumber): string
+    {
+        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
+
+        return URL::temporarySignedRoute(
+            'upload.show',
+            now()->addDays($ttlDays),
+            ['order_number' => $orderNumber],
+        );
     }
 }
