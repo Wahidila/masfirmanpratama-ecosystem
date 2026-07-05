@@ -12,14 +12,15 @@
         @foreach ($topAffiliators as $i => $aff)
             <tr class="hover:bg-slate-50/70 transition-colors {{ $i < 3 ? 'bg-accent-50/40' : '' }}">
                 <td class="px-5 py-3.5 text-center w-16">
+                    <span class="sr-only">Peringkat {{ $i + 1 }}</span>
                     @if ($i === 0)
-                        <span class="text-lg">🥇</span>
+                        <span class="text-lg" aria-hidden="true">🥇</span>
                     @elseif ($i === 1)
-                        <span class="text-lg">🥈</span>
+                        <span class="text-lg" aria-hidden="true">🥈</span>
                     @elseif ($i === 2)
-                        <span class="text-lg">🥉</span>
+                        <span class="text-lg" aria-hidden="true">🥉</span>
                     @else
-                        <span class="font-semibold text-slate-400">{{ $i + 1 }}</span>
+                        <span class="font-semibold text-slate-400" aria-hidden="true">{{ $i + 1 }}</span>
                     @endif
                 </td>
                 <td class="px-5 py-3.5 font-medium text-slate-700">{{ $aff->name }}</td>

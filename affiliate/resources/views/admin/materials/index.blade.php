@@ -28,7 +28,7 @@
                         </form>
                         <x-modal title="Hapus materi ini?" icon="trash-2" tone="danger">
                             <x-slot:trigger>
-                                <x-button variant="ghost" size="sm" icon="trash-2" class="text-rose-600 hover:bg-rose-50">Hapus</x-button>
+                                <x-button variant="danger-ghost" size="sm" icon="trash-2">Hapus</x-button>
                             </x-slot:trigger>
                             <p class="text-sm text-slate-600">Materi <strong>{{ $m->title }}</strong> akan dihapus permanen.</p>
                             <form method="POST" action="{{ route('admin.materials.destroy', $m) }}" class="mt-6 flex justify-end gap-2">

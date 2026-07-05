@@ -6,12 +6,12 @@
 <x-card class="mb-4">
     <form method="GET" class="flex flex-wrap items-end gap-3">
         <div class="flex-1 min-w-[12rem]">
-            <x-form.group label="Cari">
+            <x-form.group label="Cari" name="search">
                 <x-form.input name="search" value="{{ request('search') }}" placeholder="Nama atau email..." />
             </x-form.group>
         </div>
         <div class="w-48">
-            <x-form.group label="Status">
+            <x-form.group label="Status" name="status">
                 <x-form.select name="status" onchange="this.form.submit()">
                     <option value="all" @selected(request('status') === 'all')>Semua Status</option>
                     <option value="pending" @selected(request('status') === 'pending')>Pending</option>

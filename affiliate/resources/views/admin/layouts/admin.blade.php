@@ -14,7 +14,7 @@
              class="relative flex w-72 max-w-[80%] flex-col bg-white h-full shadow-xl">
             <div class="flex items-center justify-between px-5 h-16 border-b border-slate-100">
                 <div class="flex items-center gap-2"><x-brand-mark size="sm" /><span class="text-[10px] font-bold uppercase tracking-wider text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded">Admin</span></div>
-                <button @click="sidebarOpen = false" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button @click="sidebarOpen = false" aria-label="Tutup menu" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             @include('admin.components.sidebar')
         </div>
@@ -34,7 +34,7 @@
     {{-- Main --}}
     <div class="lg:pl-64 flex flex-col min-h-screen">
         <header class="sticky top-0 z-30 flex items-center gap-3 h-16 px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-md border-b border-slate-100">
-            <button @click="sidebarOpen = true" class="lg:hidden text-slate-500 hover:text-slate-700"><i data-lucide="menu" class="w-6 h-6"></i></button>
+            <button @click="sidebarOpen = true" aria-label="Buka menu" class="lg:hidden text-slate-500 hover:text-slate-700"><i data-lucide="menu" class="w-6 h-6"></i></button>
 
             <div class="ml-auto flex items-center gap-3">
                 <span class="hidden sm:flex items-center gap-2 text-sm text-slate-500">
