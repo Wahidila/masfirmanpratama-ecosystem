@@ -1,156 +1,116 @@
-{{-- Tab: WhatsApp Gateway (XSender) --}}
-<section class="space-y-6">
-    <header>
-        <h2 class="text-lg font-bold text-slate-900">WhatsApp Gateway (XSender)</h2>
-        <p class="mt-1 text-sm text-slate-500">
-            Konfigurasi integrasi XSender untuk mengirim notifikasi WhatsApp otomatis ke customer dan admin.
-        </p>
-    </header>
+@php
+    // Tema admin (bukan storefront) — hanya utility yang ter-compile di admin.css.
+    $inputClass = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30';
+@endphp
 
-    <form
-        method="POST"
-        action="{{ route('admin.settings.whatsapp.update') }}"
-        class="space-y-5"
-    >
+<x-admin.card>
+    <form method="POST" action="{{ route('admin.settings.whatsapp.update') }}" class="space-y-5">
         @csrf
         @method('PUT')
 
-        {{-- API Key --}}
-        <x-admin.form-group label="API Key XSender" hint="Dapatkan dari dashboard XSender (xsender.id).">
-            <input
-                type="password"
-                name="xsender_api_key"
+        <x-admin.form-group label="API Key XSender" name="xsender_api_key" required
+            hint="Dapatkan dari dashboard XSender (xsender.id).">
+            <input type="password" id="xsender_api_key" name="xsender_api_key" autocomplete="off"
                 value="{{ old('xsender_api_key', $whatsappData['api_key'] ?? '') }}"
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition"
                 placeholder="Masukkan API Key"
-                autocomplete="off"
-            >
-            @error('xsender_api_key')
-                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-            @enderror
+                class="{{ $inputClass }}">
         </x-admin.form-group>
 
-        {{-- Nomor WhatsApp Sender --}}
-        <x-admin.form-group label="Nomor WhatsApp Sender" hint="Nomor WA yang terhubung di XSender. Format: 628xxxxxxxxxx.">
-            <input
-                type="text"
-                name="xsender_sender"
-                value="{{ old('xsender_sender', $whatsappData['sender'] ?? '') }}"
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition"
-                placeholder="628xxxxxxxxxx"
-                inputmode="numeric"
-            >
-            @error('xsender_sender')
-                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-            @enderror
-        </x-admin.form-group>
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <x-admin.form-group label="Nomor WhatsApp Sender" name="xsender_sender" required
+                hint="Nomor WA yang terhubung di XSender. Format: 628xxxxxxxxxx.">
+                <input type="text" id="xsender_sender" name="xsender_sender" inputmode="numeric"
+                    value="{{ old('xsender_sender', $whatsappData['sender'] ?? '') }}"
+                    placeholder="628xxxxxxxxxx"
+                    class="{{ $inputClass }}">
+            </x-admin.form-group>
 
-        {{-- Nomor WhatsApp Admin (penerima alert) --}}
-        <x-admin.form-group label="Nomor WhatsApp Admin (penerima notifikasi)" hint="Nomor WA admin untuk menerima alert (mis. bukti bayar baru masuk). WAJIB nomor WA aktif — kalau kosong/placeholder, alert admin akan gagal terkirim.">
-            <input
-                type="text"
-                name="wa_admin_number"
-                value="{{ old('wa_admin_number', $whatsappData['admin_number'] ?? '') }}"
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition"
-                placeholder="628xxxxxxxxxx"
-                inputmode="numeric"
-            >
-            @error('wa_admin_number')
-                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-            @enderror
-        </x-admin.form-group>
+            <x-admin.form-group label="Nomor WhatsApp Admin" name="wa_admin_number"
+                hint="Penerima alert (mis. bukti bayar baru). WAJIB nomor WA aktif — kalau kosong, alert admin gagal terkirim.">
+                <input type="text" id="wa_admin_number" name="wa_admin_number" inputmode="numeric"
+                    value="{{ old('wa_admin_number', $whatsappData['admin_number'] ?? '') }}"
+                    placeholder="628xxxxxxxxxx"
+                    class="{{ $inputClass }}">
+            </x-admin.form-group>
+        </div>
 
-        {{-- Endpoint (optional override) --}}
-        <x-admin.form-group label="Endpoint URL" hint="Default: https://xsender.id/id/send-message. Ubah jika pakai custom endpoint.">
-            <input
-                type="url"
-                name="xsender_endpoint"
+        <x-admin.form-group label="Endpoint URL" name="xsender_endpoint"
+            hint="Default: https://xsender.id/id/send-message. Ubah jika pakai custom endpoint.">
+            <input type="url" id="xsender_endpoint" name="xsender_endpoint"
                 value="{{ old('xsender_endpoint', $whatsappData['endpoint'] ?? 'https://xsender.id/id/send-message') }}"
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition"
                 placeholder="https://xsender.id/id/send-message"
-            >
-            @error('xsender_endpoint')
-                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-            @enderror
+                class="{{ $inputClass }}">
         </x-admin.form-group>
 
-        {{-- Info box --}}
-        <div class="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
-            <p class="font-semibold mb-1">Cara kerja:</p>
-            <ol class="list-decimal list-inside space-y-1 text-blue-700">
+        {{-- Info: cara kerja --}}
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
+            <p class="mb-1 font-semibold text-gray-800 dark:text-white/90">Cara kerja</p>
+            <ol class="list-inside list-decimal space-y-1 text-gray-600 dark:text-gray-400">
                 <li>Sistem mengirim pesan via API XSender ke nomor customer/admin.</li>
                 <li>Pastikan device WhatsApp terhubung di dashboard XSender.</li>
                 <li>Notifikasi dikirim saat: order baru, pembayaran diverifikasi, pesanan dikirim.</li>
             </ol>
         </div>
 
-        <div class="flex justify-end gap-3">
-            <button
-                type="button"
-                id="btn-test-xsender"
-                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition"
-            >
+        {{-- Hasil test koneksi (di-toggle oleh JS) --}}
+        <div id="xsender-test-result" class="hidden rounded-lg border p-4 text-sm"></div>
+
+        <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-end dark:border-gray-800">
+            <x-admin.button type="button" id="btn-test-xsender" variant="outline">
                 <i data-lucide="wifi" class="h-4 w-4"></i>
                 Test Koneksi
-            </button>
-            <button
-                type="submit"
-                class="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow hover:bg-primary-700 transition"
-            >
+            </x-admin.button>
+            <x-admin.button type="submit">
                 <i data-lucide="save" class="h-4 w-4"></i>
                 Simpan Pengaturan
-            </button>
+            </x-admin.button>
         </div>
     </form>
 
-    {{-- Test result --}}
-    <div id="xsender-test-result" class="hidden rounded-xl border p-4 text-sm"></div>
-
     <script>
-        document.getElementById('btn-test-xsender').addEventListener('click', async function () {
-            const btn = this;
+        (function () {
+            const btn = document.getElementById('btn-test-xsender');
             const resultDiv = document.getElementById('xsender-test-result');
+            if (!btn || !resultDiv) return;
 
-            btn.disabled = true;
-            btn.innerHTML = '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Testing...';
+            const BASE = 'rounded-lg border p-4 text-sm ';
+            const OK = 'border-success-200 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400';
+            const FAIL = 'border-error-200 bg-error-50 text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400';
+            const original = btn.innerHTML;
 
-            resultDiv.classList.add('hidden');
+            btn.addEventListener('click', async function () {
+                btn.disabled = true;
+                btn.innerHTML = '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Testing…';
+                resultDiv.className = BASE + 'hidden';
 
-            try {
-                const response = await fetch('{{ route("admin.settings.whatsapp.test") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        api_key: document.querySelector('[name="xsender_api_key"]').value,
-                        sender: document.querySelector('[name="xsender_sender"]').value,
-                        endpoint: document.querySelector('[name="xsender_endpoint"]').value,
-                    }),
-                });
-
-                const data = await response.json();
-
-                resultDiv.classList.remove('hidden', 'border-green-200', 'bg-green-50', 'text-green-800', 'border-rose-200', 'bg-rose-50', 'text-rose-800');
-
-                if (data.ok) {
-                    resultDiv.classList.add('border-green-200', 'bg-green-50', 'text-green-800');
-                    resultDiv.innerHTML = '<p class="font-semibold">✅ Koneksi berhasil!</p><p class="mt-1 text-xs">' + (data.message || 'Pesan test terkirim ke nomor sender.') + '</p>';
-                } else {
-                    resultDiv.classList.add('border-rose-200', 'bg-rose-50', 'text-rose-800');
-                    resultDiv.innerHTML = '<p class="font-semibold">❌ Koneksi gagal</p><p class="mt-1 text-xs">' + (data.message || 'Periksa API Key dan status device.') + '</p>';
+                try {
+                    const response = await fetch('{{ route('admin.settings.whatsapp.test') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            api_key: document.querySelector('[name="xsender_api_key"]').value,
+                            sender: document.querySelector('[name="xsender_sender"]').value,
+                            endpoint: document.querySelector('[name="xsender_endpoint"]').value,
+                        }),
+                    });
+                    const data = await response.json();
+                    resultDiv.className = BASE + (data.ok ? OK : FAIL);
+                    resultDiv.innerHTML = data.ok
+                        ? '<p class="font-semibold">✅ Koneksi berhasil</p><p class="mt-1 text-xs">' + (data.message || 'Pesan test terkirim ke nomor sender.') + '</p>'
+                        : '<p class="font-semibold">❌ Koneksi gagal</p><p class="mt-1 text-xs">' + (data.message || 'Periksa API Key dan status device.') + '</p>';
+                } catch (e) {
+                    resultDiv.className = BASE + FAIL;
+                    resultDiv.innerHTML = '<p class="font-semibold">❌ Error</p><p class="mt-1 text-xs">' + e.message + '</p>';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                    if (window.lucide) lucide.createIcons();
                 }
-            } catch (e) {
-                resultDiv.classList.remove('hidden', 'border-green-200', 'bg-green-50', 'text-green-800', 'border-rose-200', 'bg-rose-50', 'text-rose-800');
-                resultDiv.classList.add('border-rose-200', 'bg-rose-50', 'text-rose-800');
-                resultDiv.innerHTML = '<p class="font-semibold">❌ Error</p><p class="mt-1 text-xs">' + e.message + '</p>';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i data-lucide="wifi" class="h-4 w-4"></i> Test Koneksi';
-                if (window.lucide) lucide.createIcons();
-            }
-        });
+            });
+        })();
     </script>
-</section>
+</x-admin.card>
