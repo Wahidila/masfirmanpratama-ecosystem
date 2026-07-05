@@ -21,12 +21,15 @@
                         <tr>
                             <td class="px-5 py-3 text-slate-700 font-medium">{{ $setting->affiliatorType->name ?? 'Global' }}</td>
                             <td class="px-5 py-3 text-slate-600">{{ $setting->product_type ?? 'Semua' }}</td>
+                            @php $rowLabel = ($setting->affiliatorType->name ?? 'Global').' · '.($setting->product_type ?? 'semua produk'); @endphp
                             <td class="px-5 py-3">
                                 <input type="number" step="0.01" name="settings[{{ $setting->id }}][rate]" value="{{ $setting->rate }}"
+                                       aria-label="Rate komisi (%) — {{ $rowLabel }}"
                                        class="w-24 h-10 px-3 rounded-lg border border-slate-200 text-sm text-slate-800 shadow-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                             </td>
                             <td class="px-5 py-3">
                                 <input type="number" name="settings[{{ $setting->id }}][cooling_days]" value="{{ $setting->cooling_days }}"
+                                       aria-label="Cooling (hari) — {{ $rowLabel }}"
                                        class="w-20 h-10 px-3 rounded-lg border border-slate-200 text-sm text-slate-800 shadow-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                             </td>
                         </tr>

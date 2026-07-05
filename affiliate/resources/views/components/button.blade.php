@@ -13,6 +13,7 @@
         'secondary' => 'bg-secondary-600 text-white hover:bg-secondary-700 shadow-sm shadow-secondary-500/30 hover:shadow-secondary-500/40',
         'outline' => 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm',
         'ghost' => 'bg-transparent text-slate-600 hover:bg-slate-100',
+        'danger-ghost' => 'bg-transparent text-rose-600 hover:bg-rose-50',
         'danger' => 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm shadow-rose-500/30',
         'accent' => 'bg-accent-500 text-white hover:bg-accent-600 shadow-sm shadow-accent-500/30',
     ];

@@ -32,7 +32,7 @@
                         <x-button :href="route('admin.events.edit', $event)" variant="outline" size="sm">Edit</x-button>
                         <x-modal title="Hapus event ini?" icon="trash-2" tone="danger">
                             <x-slot:trigger>
-                                <x-button variant="ghost" size="sm" icon="trash-2" class="text-rose-600 hover:bg-rose-50">Hapus</x-button>
+                                <x-button variant="danger-ghost" size="sm" icon="trash-2">Hapus</x-button>
                             </x-slot:trigger>
                             <p class="text-sm text-slate-600">Event <strong>{{ $event->title }}</strong> akan dihapus permanen.</p>
                             <form method="POST" action="{{ route('admin.events.destroy', $event) }}" class="mt-6 flex justify-end gap-2">

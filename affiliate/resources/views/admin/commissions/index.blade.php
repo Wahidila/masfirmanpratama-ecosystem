@@ -4,7 +4,7 @@
 <x-page-header title="Semua Komisi" subtitle="Pantau seluruh komisi affiliator." />
 
 <form method="GET" class="mb-4 flex items-center gap-2">
-    <x-form.select name="status" onchange="this.form.submit()" class="max-w-xs">
+    <x-form.select name="status" aria-label="Filter status komisi" onchange="this.form.submit()" class="max-w-xs">
         <option value="all" @selected(request('status') === 'all')>Semua Status</option>
         <option value="cooling" @selected(request('status') === 'cooling')>Cooling</option>
         <option value="available" @selected(request('status') === 'available')>Available</option>

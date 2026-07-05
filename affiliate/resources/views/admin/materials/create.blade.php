@@ -27,7 +27,7 @@
                 </x-form.select>
             </x-form.group>
             <x-form.group label="File" name="file" hint="Maksimal 50MB">
-                <input type="file" name="file" required
+                <input type="file" name="file" id="file" required
                        class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:bg-primary-50 file:text-primary-700 file:font-medium file:cursor-pointer hover:file:bg-primary-100">
             </x-form.group>
             <div class="flex items-center gap-3 pt-2">

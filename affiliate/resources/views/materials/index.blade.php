@@ -14,7 +14,7 @@
 
 {{-- Filter --}}
 <form method="GET" class="mb-4 flex items-center gap-2">
-    <x-form.select name="type" onchange="this.form.submit()" class="max-w-xs">
+    <x-form.select name="type" aria-label="Filter tipe materi" onchange="this.form.submit()" class="max-w-xs">
         <option value="all" @selected(request('type') === 'all')>Semua Tipe</option>
         <option value="image" @selected(request('type') === 'image')>Gambar</option>
         <option value="video" @selected(request('type') === 'video')>Video</option>
@@ -57,7 +57,7 @@
     </div>
 
     @if ($materials->hasPages())
-        <div class="mt-6">{{ $materials->links() }}</div>
+        <div class="mt-6">{{ $materials->withQueryString()->links() }}</div>
     @endif
 @endif
 @endsection
