@@ -824,7 +824,7 @@
                     @csrf
                     <button
                         type="submit"
-                        class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-rose-600 focus:outline-hidden focus:ring-3 focus:ring-rose-500/10"
+                        class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-error-500 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs hover:bg-error-600 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
                         onclick="return confirm('Konfirmasi: refund order ini? Tindakan tidak dapat dibatalkan.');"
                     >
                         <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
