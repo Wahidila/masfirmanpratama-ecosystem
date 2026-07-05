@@ -44,7 +44,16 @@ class AuthTest extends TestCase
         $response = $this->get('/register');
         $response->assertSee('Alumni');
         $response->assertSee('Non-Alumni');
-        $response->assertSee('Peserta Aktif');
+        $response->assertDontSee('Peserta Aktif');
+    }
+
+    public function test_only_two_affiliator_types_exist(): void
+    {
+        $this->assertSame(2, AffiliatorType::count());
+        $this->assertSame(
+            ['alumni', 'non-alumni'],
+            AffiliatorType::orderBy('slug')->pluck('slug')->all()
+        );
     }
 
     public function test_user_can_register(): void

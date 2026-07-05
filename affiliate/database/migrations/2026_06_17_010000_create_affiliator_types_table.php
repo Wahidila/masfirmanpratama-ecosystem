@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('affiliator_types', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // alumni, non-alumni, peserta
+            $table->string('name'); // alumni, non-alumni
             $table->string('slug')->unique();
             $table->text('description')->nullable();
             $table->json('benefits')->nullable();

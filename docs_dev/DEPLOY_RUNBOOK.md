@@ -10,7 +10,7 @@
 3. **Kredensial DB MySQL produksi** — host, 2 database (`store_db`, `affiliate_db`), user, password.
 4. **SMTP mail** — provider + kredensial (buat verifikasi email affiliator + notifikasi).
 5. **XSender** — API key + sender number produksi.
-6. **Rate komisi final** — sudah di-seed (alumni 15/12, non-alumni 10/8, peserta 12/10, global 8%). Konfirmasi angka ke klien; ubah via admin atau re-seed kalau beda.
+6. **Rate komisi final** — sudah di-seed (alumni 15/12, non-alumni 10/8, global 8%). Konfirmasi angka ke klien; ubah via admin atau re-seed kalau beda.
 
 ## 🔒 Security hard-gates (WAJIB sebelum launch)
 

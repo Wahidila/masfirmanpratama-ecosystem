@@ -64,7 +64,7 @@
                         <i data-lucide="user-plus" class="w-8 h-8 text-primary-600"></i>
                     </div>
                     <h3 class="text-lg font-semibold text-slate-800 mb-2">1. Daftar Gratis</h3>
-                    <p class="text-slate-500 text-sm">Pilih tipe affiliator sesuai profil Anda (Alumni, Peserta, atau Non-Alumni)</p>
+                    <p class="text-slate-500 text-sm">Pilih tipe affiliator sesuai profil Anda (Alumni atau Non-Alumni)</p>
                 </div>
                 <div class="text-center p-6">
                     <div class="w-16 h-16 bg-secondary-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -92,7 +92,7 @@
                 <p class="mt-3 text-slate-500">Sesuaikan dengan profil dan keuntungan yang Anda inginkan</p>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-6">
+            <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                 @foreach($types as $type)
                 <div class="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                     <div class="flex items-center gap-3 mb-4">
