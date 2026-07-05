@@ -12,27 +12,11 @@
     $waText = rawurlencode("Halo Admin, saya baru saja upload bukti bayar untuk order {$orderNumber}. Mohon dicek.");
     $waLink = "https://wa.me/{$waAdmin['number']}?text={$waText}";
 
-    // Generate dropdown options dari skema cicilan.
-    // M1: stateless (tidak tahu cicilan ke berapa yang sudah dibayar) — admin/user pilih
-    // manual. M2: pakai data orders.status + order_payments untuk auto-skip yang sudah lunas
-    // dan disable opsi yang belum jatuh tempo.
-    $installmentOptions = [];
-    if ($isInstallment) {
-        $remaining = $totalPayments - 1;
-        $installmentOptions[] = [
-            'value' => 0,
-            'label' => 'Down Payment (DP)',
-            'note' => "Pembayaran pertama dari {$totalPayments}",
-        ];
-        for ($i = 1; $i < $totalPayments; $i++) {
-            $isLast = $i === $totalPayments - 1;
-            $installmentOptions[] = [
-                'value' => $i,
-                'label' => "Cicilan ke-{$i} dari {$remaining}",
-                'note' => $isLast ? 'Cicilan terakhir' : '',
-            ];
-        }
-    }
+    // Opsi dropdown cicilan + nominal per-sequence disiapkan oleh UploadController.
+    // Untuk order nyata state-aware (tandai lunas/menunggu/ditolak + disable yang
+    // tak bisa diupload); untuk stub M1 count-based. Default fallback [] biar aman.
+    $installmentOptions = $installmentOptions ?? [];
+    $installmentAmounts = $installmentAmounts ?? [];
 
     $successFlash = session('upload.success');
 @endphp
@@ -70,6 +54,7 @@
             totalTransfer: @js($totalTransfer),
             totalPayments: @js($totalPayments),
             defaultSequence: @js($defaultSequence),
+            installmentAmounts: @js($installmentAmounts),
             maxBytes: 2 * 1024 * 1024,
             acceptTypes: ['image/jpeg', 'image/png', 'image/webp'],
             initialSuccess: @js((bool) $successFlash),
@@ -124,11 +109,12 @@
                 <p
                     class="mt-2 text-2xl font-extrabold leading-tight text-primary-600 sm:text-3xl"
                     data-testid="upload-total-transfer"
+                    x-text="currentAmountLabel"
                 >
                     @if ($totalTransfer > 0)
                         Rp {{ number_format($totalTransfer, 0, ',', '.') }}
                     @else
-                        <span class="text-slate-500">—</span>
+                        —
                     @endif
                 </p>
                 <p class="mt-1 text-xs text-slate-500">
@@ -222,13 +208,13 @@
                         required
                     >
                         @foreach ($installmentOptions as $opt)
-                            <option value="{{ $opt['value'] }}">
-                                {{ $opt['label'] }}@if (! empty($opt['note'])) — {{ $opt['note'] }}@endif
+                            <option value="{{ $opt['value'] }}" @disabled(! ($opt['uploadable'] ?? true)) @selected($opt['value'] === $defaultSequence)>
+                                {{ $opt['label'] }}@if (! empty($opt['note'])) — {{ $opt['note'] }}@endif @if (! empty($opt['status_note'])) · {{ $opt['status_note'] }}@endif
                             </option>
                         @endforeach
                     </select>
                     <p class="text-xs text-slate-500">
-                        Pilih cicilan yang sedang kamu bayar (auto-detect dari order kamu setelah login admin di M2).
+                        Terpilih otomatis ke pembayaran berikutnya yang belum lunas. Yang sudah lunas / sedang diverifikasi tidak bisa dipilih lagi.
                     </p>
                 @else
                     {{-- Lunas — placeholder read-only supaya backend tetap dapat field konsisten. --}}
@@ -418,6 +404,7 @@
                     paymentType: cfg.paymentType || 'lunas',
                     totalTransfer: Number(cfg.totalTransfer) || 0,
                     totalPayments: Number(cfg.totalPayments) || 1,
+                    installmentAmounts: (cfg.installmentAmounts && typeof cfg.installmentAmounts === 'object') ? cfg.installmentAmounts : {},
                     maxBytes: Number(cfg.maxBytes) || (2 * 1024 * 1024),
                     acceptTypes: Array.isArray(cfg.acceptTypes) ? cfg.acceptTypes : ['image/jpeg', 'image/png', 'image/webp'],
 
@@ -436,6 +423,15 @@
                     // Computed
                     get canSubmit() {
                         return !!this.file && !this.fileError && !this.submitting;
+                    },
+                    // Nominal yang ditampilkan mengikuti pilihan cicilan (kalau ada
+                    // data per-sequence); fallback ke totalTransfer server.
+                    get currentAmountLabel() {
+                        const seq = Number(this.form.sequence) || 0;
+                        const amt = (this.installmentAmounts && this.installmentAmounts[seq] != null)
+                            ? Number(this.installmentAmounts[seq])
+                            : this.totalTransfer;
+                        return amt > 0 ? ('Rp ' + amt.toLocaleString('id-ID')) : '—';
                     },
                     get fileTypeLabel() {
                         if (!this.file) return '';

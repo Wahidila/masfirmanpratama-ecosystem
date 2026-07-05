@@ -156,6 +156,61 @@ class InstallmentReminderTest extends TestCase
         $this->assertNull($svc->nextDue($order));
     }
 
+    // ── Upload URL TTL (schedule-aware) ─────────────────────
+
+    public function test_upload_url_expiry_uses_default_for_non_installment(): void
+    {
+        $this->travelTo(now());
+        $order = $this->lunasOrder('pending');
+
+        $this->assertSame(
+            now()->addDays(7)->toDateTimeString(),
+            (new InstallmentReminder)->uploadUrlExpiry($order)->toDateTimeString(),
+        );
+    }
+
+    public function test_upload_url_expiry_extends_to_last_unpaid_due_plus_grace(): void
+    {
+        $this->travelTo(now());
+        // Checkout now, interval 30: angsuran terakhir yg belum lunas = Cicilan
+        // ke-2 (index 2 → now+60). + grace 14 → now+74.
+        $order = $this->installmentOrder(['verified', 'pending', 'pending'], ['created_at' => now()]);
+
+        $this->assertSame(
+            now()->addDays(60 + 14)->toDateString(),
+            (new InstallmentReminder)->uploadUrlExpiry($order)->toDateString(),
+        );
+    }
+
+    public function test_upload_url_expiry_floors_at_default_when_schedule_is_in_the_past(): void
+    {
+        $this->travelTo(now());
+        // Checkout 200 hari lalu → semua jatuh tempo sudah lewat; expiry tak boleh
+        // lebih pendek dari TTL default.
+        $order = $this->installmentOrder(['verified', 'pending', 'pending'], ['created_at' => now()->subDays(200)]);
+
+        $this->assertSame(
+            now()->addDays(7)->toDateTimeString(),
+            (new InstallmentReminder)->uploadUrlExpiry($order)->toDateTimeString(),
+        );
+    }
+
+    public function test_reminder_upload_url_ttl_is_schedule_aware(): void
+    {
+        $order = $this->installmentOrder(['verified', 'pending', 'pending'], ['created_at' => now()]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.remind-installment', $order))
+            ->assertRedirect(route('admin.orders.show', $order));
+
+        $notif = $order->waNotifications()->where('template', 'customer_installment_reminder')->firstOrFail();
+        parse_str((string) parse_url($notif->payload_json['upload_url'], PHP_URL_QUERY), $q);
+
+        $this->assertArrayHasKey('expires', $q);
+        // Far beyond the flat 7-day default (last angsuran ~60d out + grace).
+        $this->assertGreaterThan(now()->addDays(30)->timestamp, (int) $q['expires']);
+    }
+
     // ── Detail page (show) ──────────────────────────────────
 
     public function test_show_renders_reminder_button_for_outstanding_installment(): void

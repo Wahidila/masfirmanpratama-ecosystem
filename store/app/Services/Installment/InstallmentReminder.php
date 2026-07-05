@@ -140,4 +140,41 @@ class InstallmentReminder
 
         return $interval > 0 ? $interval : self::DEFAULT_INTERVAL_DAYS;
     }
+
+    /**
+     * Expiry for a customer upload-proof signed URL, schedule-aware.
+     *
+     * A course cicilan link must survive until the last still-unpaid angsuran is
+     * due (+ a grace buffer), because that can be weeks/months past the default
+     * upload TTL. For non-installment orders (or when nothing is scheduled ahead)
+     * it falls back to the flat default. Never returns earlier than the default,
+     * so the schedule can only ever EXTEND the link, never shorten it.
+     */
+    public function uploadUrlExpiry(?Order $order): Carbon
+    {
+        $default = now()->addDays(max(1, (int) config('checkout.upload_url_ttl_days', 7)));
+
+        if (! $order || ! $this->isInstallment($order)) {
+            return $default;
+        }
+
+        $lastDue = null;
+        foreach ($this->schedule($order) as $step) {
+            if ($step['status'] === 'verified' || ! $step['due_date']) {
+                continue;
+            }
+            if ($lastDue === null || $step['due_date']->greaterThan($lastDue)) {
+                $lastDue = $step['due_date'];
+            }
+        }
+
+        if ($lastDue === null) {
+            return $default;
+        }
+
+        $grace = max(0, (int) config('checkout.installment_upload_grace_days', 14));
+        $expiry = $lastDue->copy()->addDays($grace);
+
+        return $expiry->greaterThan($default) ? $expiry : $default;
+    }
 }

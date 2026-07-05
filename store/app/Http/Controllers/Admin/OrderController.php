@@ -588,22 +588,22 @@ class OrderController extends Controller
             'next_due' => $nextDue,
             'remaining' => number_format($reminder->remaining($order), 0, ',', '.'),
             'bank_accounts' => $banks,
-            'upload_url' => $this->generateUploadUrl($order->order_number),
+            'upload_url' => $this->generateUploadUrl($order, $reminder),
         ];
     }
 
     /**
-     * Signed upload URL untuk customer upload bukti bayar (TTL default 7 hari),
-     * konsisten dengan CourseCheckoutController::generateUploadUrl().
+     * Signed upload URL untuk customer upload bukti bayar. TTL schedule-aware:
+     * untuk order cicilan link hidup sampai angsuran terakhir jatuh tempo (+
+     * grace) — bukan cuma 7 hari yang keburu mati sebelum angsuran ditagih.
+     * Konsisten dengan CourseCheckoutController::generateUploadUrl().
      */
-    protected function generateUploadUrl(string $orderNumber): string
+    protected function generateUploadUrl(Order $order, InstallmentReminder $reminder): string
     {
-        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
-
         return URL::temporarySignedRoute(
             'upload.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $orderNumber],
+            $reminder->uploadUrlExpiry($order),
+            ['order_number' => $order->order_number],
         );
     }
 }

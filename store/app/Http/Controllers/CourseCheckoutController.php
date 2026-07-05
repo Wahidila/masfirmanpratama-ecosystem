@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
 use App\Models\WaNotification;
+use App\Services\Installment\InstallmentReminder;
 use App\Services\Settings;
 use App\Services\XSenderService;
 use Illuminate\Http\RedirectResponse;
@@ -140,7 +141,7 @@ class CourseCheckoutController extends Controller
         });
 
         // Kirim notifikasi WhatsApp ke customer
-        $uploadUrl = $this->generateUploadUrl($order->order_number);
+        $uploadUrl = $this->generateUploadUrl($order);
         $this->sendWhatsAppNotification($order, $course, $validated, $uploadUrl);
 
         return redirect()
@@ -184,7 +185,7 @@ class CourseCheckoutController extends Controller
             'order' => $orderModel,
             'bankAccounts' => Settings::getBankAccounts(),
             'waAdmin' => Settings::getWaAdmin(),
-            'uploadUrl' => session('upload_url', $this->generateUploadUrl($order)),
+            'uploadUrl' => session('upload_url', $this->generateUploadUrl($orderModel)),
             'trackUrl' => $this->generateTrackUrl($orderModel->order_number),
             'isCicilan' => $isCicilan,
             'paymentType' => $isCicilan ? 'cicilan' : 'lunas',
@@ -342,17 +343,17 @@ class CourseCheckoutController extends Controller
     }
 
     /**
-     * Generate signed upload URL untuk customer upload bukti bayar.
-     * TTL = 7 hari (sama dengan book checkout).
+     * Generate signed upload URL untuk customer upload bukti bayar. TTL
+     * schedule-aware: untuk order cicilan, link hidup sampai angsuran terakhir
+     * jatuh tempo (+ grace) — bukan cuma 7 hari yang keburu mati sebelum
+     * angsuran ditagih. Order lunas/buku tetap pakai TTL default.
      */
-    protected function generateUploadUrl(string $orderNumber): string
+    protected function generateUploadUrl(Order $order): string
     {
-        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
-
         return URL::temporarySignedRoute(
             'upload.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $orderNumber],
+            app(InstallmentReminder::class)->uploadUrlExpiry($order),
+            ['order_number' => $order->order_number],
         );
     }
 

@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Events\PaymentSubmitted;
 use App\Models\Order;
+use App\Models\OrderPayment;
+use App\Services\Installment\InstallmentReminder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -55,23 +58,35 @@ class UploadController extends Controller
             return $this->m1StubView($request, $order_number);
         }
 
-        $pendingPayments = $order->payments
+        $payments = $order->payments; // sudah orderBy('id') = urutan sequence
+
+        $pendingPayments = $payments
             ->where('status', 'pending')
             ->whereNull('proof_path')
             ->values();
 
         // Determine payment context dari real Order.
-        $totalPayments = $order->payments->count();
+        $totalPayments = $payments->count();
         $isInstallment = $totalPayments > 1;
         $paymentType = $isInstallment ? 'cicilan' : 'lunas';
 
-        // Default ke pending payment pertama (atau seq dari query string kalau valid).
-        $defaultSequence = (int) $request->query('seq', 0);
-        $defaultSequence = max(0, min($totalPayments - 1, $defaultSequence));
+        // Default ke angsuran BERIKUTNYA yang bisa diupload (pending + belum ada
+        // bukti) — bukan selalu DP. Kalau customer buka link reminder setelah DP
+        // lunas, langsung ke-arah cicilan yang benar. ?seq= eksplisit tetap
+        // dihormati (mis. redirect balik setelah upload).
+        $explicitSeq = $request->query('seq');
+        if ($explicitSeq !== null && $explicitSeq !== '') {
+            $defaultSequence = max(0, min($totalPayments - 1, (int) $explicitSeq));
+        } else {
+            $idx = $payments->search(fn ($p) => $p->status === 'pending' && $p->proof_path === null);
+            $defaultSequence = $idx === false ? 0 : (int) $idx;
+        }
 
         // Total transfer = nominal payment yang sedang di-target.
-        $targetPayment = $order->payments[$defaultSequence] ?? null;
+        $targetPayment = $payments[$defaultSequence] ?? null;
         $totalTransfer = $targetPayment ? (int) $targetPayment->amount : 0;
+
+        [$installmentOptions, $installmentAmounts] = $this->installmentOptions($payments, $totalPayments);
 
         return view('pages.upload', [
             'orderNumber' => $order_number,
@@ -81,9 +96,58 @@ class UploadController extends Controller
             'defaultSequence' => $defaultSequence,
             'dbOrder' => $order,
             'pendingPayments' => $pendingPayments,
-            'uploadStoreUrl' => $this->signedStoreUrl($order_number),
+            'installmentOptions' => $installmentOptions,
+            'installmentAmounts' => $installmentAmounts,
+            'uploadStoreUrl' => $this->signedStoreUrl($order_number, $order),
             'trackUrl' => $this->signedTrackUrl($order_number),
         ]);
+    }
+
+    /**
+     * Build opsi dropdown cicilan + nominal per-sequence untuk halaman upload.
+     *
+     * Real order → state-aware: tandai mana yang sudah lunas / menunggu verifikasi
+     * / ditolak, dan hanya yang 'pending + belum ada bukti' yang bisa dipilih.
+     * Stub M1 (payments null) → count-based, semua bisa dipilih (backward compat).
+     *
+     * @param  Collection<int, OrderPayment>|null  $payments
+     * @return array{0: list<array<string, mixed>>, 1: array<int, int>}
+     */
+    protected function installmentOptions(?Collection $payments, int $totalPayments): array
+    {
+        $options = [];
+        $amounts = [];
+        $installmentCount = max(0, $totalPayments - 1);
+
+        for ($i = 0; $i < $totalPayments; $i++) {
+            $payment = $payments?->get($i);
+            $status = $payment?->status;
+            $hasProof = $payment && $payment->proof_path !== null;
+            $uploadable = $payment ? ($status === 'pending' && ! $hasProof) : true;
+
+            if ($payment) {
+                $amounts[$i] = (int) $payment->amount;
+            }
+
+            $statusNote = match (true) {
+                $status === 'verified' => 'sudah lunas',
+                $status === 'rejected' => 'ditolak — hubungi admin',
+                $status === 'pending' && $hasProof => 'menunggu verifikasi',
+                default => '',
+            };
+
+            $options[] = [
+                'value' => $i,
+                'label' => $i === 0 ? 'Down Payment (DP)' : 'Cicilan ke-'.$i.' dari '.$installmentCount,
+                'note' => $i === 0
+                    ? 'Pembayaran pertama dari '.$totalPayments
+                    : ($i === $totalPayments - 1 ? 'Cicilan terakhir' : ''),
+                'status_note' => $statusNote,
+                'uploadable' => $uploadable,
+            ];
+        }
+
+        return [$options, $amounts];
     }
 
     /**
@@ -173,37 +237,35 @@ class UploadController extends Controller
         // Fire event AFTER commit — listener bisa baca persisted state.
         PaymentSubmitted::dispatch($order->fresh(), $payment->fresh(), $sequence);
 
-        return redirect($this->signedShowUrl($order_number, ['seq' => $sequence]))
+        return redirect($this->signedShowUrl($order_number, ['seq' => $sequence], $order))
             ->with('upload.success', true)
             ->with('upload.sequence', $sequence);
     }
 
     /**
      * Generate signed POST URL ke /upload/{order_number} buat form action.
-     * TTL match config('checkout.upload_url_ttl_days') sehingga form expire
-     * konsisten dengan show URL.
+     * TTL schedule-aware (InstallmentReminder::uploadUrlExpiry) sehingga form
+     * expire konsisten dengan show URL — untuk order cicilan, form tetap bisa
+     * disubmit sampai angsuran terakhir jatuh tempo, bukan cuma 7 hari.
      */
-    protected function signedStoreUrl(string $order_number): string
+    protected function signedStoreUrl(string $order_number, ?Order $order = null): string
     {
-        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
-
         return URL::temporarySignedRoute(
             'upload.store',
-            now()->addDays($ttlDays),
+            app(InstallmentReminder::class)->uploadUrlExpiry($order),
             ['order_number' => $order_number],
         );
     }
 
     /**
      * Generate signed GET URL kembali ke upload page (redirect after store).
+     * TTL schedule-aware, konsisten dengan signedStoreUrl().
      */
-    protected function signedShowUrl(string $order_number, array $extraParams = []): string
+    protected function signedShowUrl(string $order_number, array $extraParams = [], ?Order $order = null): string
     {
-        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
-
         return URL::temporarySignedRoute(
             'upload.show',
-            now()->addDays($ttlDays),
+            app(InstallmentReminder::class)->uploadUrlExpiry($order),
             array_merge(['order_number' => $order_number], $extraParams),
         );
     }
@@ -246,6 +308,8 @@ class UploadController extends Controller
         $defaultSequence = (int) $request->query('seq', 0);
         $defaultSequence = max(0, min($totalPayments - 1, $defaultSequence));
 
+        [$installmentOptions, $installmentAmounts] = $this->installmentOptions(null, $totalPayments);
+
         return view('pages.upload', [
             'orderNumber' => $order_number,
             'paymentType' => $paymentType,
@@ -254,6 +318,8 @@ class UploadController extends Controller
             'defaultSequence' => $defaultSequence,
             'dbOrder' => null,
             'pendingPayments' => collect(),
+            'installmentOptions' => $installmentOptions,
+            'installmentAmounts' => $installmentAmounts,
             'uploadStoreUrl' => $this->signedStoreUrl($order_number),
             'trackUrl' => $this->signedTrackUrl($order_number),
         ]);
