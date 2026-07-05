@@ -1,62 +1,35 @@
-<nav class="flex-1 px-4 py-4 space-y-1">
-    <a href="{{ route('dashboard') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('dashboard') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-        Dashboard
-    </a>
-    <a href="{{ route('referrals.index') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('referrals.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="link" class="w-5 h-5"></i>
-        Link Referral
-    </a>
-    <a href="{{ route('commissions.index') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('commissions.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="coins" class="w-5 h-5"></i>
-        Komisi
-    </a>
-    <a href="{{ route('withdrawals.index') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('withdrawals.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="wallet" class="w-5 h-5"></i>
-        Penarikan
-    </a>
-    <a href="{{ route('materials.index') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('materials.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="folder-open" class="w-5 h-5"></i>
-        Materi Marketing
-    </a>
-    <a href="{{ route('events.index') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('events.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="trophy" class="w-5 h-5"></i>
-        Event & Gamifikasi
-    </a>
-    <a href="{{ route('leaderboard') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('leaderboard') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-        Leaderboard
-    </a>
-    <a href="{{ route('rewards.index') }}"
-       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('rewards.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-        <i data-lucide="gift" class="w-5 h-5"></i>
-        Reward Saya
-    </a>
+<nav class="flex-1 px-4 py-5 space-y-6 overflow-y-auto">
+    <div class="space-y-1">
+        <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Menu</p>
+        <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="layout-dashboard">Dashboard</x-nav-link>
+        <x-nav-link :href="route('referrals.index')" :active="request()->routeIs('referrals.*')" icon="link">Link Referral</x-nav-link>
+        <x-nav-link :href="route('commissions.index')" :active="request()->routeIs('commissions.*')" icon="coins">Komisi</x-nav-link>
+        <x-nav-link :href="route('withdrawals.index')" :active="request()->routeIs('withdrawals.*')" icon="wallet">Penarikan</x-nav-link>
+        <x-nav-link :href="route('materials.index')" :active="request()->routeIs('materials.*')" icon="folder-open">Materi Marketing</x-nav-link>
+    </div>
 
-    <div class="pt-4 mt-4 border-t border-slate-100">
-        <a href="{{ route('profile.edit') }}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('profile.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-            <i data-lucide="user" class="w-5 h-5"></i>
-            Profil
-        </a>
-        <a href="{{ route('notifications.index') }}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('notifications.*') ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50' }}">
-            <i data-lucide="bell" class="w-5 h-5"></i>
-            Notifikasi
-        </a>
+    <div class="space-y-1">
+        <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Gamifikasi</p>
+        <x-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')" icon="trophy">Event</x-nav-link>
+        <x-nav-link :href="route('leaderboard')" :active="request()->routeIs('leaderboard')" icon="bar-chart-3">Leaderboard</x-nav-link>
+        <x-nav-link :href="route('rewards.index')" :active="request()->routeIs('rewards.*')" icon="gift">Reward Saya</x-nav-link>
+    </div>
+
+    <div class="space-y-1">
+        <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Akun</p>
+        <x-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.*')" icon="user">Profil</x-nav-link>
+        <x-nav-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')" icon="bell">Notifikasi</x-nav-link>
     </div>
 </nav>
 
 <div class="px-4 py-4 border-t border-slate-100">
-    <div class="px-3 py-2 bg-slate-50 rounded-xl">
-        <p class="text-xs text-slate-500">Tipe Affiliator</p>
-        <p class="text-sm font-medium text-slate-700">{{ auth()->user()->type->name ?? '-' }}</p>
+    <div class="flex items-center gap-3 px-3 py-2.5 bg-primary-50/60 rounded-xl">
+        <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary-600 text-white text-xs font-bold shrink-0">
+            {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
+        </span>
+        <div class="min-w-0">
+            <p class="text-xs text-slate-500">Tipe Affiliator</p>
+            <p class="text-sm font-semibold text-slate-800 truncate">{{ auth()->user()->type->name ?? '—' }}</p>
+        </div>
     </div>
 </div>

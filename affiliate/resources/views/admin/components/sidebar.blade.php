@@ -1,23 +1,20 @@
-<nav class="flex-1 px-3 py-4 space-y-1">
-    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('admin.dashboard') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
-        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
-    </a>
-    <a href="{{ route('admin.affiliators.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('admin.affiliators.*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
-        <i data-lucide="users" class="w-4 h-4"></i> Affiliator
-    </a>
-    <a href="{{ route('admin.commissions.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('admin.commissions.*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
-        <i data-lucide="coins" class="w-4 h-4"></i> Komisi
-    </a>
-    <a href="{{ route('admin.withdrawals.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('admin.withdrawals.*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
-        <i data-lucide="wallet" class="w-4 h-4"></i> Penarikan
-    </a>
-    <a href="{{ route('admin.materials.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('admin.materials.*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
-        <i data-lucide="folder" class="w-4 h-4"></i> Materi
-    </a>
-    <a href="{{ route('admin.events.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('admin.events.*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
-        <i data-lucide="trophy" class="w-4 h-4"></i> Event & Gamifikasi
-    </a>
-    <a href="{{ route('admin.commissions.settings') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm {{ request()->routeIs('admin.commissions.settings') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
-        <i data-lucide="settings" class="w-4 h-4"></i> Pengaturan
-    </a>
+<nav class="flex-1 px-4 py-5 space-y-6 overflow-y-auto">
+    <div class="space-y-1">
+        <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Operasional</p>
+        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')" icon="layout-dashboard">Dashboard</x-nav-link>
+        <x-nav-link :href="route('admin.affiliators.index')" :active="request()->routeIs('admin.affiliators.*')" icon="users">Affiliator</x-nav-link>
+        <x-nav-link :href="route('admin.commissions.index')" :active="request()->routeIs('admin.commissions.index')" icon="coins">Komisi</x-nav-link>
+        <x-nav-link :href="route('admin.withdrawals.index')" :active="request()->routeIs('admin.withdrawals.*')" icon="wallet">Penarikan</x-nav-link>
+    </div>
+
+    <div class="space-y-1">
+        <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Konten</p>
+        <x-nav-link :href="route('admin.materials.index')" :active="request()->routeIs('admin.materials.*')" icon="folder">Materi</x-nav-link>
+        <x-nav-link :href="route('admin.events.index')" :active="request()->routeIs('admin.events.*')" icon="trophy">Event &amp; Gamifikasi</x-nav-link>
+    </div>
+
+    <div class="space-y-1">
+        <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Sistem</p>
+        <x-nav-link :href="route('admin.commissions.settings')" :active="request()->routeIs('admin.commissions.settings')" icon="settings">Pengaturan Komisi</x-nav-link>
+    </div>
 </nav>
