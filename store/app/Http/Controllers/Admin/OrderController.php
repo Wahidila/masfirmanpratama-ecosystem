@@ -19,8 +19,11 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -189,15 +192,38 @@ class OrderController extends Controller
     public function approvePayment(Request $request, Order $order, OrderPayment $payment): RedirectResponse
     {
         abort_if($payment->order_id !== $order->id, 404);
-        abort_if($payment->status !== 'pending', 422, 'Payment sudah diproses sebelumnya.');
+
+        // Double-submit / tab basi: approve dikirim ke payment yang sudah
+        // diproses. Redirect ramah (bukan error 422) — upload bukti bikin request
+        // lambat sehingga double-click lebih mungkin terjadi.
+        if ($payment->status !== 'pending') {
+            return $this->alreadyProcessedRedirect($order, $payment, 'Approve');
+        }
 
         $validated = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:0'],
+            'proof_file' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+        ], [
+            'proof_file.image' => 'Bukti harus berupa gambar (JPG, PNG, atau WebP).',
+            'proof_file.mimes' => 'Format bukti tidak didukung. Pakai JPG, PNG, atau WebP.',
+            'proof_file.max' => 'Ukuran bukti terlalu besar. Maksimal 2 MB.',
         ]);
 
-        DB::transaction(function () use ($order, $payment, $validated, $request) {
+        // Simpan bukti yang di-lampirkan admin (kalau ada) SEBELUM transaction —
+        // IO file di luar DB. Berguna saat approve manual bukti dari luar (mis. WA)
+        // sementara customer belum upload sendiri.
+        $newProofPath = $request->hasFile('proof_file')
+            ? $this->storePaymentProof($request->file('proof_file'), $order, $payment)
+            : null;
+
+        DB::transaction(function () use ($order, $payment, $validated, $request, $newProofPath) {
             if (isset($validated['amount'])) {
                 $payment->amount = $validated['amount'];
+            }
+            if ($newProofPath !== null) {
+                // Ganti bukti lama (jika ada) supaya tidak jadi orphan.
+                $this->deletePaymentProof($payment->proof_path);
+                $payment->proof_path = $newProofPath;
             }
             $payment->status = 'verified';
             $payment->verified_at = now();
@@ -228,7 +254,10 @@ class OrderController extends Controller
     public function rejectPayment(Request $request, Order $order, OrderPayment $payment): RedirectResponse
     {
         abort_if($payment->order_id !== $order->id, 404);
-        abort_if($payment->status !== 'pending', 422, 'Payment sudah diproses sebelumnya.');
+
+        if ($payment->status !== 'pending') {
+            return $this->alreadyProcessedRedirect($order, $payment, 'Reject');
+        }
 
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:500'],
@@ -605,5 +634,38 @@ class OrderController extends Controller
             $reminder->uploadUrlExpiry($order),
             ['order_number' => $order->order_number],
         );
+    }
+
+    /**
+     * Simpan bukti bayar yang di-upload admin saat approve manual. Path & disk
+     * konsisten dengan UploadController (payment-proofs/<order>/<payment_id>-rand).
+     */
+    protected function storePaymentProof(UploadedFile $file, Order $order, OrderPayment $payment): string
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
+        $filename = sprintf('%d-%s.%s', $payment->id, Str::random(8), $ext);
+
+        return $file->storeAs('payment-proofs/'.$order->order_number, $filename, 'public');
+    }
+
+    /** Hapus file bukti lama HANYA bila milik kita (prefix payment-proofs/). */
+    protected function deletePaymentProof(?string $path): void
+    {
+        if ($path && str_starts_with($path, 'payment-proofs/') && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    /**
+     * Redirect ramah saat approve/reject dikirim ke payment yang sudah diproses
+     * (double-submit / tab basi). Pesan menerangkan status, tanpa halaman error.
+     */
+    protected function alreadyProcessedRedirect(Order $order, OrderPayment $payment, string $verb): RedirectResponse
+    {
+        $label = $payment->status === 'verified' ? 'sudah diverifikasi' : 'sudah ditolak';
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('error', 'Pembayaran ini '.$label.' sebelumnya — '.$verb.' dibatalkan.');
     }
 }

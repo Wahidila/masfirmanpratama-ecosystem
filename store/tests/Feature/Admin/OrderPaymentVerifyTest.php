@@ -7,6 +7,8 @@ use App\Models\Order;
 use App\Models\OrderPayment;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class OrderPaymentVerifyTest extends TestCase
@@ -202,9 +204,11 @@ class OrderPaymentVerifyTest extends TestCase
             'order_id' => $order->id,
         ]);
 
+        // Double-submit → redirect ramah dengan pesan, bukan error 422.
         $this->actingAs($this->admin, 'admin')
             ->post(route('admin.orders.payments.approve', [$order, $payment]))
-            ->assertStatus(422);
+            ->assertRedirect(route('admin.orders.show', $order))
+            ->assertSessionHas('error');
     }
 
     public function test_cannot_reject_already_processed_payment(): void
@@ -218,7 +222,27 @@ class OrderPaymentVerifyTest extends TestCase
             ->post(route('admin.orders.payments.reject', [$order, $payment]), [
                 'reason' => 'Whatever',
             ])
-            ->assertStatus(422);
+            ->assertRedirect(route('admin.orders.show', $order))
+            ->assertSessionHas('error');
+    }
+
+    public function test_reapprove_with_proof_does_not_store_orphan_file(): void
+    {
+        Storage::fake('public');
+
+        $order = Order::factory()->create();
+        $payment = OrderPayment::factory()->verified()->create(['order_id' => $order->id]);
+
+        // Klik kedua (double-submit) yang membawa file: guard trip SEBELUM file
+        // disimpan → tidak ada bukti orphan tertulis ke disk.
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.payments.approve', [$order, $payment]), [
+                'proof_file' => UploadedFile::fake()->image('dobel.jpg'),
+            ])
+            ->assertRedirect(route('admin.orders.show', $order))
+            ->assertSessionHas('error');
+
+        $this->assertSame([], Storage::disk('public')->allFiles('payment-proofs'));
     }
 
     public function test_payment_must_belong_to_order(): void
@@ -304,5 +328,81 @@ class OrderPaymentVerifyTest extends TestCase
         $order->refresh();
         // Status sticky on shipped — recalc tidak boleh overwrite ke partial_paid
         $this->assertSame('shipped', $order->status);
+    }
+
+    // ── Approve manual + lampiran bukti ─────────────────────
+
+    public function test_approve_attaches_uploaded_proof(): void
+    {
+        Storage::fake('public');
+
+        $order = Order::factory()->create(['total' => 1_750_000, 'status' => 'pending']);
+        $payment = OrderPayment::factory()->create([
+            'order_id' => $order->id,
+            'amount' => 1_750_000,
+            'status' => 'pending',
+            'proof_path' => null,
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.payments.approve', [$order, $payment]), [
+                'proof_file' => UploadedFile::fake()->image('bukti-wa.jpg'),
+            ])
+            ->assertRedirect(route('admin.orders.show', $order))
+            ->assertSessionHas('status');
+
+        $payment->refresh();
+        $this->assertSame('verified', $payment->status);
+        $this->assertNotNull($payment->proof_path);
+        $this->assertStringStartsWith('payment-proofs/'.$order->order_number, $payment->proof_path);
+        Storage::disk('public')->assertExists($payment->proof_path);
+    }
+
+    public function test_approve_rejects_non_image_proof(): void
+    {
+        Storage::fake('public');
+
+        $order = Order::factory()->create();
+        $payment = OrderPayment::factory()->create(['order_id' => $order->id, 'status' => 'pending', 'proof_path' => null]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.payments.approve', [$order, $payment]), [
+                'proof_file' => UploadedFile::fake()->create('bukti.pdf', 80, 'application/pdf'),
+            ])
+            ->assertSessionHasErrors('proof_file');
+
+        $this->assertSame('pending', $payment->fresh()->status); // tidak ter-approve
+    }
+
+    public function test_approve_without_proof_keeps_proof_null(): void
+    {
+        $order = Order::factory()->create(['total' => 1_000_000, 'status' => 'pending']);
+        $payment = OrderPayment::factory()->create([
+            'order_id' => $order->id,
+            'amount' => 1_000_000,
+            'status' => 'pending',
+            'proof_path' => null,
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('admin.orders.payments.approve', [$order, $payment]))
+            ->assertRedirect();
+
+        $payment->refresh();
+        $this->assertSame('verified', $payment->status);
+        $this->assertNull($payment->proof_path);
+    }
+
+    public function test_approve_form_shows_proof_input_for_payment_without_proof(): void
+    {
+        $order = Order::factory()->create();
+        OrderPayment::factory()->create(['order_id' => $order->id, 'status' => 'pending', 'proof_path' => null]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order))
+            ->assertStatus(200)
+            ->assertSee('name="proof_file"', false)
+            ->assertSee('enctype="multipart/form-data"', false)
+            ->assertSee('Upload bukti bayar');
     }
 }

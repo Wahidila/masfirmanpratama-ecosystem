@@ -164,7 +164,7 @@
                                     default => 'bg-gray-50 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400',
                                 };
                             @endphp
-                            <li class="px-5 py-4" x-data="{ showApprove: false, showReject: false }">
+                            <li class="px-5 py-4" x-data="{ showApprove: false, showReject: false, submitting: false }">
                                 <div class="flex items-start gap-4">
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2">
@@ -237,7 +237,9 @@
                                     {{-- Approve form --}}
                                     <form x-show="showApprove" x-cloak
                                           method="POST"
+                                          enctype="multipart/form-data"
                                           action="{{ route('admin.orders.payments.approve', [$order, $payment]) }}"
+                                          @submit="submitting = true"
                                           class="mt-3 rounded-xl border border-success-200 bg-success-50 p-4 space-y-3 dark:border-success-500/30 dark:bg-success-500/15">
                                         @csrf
                                         <div>
@@ -255,13 +257,37 @@
                                                 Edit kalau jumlah aktual transfer beda dari yang diinput customer.
                                             </p>
                                         </div>
+
+                                        {{-- Lampirkan bukti bayar saat approve manual — berguna kalau customer
+                                             belum upload sendiri (mis. admin terima bukti via WhatsApp). --}}
+                                        @if (! $payment->proof_path)
+                                            <div>
+                                                <label for="approve-proof-{{ $payment->id }}" class="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">
+                                                    Upload bukti bayar <span class="font-normal text-gray-500 dark:text-gray-400">(opsional)</span>
+                                                </label>
+                                                <input id="approve-proof-{{ $payment->id }}"
+                                                       type="file"
+                                                       name="proof_file"
+                                                       accept="image/jpeg,image/png,image/webp"
+                                                       class="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-success-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-success-700 hover:file:bg-success-200 dark:text-gray-400 dark:file:bg-success-500/20 dark:file:text-success-400">
+                                                @error('proof_file')
+                                                    <p class="mt-1 text-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                                                @enderror
+                                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                    Lampirkan bukti transfer yang kamu terima kalau customer belum upload. JPG/PNG/WebP, maks 2 MB.
+                                                </p>
+                                            </div>
+                                        @endif
+
                                         <div class="flex gap-2">
                                             <button type="submit"
-                                                    class="inline-flex items-center rounded-lg bg-success-500 px-4 py-2 text-sm font-medium text-white hover:bg-success-600 transition">
-                                                Konfirmasi Approve
+                                                    :disabled="submitting"
+                                                    class="inline-flex items-center rounded-lg bg-success-500 px-4 py-2 text-sm font-medium text-white hover:bg-success-600 transition disabled:cursor-not-allowed disabled:opacity-60">
+                                                <span x-show="!submitting">Konfirmasi Approve</span>
+                                                <span x-show="submitting" x-cloak>Menyimpan…</span>
                                             </button>
-                                            <button type="button" @click="showApprove = false"
-                                                    class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                                            <button type="button" @click="showApprove = false" :disabled="submitting"
+                                                    class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                                                 Batal
                                             </button>
                                         </div>
@@ -271,6 +297,7 @@
                                     <form x-show="showReject" x-cloak
                                           method="POST"
                                           action="{{ route('admin.orders.payments.reject', [$order, $payment]) }}"
+                                          @submit="submitting = true"
                                           class="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3 dark:border-gray-800 dark:bg-white/[0.03]">
                                         @csrf
                                         <div>
@@ -288,11 +315,13 @@
                                         </div>
                                         <div class="flex gap-2">
                                             <button type="submit"
-                                                    class="inline-flex items-center rounded-lg bg-error-500 px-4 py-2 text-sm font-medium text-white hover:bg-error-600 transition">
-                                                Konfirmasi Reject
+                                                    :disabled="submitting"
+                                                    class="inline-flex items-center rounded-lg bg-error-500 px-4 py-2 text-sm font-medium text-white hover:bg-error-600 transition disabled:cursor-not-allowed disabled:opacity-60">
+                                                <span x-show="!submitting">Konfirmasi Reject</span>
+                                                <span x-show="submitting" x-cloak>Menyimpan…</span>
                                             </button>
-                                            <button type="button" @click="showReject = false"
-                                                    class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                                            <button type="button" @click="showReject = false" :disabled="submitting"
+                                                    class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                                                 Batal
                                             </button>
                                         </div>
