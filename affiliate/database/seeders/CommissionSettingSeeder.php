@@ -12,7 +12,6 @@ class CommissionSettingSeeder extends Seeder
     {
         $alumni = AffiliatorType::where('slug', 'alumni')->first();
         $nonAlumni = AffiliatorType::where('slug', 'non-alumni')->first();
-        $peserta = AffiliatorType::where('slug', 'peserta')->first();
 
         $settings = [
             // Alumni rates (komisi tertinggi)
@@ -21,9 +20,6 @@ class CommissionSettingSeeder extends Seeder
             // Non-alumni rates (komisi standar)
             ['affiliator_type_id' => $nonAlumni?->id, 'product_type' => 'course', 'rate' => 10.00, 'min_amount' => 0, 'cooling_days' => 7, 'is_active' => true],
             ['affiliator_type_id' => $nonAlumni?->id, 'product_type' => 'book', 'rate' => 8.00, 'min_amount' => 0, 'cooling_days' => 7, 'is_active' => true],
-            // Peserta aktif rates (komisi menengah)
-            ['affiliator_type_id' => $peserta?->id, 'product_type' => 'course', 'rate' => 12.00, 'min_amount' => 0, 'cooling_days' => 7, 'is_active' => true],
-            ['affiliator_type_id' => $peserta?->id, 'product_type' => 'book', 'rate' => 10.00, 'min_amount' => 0, 'cooling_days' => 7, 'is_active' => true],
             // Global fallback (tipe/produk apa pun yang tak ter-cover) — komisi minimum
             ['affiliator_type_id' => null, 'product_type' => null, 'rate' => 8.00, 'min_amount' => 0, 'cooling_days' => 7, 'is_active' => true],
         ];

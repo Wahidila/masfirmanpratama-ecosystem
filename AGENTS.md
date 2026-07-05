@@ -27,7 +27,7 @@ Ekosistem bisnis online Mas Firman Pratama (Mind Power & Life Mastery / AMC):
    1 login kontrol Store + Affiliate: produk, pesanan, verifikasi bayar,
    resi, affiliator, komisi, withdrawal, materi marketing, event gamifikasi.
 3. **Affiliate System** (`affiliate.masfirmanpratama.com`) — landing program,
-   register affiliator (3 tipe: alumni/non-alumni/peserta), dashboard,
+   register affiliator (2 tipe: alumni/non-alumni), dashboard,
    referral link manager, komisi (cooling 7 hari), withdrawal,
    leaderboard, gamifikasi event.
 
@@ -259,14 +259,14 @@ QC outcome: PASS clean (Lead anggap QC oke setelah verify 10/10 PR ship + tests 
 
 ## 🚀 Sprint aktif — M3 Affiliate System (2026-05-22 → 2026-06-01)
 
-**Target:** M3 deliverable Day 20 (2026-06-01) — affiliate.masfirmanpratama.com landing + register/login affiliator + dashboard 3 tipe (alumni/non-alumni/peserta) + admin affiliate panel (proxied dari unified admin).
+**Target:** M3 deliverable Day 20 (2026-06-01) — affiliate.masfirmanpratama.com landing + register/login affiliator + dashboard 2 tipe (alumni/non-alumni) + admin affiliate panel (proxied dari unified admin).
 
 **Scope:**
 - Foundation DB: 14 tabel (`affiliators`, `affiliator_types`, `referral_codes`, `referral_clicks`, `referral_orders`, `commissions`, `commission_settings`, `withdrawals`, `withdrawal_methods`, `affiliate_events`, `affiliate_event_participants`, `affiliate_event_rewards`, `materials`, `material_downloads`)
-- Auth affiliator: register flow (3 tipe) + login + email verification
+- Auth affiliator: register flow (2 tipe) + login + email verification
 - Public landing: `affiliate.masfirmanpratama.com` program landing + benefit explainer + register CTA
-- Dashboard non-peserta: referral link manager + earnings overview + withdraw trigger
-- Dashboard peserta/alumni: extra leaderboard + event card + materi marketing download
+- Dashboard non-alumni: referral link manager + earnings overview + withdraw trigger
+- Dashboard alumni: extra leaderboard + event card + materi marketing download
 - Admin affiliate panel: affiliator CRUD + komisi review + withdrawal approve + materi upload + event setup (basic, gamifikasi penuh M4)
 
 **Out of scope (defer ke M4):**
@@ -276,18 +276,18 @@ QC outcome: PASS clean (Lead anggap QC oke setelah verify 10/10 PR ship + tests 
 - WA gateway provider integration (still stub via `wa_notifications` table)
 
 **Owner agent split (akan di-decompose di kanban M3 setelah DOC-1 land):**
-- `mc-planning` — decompose 14 tabel + auth + landing + 3 dashboard + admin panel jadi task atomic (estimasi ~25-30 task)
+- `mc-planning` — decompose 14 tabel + auth + landing + 2 dashboard + admin panel jadi task atomic (estimasi ~25-30 task)
 - `mc-fullstack` — bulk implementation (Foundation + Auth + Dashboard + Admin)
-- `mc-ui` — landing page distinctive (klien minta high-impact program landing) + 3 dashboard layout
+- `mc-ui` — landing page distinctive (klien minta high-impact program landing) + 2 dashboard layout
 - `mc-qc` — review per sub-block + final M3 sign-off
 
 **ETA: 9 days (Day 12 → Day 20).**
 
 **Sprint blocks:**
 - **Foundation DB+auth** (Day 12-13) — 14 migration + Affiliator model + auth flow + email verification
-- **Public landing + register** (Day 14-15) — landing page distinctive + register form 3 tipe + onboarding email
-- **Dashboard non-peserta** (Day 16) — referral link manager + komisi tracking + withdraw form
-- **Dashboard peserta/alumni** (Day 17-18) — extra leaderboard + event card + materi download
+- **Public landing + register** (Day 14-15) — landing page distinctive + register form 2 tipe + onboarding email
+- **Dashboard non-alumni** (Day 16) — referral link manager + komisi tracking + withdraw form
+- **Dashboard alumni** (Day 17-18) — extra leaderboard + event card + materi download
 - **Admin affiliate panel** (Day 19) — affiliator CRUD + komisi approve + withdrawal review (proxied di unified admin)
 - **QC + sign-off** (Day 20) — visual review + integration tests + final sign-off
 

@@ -346,7 +346,7 @@ app/
 │   │   ├── Auth/
 │   │   │   ├── EmailVerificationController.php
 │   │   │   ├── LoginController.php
-│   │   │   └── RegisterController.php       → 3 tipe: alumni, non-alumni, peserta
+│   │   │   └── RegisterController.php       → 2 tipe: alumni, non-alumni
 │   │   └── Webhooks/
 │   │       └── StoreWebhookController.php   → HMAC verify + order-paid/refunded handler
 │   └── Middleware/
@@ -358,7 +358,7 @@ app/
 │   ├── AffiliateEventParticipant.php        → Peserta event (score, rank, progress)
 │   ├── AffiliateEventReward.php             → Reward per event (title, description, image)
 │   ├── Affiliator.php                       → User affiliator (Authenticatable, SoftDeletes)
-│   ├── AffiliatorType.php                   → 3 tipe: alumni, non-alumni, peserta
+│   ├── AffiliatorType.php                   → 2 tipe: alumni, non-alumni
 │   ├── Commission.php                       → Komisi (cooling → available → withdrawn)
 │   ├── CommissionSetting.php                → Rate per type × product_type (book/course)
 │   ├── Material.php                         → Materi marketing (banner, video, copy)
@@ -414,7 +414,7 @@ database/
 │   ├── 2026_06_17_011900_create_password_reset_tokens_table.php
 │   └── 2026_06_18_120000_make_referral_order_id_nullable_on_commissions_table.php
 └── seeders/
-    ├── AffiliatorTypeSeeder.php             → 3 tipe: alumni (10%), non-alumni (8%), peserta (5%)
+    ├── AffiliatorTypeSeeder.php             → 2 tipe: alumni (15%), non-alumni (10%)
     ├── CommissionSettingSeeder.php          → Rate per type × product_type
     ├── DatabaseSeeder.php                   → Orchestrator
     └── WithdrawalMethodSeeder.php           → BCA, Mandiri, BRI
@@ -464,7 +464,7 @@ tests/
 ├── Feature/
 │   ├── Admin/AdminEventTest.php            → Event CRUD admin (176 lines)
 │   ├── AdminTest.php                       → Admin panel tests
-│   ├── AuthTest.php                        → Register + login + 3 tipe
+│   ├── AuthTest.php                        → Register + login + 2 tipe
 │   ├── CommissionSettingSeederTest.php
 │   ├── DashboardTest.php
 │   ├── EventRewardTest.php                 → Reward granting + claiming (241 lines)

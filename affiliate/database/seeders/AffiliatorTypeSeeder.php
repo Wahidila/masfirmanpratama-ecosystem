@@ -24,13 +24,6 @@ class AffiliatorTypeSeeder extends Seeder
                 'benefits' => ['Komisi standar', 'Akses materi marketing dasar', 'Support via grup'],
                 'default_commission_rate' => 10.00,
             ],
-            [
-                'name' => 'Peserta Aktif',
-                'slug' => 'peserta',
-                'description' => 'Peserta yang sedang aktif mengikuti program AMC',
-                'benefits' => ['Komisi menengah', 'Akses materi marketing', 'Leaderboard & gamifikasi', 'Event khusus peserta'],
-                'default_commission_rate' => 12.00,
-            ],
         ];
 
         foreach ($types as $type) {

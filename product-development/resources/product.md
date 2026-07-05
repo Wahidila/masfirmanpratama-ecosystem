@@ -6,7 +6,7 @@ Ekosistem bisnis online Mas Firman Pratama (Mind Power & Life Mastery / AMC) yan
 
 1. **Online Store** (`masfirmanpratama.com`) — Etalase produk (kelas + buku), checkout manual, upload bukti bayar (lunas/cicilan), tracking order tanpa login, integrasi ongkir Agenwebsite.com untuk buku fisik.
 2. **Admin Panel Unified** (`/admin`) — 1 login kontrol Store + Affiliate: produk, pesanan, verifikasi bayar, resi, affiliator, komisi, withdrawal, materi marketing, event gamifikasi.
-3. **Affiliate System** (`affiliate.masfirmanpratama.com`) — Landing program, register affiliator (3 tipe: alumni/non-alumni/peserta), dashboard, referral link manager, komisi (cooling 7 hari), withdrawal, leaderboard, gamifikasi event.
+3. **Affiliate System** (`affiliate.masfirmanpratama.com`) — Landing program, register affiliator (2 tipe: alumni/non-alumni), dashboard, referral link manager, komisi (cooling 7 hari), withdrawal, leaderboard, gamifikasi event.
 
 ## Tech Stack
 
@@ -64,5 +64,5 @@ Ekosistem bisnis online Mas Firman Pratama (Mind Power & Life Mastery / AMC) yan
 2. **Cicilan**: DP + N installments, each with upload bukti + admin verify
 3. **Referral Tracking**: `/ref/{code}` → cookie 30 hari → attached ke order → webhook ke affiliate
 4. **Commission Lifecycle**: cooling (7 hari) → available → withdrawn
-5. **3 Tipe Affiliator**: alumni, non-alumni, peserta (beda commission rate)
+5. **2 Tipe Affiliator**: alumni, non-alumni (beda commission rate)
 6. **Gamifikasi**: Event scoring → finalization → reward granting → claiming
