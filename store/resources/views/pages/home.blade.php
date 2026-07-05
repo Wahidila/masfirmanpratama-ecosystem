@@ -347,7 +347,7 @@
                                     </div>
                                 </div>
 
-                                <div class="absolute -top-6 -right-12 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float-delayed flex items-center gap-3 border border-white/50">
+                                <div class="absolute -top-4 -right-8 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float-delayed flex items-center gap-3 border border-white/50">
                                     <div class="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center shrink-0">
                                         <i data-lucide="award" class="w-5 h-5 text-accent-600"></i>
                                     </div>
@@ -357,7 +357,7 @@
                                     </div>
                                 </div>
 
-                                <div class="absolute bottom-20 left-0 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float flex items-center gap-3 border border-white/50">
+                                <div class="absolute -bottom-6 -left-8 bg-white p-4 rounded-xl shadow-xl glass z-30 animate-float flex items-center gap-3 border border-white/50">
                                     <div class="w-10 h-10 bg-secondary-100 rounded-full flex items-center justify-center">
                                         <i data-lucide="users" class="w-5 h-5 text-secondary-600"></i>
                                     </div>
