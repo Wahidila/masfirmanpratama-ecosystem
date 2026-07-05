@@ -110,4 +110,101 @@ class Settings
             'label' => 'Admin',
         ]);
     }
+
+    /**
+     * Icon media sosial yang tersedia di picker footer (nama Lucide => label
+     * default). Sumber tunggal untuk picker admin + validasi updateFooter —
+     * menjamin nama icon selalu valid saat dirender lucide.js di storefront.
+     *
+     * @var array<string, string>
+     */
+    public const FOOTER_SOCIAL_ICONS = [
+        'facebook' => 'Facebook',
+        'instagram' => 'Instagram',
+        'youtube' => 'YouTube',
+        'twitter' => 'Twitter / X',
+        'linkedin' => 'LinkedIn',
+        'send' => 'Telegram',
+        'message-circle' => 'WhatsApp',
+        'music-2' => 'TikTok',
+        'at-sign' => 'Threads',
+        'github' => 'GitHub',
+        'twitch' => 'Twitch',
+        'dribbble' => 'Dribbble',
+        'globe' => 'Website',
+        'mail' => 'Email',
+        'phone' => 'Telepon',
+        'rss' => 'RSS / Blog',
+    ];
+
+    /** @var list<array{icon: string, href: string, label: string}> */
+    public const DEFAULT_FOOTER_SOCIALS = [
+        ['icon' => 'facebook', 'href' => 'https://facebook.com/wahanasejati', 'label' => 'Facebook'],
+        ['icon' => 'youtube', 'href' => 'https://youtube.com/@CahayaKehidupan', 'label' => 'YouTube'],
+        ['icon' => 'instagram', 'href' => 'https://instagram.com/firmanpratama_pakarpikiran', 'label' => 'Instagram'],
+    ];
+
+    /**
+     * Flat link list — footer mengelompokkannya per `group` (kolom sitemap).
+     *
+     * @var list<array{group: string, label: string, href: string}>
+     */
+    public const DEFAULT_FOOTER_LINKS = [
+        ['group' => 'Layanan', 'label' => 'Kelas Biasa AMC', 'href' => '/produk?kategori=kelas'],
+        ['group' => 'Layanan', 'label' => 'Kelas Privat AMC', 'href' => '/produk?kategori=privat'],
+        ['group' => 'Layanan', 'label' => 'Kelas Platinum', 'href' => '/produk?kategori=platinum'],
+        ['group' => 'Layanan', 'label' => 'Pembelian Karya', 'href' => '/produk?kategori=buku'],
+        ['group' => 'Komunitas', 'label' => 'Profil Pribadi', 'href' => '/tentang'],
+        ['group' => 'Komunitas', 'label' => 'Testimoni Alumni', 'href' => '/#testimoni'],
+        ['group' => 'Komunitas', 'label' => 'Artikel Keajaiban', 'href' => '/blog'],
+        ['group' => 'Komunitas', 'label' => 'Afiliasi Program', 'href' => 'https://affiliate.masfirmanpratama.com'],
+    ];
+
+    /** @var list<array{label: string, href: string}> */
+    public const DEFAULT_FOOTER_LEGAL = [
+        ['label' => 'Kebijakan Privasi', 'href' => '/privacy'],
+        ['label' => 'Syarat & Ketentuan', 'href' => '/terms'],
+    ];
+
+    /**
+     * Bundle konten footer storefront (dipakai <x-footer> + tab Settings→Footer).
+     * Semua field jatuh ke default hardcode selama admin belum menyimpannya, jadi
+     * footer tetap tampil lengkap out-of-the-box.
+     *
+     * @return array<string, mixed>
+     */
+    public static function getFooter(): array
+    {
+        return [
+            'brand_text' => self::get('footer.brand_text', 'Firman'),
+            'brand_accent' => self::get('footer.brand_accent', 'Pratama'),
+            'tagline' => self::get('footer.tagline', 'Pakar Pikiran No.1 Indonesia. Penulis Buku, Konsultan Bisnis & Pencipta Metode AMC.'),
+            'address' => self::get('footer.address', 'Wahana Sejati, Jakarta - Surabaya HQ'),
+            'phone' => self::get('footer.phone', '081.2306.33.464'),
+            'email' => self::get('footer.email', 'admin@masfirmanpratama.com'),
+            'copyright' => self::get('footer.copyright', '© {year} Firman Pratama - AMC. All rights reserved.'),
+            'socials' => self::arrayOrDefault('footer.socials', self::DEFAULT_FOOTER_SOCIALS),
+            'links' => self::arrayOrDefault('footer.links', self::DEFAULT_FOOTER_LINKS),
+            'legal' => self::arrayOrDefault('footer.legal', self::DEFAULT_FOOTER_LEGAL),
+        ];
+    }
+
+    /**
+     * Return the stored array setting, or the default when it was NEVER saved.
+     * A deliberately-saved empty array ([]) is respected (admin bisa mengosongkan
+     * daftar) — hanya key yang belum pernah diisi yang jatuh ke default.
+     *
+     * @param  list<array<string, mixed>>  $default
+     * @return list<array<string, mixed>>
+     */
+    protected static function arrayOrDefault(string $key, array $default): array
+    {
+        $value = self::get($key); // null = belum pernah disimpan
+
+        if ($value === null) {
+            return $default;
+        }
+
+        return is_array($value) ? $value : $default;
+    }
 }

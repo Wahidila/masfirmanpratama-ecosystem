@@ -1,39 +1,40 @@
 @props([
-    'brandText' => 'Firman',
-    'brandAccent' => 'Pratama',
-    'tagline' => 'Pakar Pikiran No.1 Indonesia. Penulis Buku, Konsultan Bisnis & Pencipta Metode AMC.',
-    'address' => 'Wahana Sejati, Jakarta - Surabaya HQ',
-    'phone' => '081.2306.33.464',
-    'email' => 'admin@masfirmanpratama.com',
+    'brandText' => null,
+    'brandAccent' => null,
+    'tagline' => null,
+    'address' => null,
+    'phone' => null,
+    'email' => null,
     'socials' => null,
     'sitemap' => null,
 ])
 
 @php
-    $defaultSocials = [
-        ['icon' => 'facebook', 'href' => 'https://facebook.com/wahanasejati', 'label' => 'Facebook'],
-        ['icon' => 'youtube', 'href' => 'https://youtube.com/@CahayaKehidupan', 'label' => 'YouTube'],
-        ['icon' => 'instagram', 'href' => 'https://instagram.com/firmanpratama_pakarpikiran', 'label' => 'Instagram'],
-    ];
+    // Konten footer dinamis dari Settings (tab Settings → Footer di admin), dengan
+    // fallback ke default. Props masih bisa override per-pemakaian bila perlu.
+    $footer = \App\Services\Settings::getFooter();
 
-    $defaultSitemap = [
-        'Layanan' => [
-            ['label' => 'Kelas Biasa AMC', 'href' => url('/produk?kategori=kelas')],
-            ['label' => 'Kelas Privat AMC', 'href' => url('/produk?kategori=privat')],
-            ['label' => 'Kelas Platinum', 'href' => url('/produk?kategori=platinum')],
-            ['label' => 'Pembelian Karya', 'href' => url('/produk?kategori=buku')],
-        ],
-        'Komunitas' => [
-            ['label' => 'Profil Pribadi', 'href' => route('pages.tentang')],
-            ['label' => 'Testimoni Alumni', 'href' => url('/#testimoni')],
-            ['label' => 'Artikel Keajaiban', 'href' => url('/blog')],
-            ['label' => 'Afiliasi Program', 'href' => 'https://affiliate.masfirmanpratama.com'],
-        ],
-    ];
+    $brandText ??= $footer['brand_text'];
+    $brandAccent ??= $footer['brand_accent'];
+    $tagline ??= $footer['tagline'];
+    $address ??= $footer['address'];
+    $phone ??= $footer['phone'];
+    $email ??= $footer['email'];
 
-    $socialLinks = $socials ?? $defaultSocials;
-    $sitemapLinks = $sitemap ?? $defaultSitemap;
-    $year = now()->year;
+    $socialLinks = $socials ?? $footer['socials'];
+
+    // Link disimpan sebagai list datar {group, label, href}; dikelompokkan per
+    // `group` (urutan mengikuti kemunculan pertama) menjadi kolom sitemap.
+    $sitemapLinks = $sitemap ?? collect($footer['links'])
+        ->groupBy(fn ($link) => $link['group'] ?? 'Lainnya')
+        ->map(fn ($rows) => $rows->map(fn ($r) => [
+            'label' => $r['label'] ?? '',
+            'href' => $r['href'] ?? '#',
+        ])->values()->all())
+        ->all();
+
+    $legalLinks = $footer['legal'];
+    $copyright = str_replace('{year}', (string) now()->year, (string) $footer['copyright']);
 @endphp
 
 <footer
@@ -110,11 +111,14 @@
         </div>
 
         <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
-            <p>&copy; {{ $year }} {{ $brandText }} {{ $brandAccent }} - AMC. All rights reserved.</p>
-            <div class="flex gap-6">
-                <a href="{{ url('/privacy') }}" class="hover:text-white transition-colors">Kebijakan Privasi</a>
-                <a href="{{ url('/terms') }}" class="hover:text-white transition-colors">Syarat &amp; Ketentuan</a>
-            </div>
+            <p>{{ $copyright }}</p>
+            @if (! empty($legalLinks))
+                <div class="flex gap-6">
+                    @foreach ($legalLinks as $legal)
+                        <a href="{{ $legal['href'] ?? '#' }}" class="hover:text-white transition-colors">{{ $legal['label'] ?? '' }}</a>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </div>
 </footer>

@@ -127,6 +127,16 @@ class HtmlSanitizer
         self::sanitizeChildren($el);
     }
 
+    /**
+     * Public guard: apakah URL aman dipakai di href/src — menolak skema eksekusi
+     * (javascript:, data:text/html, vbscript:). Dipakai mis. saat menyimpan link
+     * footer yang dikelola admin tapi tampil di halaman publik.
+     */
+    public static function isSafeUrl(?string $value): bool
+    {
+        return ! self::isDangerousUrl('href', $value);
+    }
+
     private static function isDangerousUrl(string $attr, ?string $value): bool
     {
         if (! in_array($attr, ['href', 'src'], true) || $value === null) {

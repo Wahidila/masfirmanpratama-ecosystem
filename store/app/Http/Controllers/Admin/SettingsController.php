@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Settings;
 use App\Services\Shipping\AgenwebsiteClient;
 use App\Services\XSenderService;
+use App\Support\HtmlSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class SettingsController extends Controller
     /**
      * Tab yang diizinkan.
      */
-    protected const ALLOWED_TABS = ['store-info', 'bank-accounts', 'shipping', 'whatsapp'];
+    protected const ALLOWED_TABS = ['store-info', 'bank-accounts', 'shipping', 'whatsapp', 'footer'];
 
     /**
      * Static fallback bila API courier master tidak bisa di-fetch
@@ -90,6 +91,10 @@ class SettingsController extends Controller
 
         if ($tab === 'whatsapp') {
             $viewData['whatsappData'] = $this->getWhatsappData();
+        }
+
+        if ($tab === 'footer') {
+            $viewData['footerData'] = Settings::getFooter();
         }
 
         return view('admin.settings.index', $viewData);
@@ -412,6 +417,89 @@ class SettingsController extends Controller
         return redirect()
             ->route('admin.settings.index', ['tab' => 'whatsapp'])
             ->with('status', 'Pengaturan WhatsApp (XSender) berhasil diperbarui.');
+    }
+
+    /**
+     * Update konten footer storefront (tab footer). Satu form menyimpan semua:
+     * brand/tagline/kontak/copyright (scalar) + socials/links/legal (list).
+     * Href boleh relatif (/produk?...) atau absolut, jadi divalidasi sebagai string.
+     */
+    public function updateFooter(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'brand_text' => ['nullable', 'string', 'max:60'],
+            'brand_accent' => ['nullable', 'string', 'max:60'],
+            'tagline' => ['nullable', 'string', 'max:300'],
+            'address' => ['nullable', 'string', 'max:300'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'copyright' => ['nullable', 'string', 'max:200'],
+            'socials' => ['nullable', 'array'],
+            // Icon dari picker terkurasi (nama Lucide valid) — tolak nama bebas
+            // supaya icon dijamin ter-render di footer storefront.
+            'socials.*.icon' => ['nullable', 'string', 'max:40', 'in:'.implode(',', array_keys(Settings::FOOTER_SOCIAL_ICONS))],
+            'socials.*.href' => ['nullable', 'string', 'max:300'],
+            'socials.*.label' => ['nullable', 'string', 'max:60'],
+            'links' => ['nullable', 'array'],
+            'links.*.group' => ['nullable', 'string', 'max:60'],
+            'links.*.label' => ['nullable', 'string', 'max:80'],
+            'links.*.href' => ['nullable', 'string', 'max:300'],
+            'legal' => ['nullable', 'array'],
+            'legal.*.label' => ['nullable', 'string', 'max:80'],
+            'legal.*.href' => ['nullable', 'string', 'max:300'],
+        ], [
+            'email.email' => 'Format email tidak valid.',
+            'socials.*.icon.in' => 'Icon media sosial tidak dikenal — pilih dari daftar icon yang tersedia.',
+        ]);
+
+        // URL footer tampil di halaman publik → tolak skema eksekusi
+        // (javascript:/data:/vbscript:) yang bisa jadi stored-XSS. Path relatif
+        // & http(s)/mailto/tel tetap boleh.
+        foreach (['socials', 'links', 'legal'] as $section) {
+            foreach ($data[$section] ?? [] as $idx => $row) {
+                if (! empty($row['href']) && ! HtmlSanitizer::isSafeUrl($row['href'])) {
+                    return back()->withInput()->withErrors([
+                        'footer_url' => 'URL "'.$row['href'].'" memakai skema berbahaya (javascript:/data:/vbscript:) dan tidak disimpan. Pakai http(s), mailto:, tel:, atau path relatif (mis. /blog).',
+                    ]);
+                }
+            }
+        }
+
+        foreach (['brand_text', 'brand_accent', 'tagline', 'address', 'phone', 'email', 'copyright'] as $key) {
+            Settings::set('footer.'.$key, $data[$key] ?? '', 'string');
+        }
+
+        // Socials: butuh icon + href; label default dari nama icon.
+        $socials = collect($data['socials'] ?? [])
+            ->filter(fn ($s) => ! empty($s['icon']) && ! empty($s['href']))
+            ->map(fn ($s) => [
+                'icon' => $s['icon'],
+                'href' => $s['href'],
+                'label' => $s['label'] ?: ucfirst($s['icon']),
+            ])
+            ->values()
+            ->all();
+        Settings::set('footer.socials', $socials, 'array');
+
+        // Link kolom: butuh group + label + href.
+        $links = collect($data['links'] ?? [])
+            ->filter(fn ($l) => ! empty($l['group']) && ! empty($l['label']) && ! empty($l['href']))
+            ->map(fn ($l) => ['group' => $l['group'], 'label' => $l['label'], 'href' => $l['href']])
+            ->values()
+            ->all();
+        Settings::set('footer.links', $links, 'array');
+
+        // Legal: butuh label + href.
+        $legal = collect($data['legal'] ?? [])
+            ->filter(fn ($l) => ! empty($l['label']) && ! empty($l['href']))
+            ->map(fn ($l) => ['label' => $l['label'], 'href' => $l['href']])
+            ->values()
+            ->all();
+        Settings::set('footer.legal', $legal, 'array');
+
+        return redirect()
+            ->route('admin.settings.index', ['tab' => 'footer'])
+            ->with('status', 'Footer berhasil diperbarui.');
     }
 
     /**
