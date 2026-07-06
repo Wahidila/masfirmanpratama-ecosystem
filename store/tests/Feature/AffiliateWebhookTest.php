@@ -39,6 +39,7 @@ class AffiliateWebhookTest extends TestCase
         $order = Order::factory()->create([
             'order_number' => 'MFP-20260618-ABC123',
             'customer_name' => 'Budi Santoso',
+            'email' => 'budi@example.com',
             'total' => 4500000,
             'status' => 'paid',
             'ref_code' => 'FIRMAN01',
@@ -100,6 +101,9 @@ class AffiliateWebhookTest extends TestCase
                 return false;
             }
             if ($payload['buyer_name'] !== 'Budi Santoso') {
+                return false;
+            }
+            if ($payload['buyer_email'] !== 'budi@example.com') {
                 return false;
             }
             if ((float) $payload['order_total'] !== 4500000.0) {
@@ -346,6 +350,40 @@ class AffiliateWebhookTest extends TestCase
         $order = Order::first();
         $this->assertNotNull($order);
         $this->assertSame('FORM_CODE', $order->ref_code);
+    }
+
+    public function test_book_checkout_requires_email_when_referral_cookie_present(): void
+    {
+        Product::factory()->create([
+            'slug' => 'buku-mpl',
+            'title' => 'Buku MPL',
+            'price' => 185_000,
+            'status' => 'active',
+            'type' => 'book',
+        ]);
+
+        // Ada referral cookie tapi email dikosongkan → harus ditolak, tidak ada order.
+        // Ini menutup lubang self-referral (affiliator beli buku via kodenya tanpa email).
+        $response = $this->withCookie('referral_code', 'AFFILIATE99')
+            ->post('/checkout', [
+                'customer_name' => 'Budi Test',
+                'customer_email' => null,
+                'customer_phone' => '081234567890',
+                'address_line' => 'Jl. Test No. 1',
+                'address_city' => 'Malang',
+                'address_province' => 'Jawa Timur',
+                'address_postal' => '65111',
+                'shipping_method' => null,
+                'payment_type' => 'lunas',
+                'cart_json' => json_encode([
+                    ['slug' => 'buku-mpl', 'name' => 'Buku MPL', 'price' => 185000, 'qty' => 1],
+                ]),
+                'cart_total' => 185000,
+                'ref_code' => null,
+            ]);
+
+        $response->assertSessionHasErrors('customer_email');
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_course_checkout_captures_referral_code_from_cookie(): void

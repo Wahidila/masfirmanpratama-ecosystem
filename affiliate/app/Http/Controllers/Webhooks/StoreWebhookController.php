@@ -100,6 +100,7 @@ class StoreWebhookController extends Controller
         $storeOrderId = $payload['store_order_id'] ?? null;
         $refCode = $payload['ref_code'] ?? null;
         $buyerName = $payload['buyer_name'] ?? '';
+        $buyerEmail = $payload['buyer_email'] ?? null;
         $orderTotal = (float) ($payload['order_total'] ?? 0);
         $productType = $payload['product_type'] ?? null;
         $orderedAt = $payload['ordered_at'] ?? now()->toIso8601String();
@@ -125,12 +126,40 @@ class StoreWebhookController extends Controller
 
         $affiliator = $referralCode->affiliator;
 
+        // Self-referral guard: affiliator tidak boleh dapat komisi (atau mengerek skor
+        // gamifikasi) dari pembelian dirinya sendiri. Deteksi via email pembeli == email
+        // affiliator (case-insensitive).
+        $isSelfReferral = $buyerEmail !== null
+            && strcasecmp(trim($buyerEmail), trim((string) $affiliator->email)) === 0;
+
+        // Fail-closed: tanpa email pembeli kita TIDAK bisa memastikan pembeli bukan si
+        // affiliator sendiri. Jangan bayar komisi / kerek skor untuk order tak terverifikasi
+        // — cukup catat di webhook_logs untuk ditinjau manual. (Sisi Store mewajibkan email
+        // saat ada referral, jadi order referral yang sah selalu membawa email.)
+        $buyerUnverifiable = trim((string) $buyerEmail) === '';
+
+        if ($isSelfReferral || $buyerUnverifiable) {
+            $webhookLog->update([
+                'status' => 'processed',
+                'error_message' => $isSelfReferral
+                    ? 'Self-referral detected (buyer email matches affiliator), order & commission skipped'
+                    : 'Buyer email missing — cannot verify self-referral, commission withheld',
+            ]);
+
+            return response()->json([
+                'message' => $isSelfReferral
+                    ? 'Self-referral detected, skipped'
+                    : 'Buyer unverifiable, commission withheld',
+            ]);
+        }
+
         // Buat ReferralOrder
         $referralOrder = ReferralOrder::create([
             'referral_code_id' => $referralCode->id,
             'affiliator_id' => $affiliator->id,
             'store_order_id' => $storeOrderId,
             'buyer_name' => $buyerName,
+            'buyer_email' => $buyerEmail,
             'order_total' => $orderTotal,
             'status' => 'paid',
             'ordered_at' => $orderedAt,

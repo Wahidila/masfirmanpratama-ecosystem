@@ -16,6 +16,7 @@ class ReferralOrder extends Model
         'affiliator_id',
         'store_order_id',
         'buyer_name',
+        'buyer_email',
         'order_total',
         'status',
         'ordered_at',

@@ -178,4 +178,6 @@ Route::prefix('admin')->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::post('/webhooks/store', [StoreWebhookController::class, 'handle'])->name('webhooks.store');
+Route::post('/webhooks/store', [StoreWebhookController::class, 'handle'])
+    ->middleware('throttle:60,1')
+    ->name('webhooks.store');

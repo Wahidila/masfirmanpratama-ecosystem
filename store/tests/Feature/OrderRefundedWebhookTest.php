@@ -7,6 +7,7 @@ use App\Listeners\DispatchAffiliateOrderRefunded;
 use App\Models\Admin;
 use App\Models\Order;
 use App\Services\Webhook\AffiliateWebhookClient;
+use Carbon\Carbon;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -135,12 +136,42 @@ class OrderRefundedWebhookTest extends TestCase
 
             $payload = json_decode($body, true);
 
-            return $payload['order_number'] === 'MFP-REFUND-TEST01'
+            // store_order_id HARUS == order_number (kontrak sama dengan order-paid),
+            // supaya receiver bisa menemukan referral_order-nya. Ini regression guard BUG-1.
+            return $payload['store_order_id'] === 'MFP-REFUND-TEST01'
+                && $payload['order_number'] === 'MFP-REFUND-TEST01'
+                && ($payload['event'] ?? null) === 'order-refunded'
                 && $payload['ref_code'] === 'AFF01'
                 && (float) $payload['order_total'] === 2500000.0
-                && isset($payload['refunded_at'])
-                && str_starts_with($payload['idempotency_key'], 'refund-');
+                // Bukan sekadar ada — harus string ISO8601 yang valid.
+                && is_string($payload['refunded_at'] ?? null)
+                && $payload['refunded_at'] !== ''
+                && Carbon::hasFormat($payload['refunded_at'], \DateTimeInterface::ATOM)
+                // idempotency_key deterministik (bukan berbasis time()).
+                && $payload['idempotency_key'] === 'refund-MFP-REFUND-TEST01';
         });
+    }
+
+    public function test_refund_does_not_dispatch_webhook_when_order_has_no_ref_code(): void
+    {
+        Http::fake(['*' => Http::response('', 200)]);
+
+        config([
+            'webhook.affiliate_url' => 'https://affiliate.test/webhook',
+            'webhook.secret' => 'test-secret-key',
+            'webhook.retries' => 1,
+        ]);
+
+        $order = Order::factory()->create([
+            'status' => 'paid',
+            'ref_code' => null,
+        ]);
+
+        $event = new OrderRefunded($order);
+        $listener = app(DispatchAffiliateOrderRefunded::class);
+        $listener->handle($event);
+
+        Http::assertNothingSent();
     }
 
     // ─────────────────────────────────────────────────────────────

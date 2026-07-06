@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Store URL
+    |--------------------------------------------------------------------------
+    |
+    | URL toko utama (Store app). Dipakai ReferralController sebagai target
+    | redirect default saat sebuah referral code tidak punya target_url sendiri.
+    |
+    */
+
+    'store_url' => env('STORE_URL', 'https://masfirmanpratama.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
