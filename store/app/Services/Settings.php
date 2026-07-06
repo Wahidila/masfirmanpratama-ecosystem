@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Settings facade-like service. Read-through cache (5 menit) supaya halaman
@@ -187,6 +188,43 @@ class Settings
             'links' => self::arrayOrDefault('footer.links', self::DEFAULT_FOOTER_LINKS),
             'legal' => self::arrayOrDefault('footer.legal', self::DEFAULT_FOOTER_LEGAL),
         ];
+    }
+
+    /**
+     * Logo branding: path tersimpan + URL siap-pakai untuk header & footer.
+     * Null = belum di-upload (komponen jatuh ke logo teks/icon default).
+     *
+     * @return array{header_logo_path: ?string, footer_logo_path: ?string, header_logo_url: ?string, footer_logo_url: ?string}
+     */
+    public static function getBranding(): array
+    {
+        $headerPath = self::get('branding.header_logo');
+        $footerPath = self::get('branding.footer_logo');
+
+        return [
+            'header_logo_path' => is_string($headerPath) && $headerPath !== '' ? $headerPath : null,
+            'footer_logo_path' => is_string($footerPath) && $footerPath !== '' ? $footerPath : null,
+            'header_logo_url' => self::logoUrl($headerPath),
+            'footer_logo_url' => self::logoUrl($footerPath),
+        ];
+    }
+
+    /** Resolve path logo ke URL publik (http as-is, else Storage disk public). */
+    protected static function logoUrl(mixed $path): ?string
+    {
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        try {
+            return Storage::disk('public')->url($path);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

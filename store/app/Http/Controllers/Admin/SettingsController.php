@@ -10,8 +10,11 @@ use App\Support\HtmlSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -19,7 +22,7 @@ class SettingsController extends Controller
     /**
      * Tab yang diizinkan.
      */
-    protected const ALLOWED_TABS = ['store-info', 'bank-accounts', 'shipping', 'whatsapp', 'footer'];
+    protected const ALLOWED_TABS = ['store-info', 'bank-accounts', 'shipping', 'whatsapp', 'footer', 'logo'];
 
     /**
      * Static fallback bila API courier master tidak bisa di-fetch
@@ -95,6 +98,10 @@ class SettingsController extends Controller
 
         if ($tab === 'footer') {
             $viewData['footerData'] = Settings::getFooter();
+        }
+
+        if ($tab === 'logo') {
+            $viewData['brandingData'] = Settings::getBranding();
         }
 
         return view('admin.settings.index', $viewData);
@@ -500,6 +507,66 @@ class SettingsController extends Controller
         return redirect()
             ->route('admin.settings.index', ['tab' => 'footer'])
             ->with('status', 'Footer berhasil diperbarui.');
+    }
+
+    /**
+     * Update logo header & footer. Tiap slot: upload file baru (ganti + hapus
+     * lama), centang "hapus" (kosongkan), atau biarkan. SVG diizinkan (logo
+     * sering vektor) — karena itu pakai mimes, bukan rule `image` yg tolak SVG.
+     */
+    public function updateLogo(Request $request): RedirectResponse
+    {
+        // Hanya raster (png/jpg/webp). SVG SENGAJA tak diizinkan: file di disk
+        // publik disajikan di /storage/... same-origin, dan SVG yang dibuka
+        // langsung (bukan via <img>) mengeksekusi <script> di dalamnya =
+        // stored-XSS. `image` rule memverifikasi konten benar-benar gambar.
+        $request->validate([
+            'header_logo' => ['nullable', 'file', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'footer_logo' => ['nullable', 'file', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'remove_header_logo' => ['nullable', 'boolean'],
+            'remove_footer_logo' => ['nullable', 'boolean'],
+        ], [
+            'header_logo.mimes' => 'Logo header harus PNG, JPG, atau WebP.',
+            'footer_logo.mimes' => 'Logo footer harus PNG, JPG, atau WebP.',
+            'header_logo.image' => 'Logo header harus berupa gambar (PNG, JPG, WebP).',
+            'footer_logo.image' => 'Logo footer harus berupa gambar (PNG, JPG, WebP).',
+            'header_logo.max' => 'Ukuran logo header maksimal 2 MB.',
+            'footer_logo.max' => 'Ukuran logo footer maksimal 2 MB.',
+        ]);
+
+        foreach (['header' => 'header_logo', 'footer' => 'footer_logo'] as $slot => $field) {
+            $key = 'branding.'.$field;
+            $current = Settings::get($key);
+
+            if ($request->hasFile($field)) {
+                $this->deleteLogo($current);
+                Settings::set($key, $this->storeLogo($request->file($field)), 'string');
+            } elseif ($request->boolean('remove_'.$field)) {
+                $this->deleteLogo($current);
+                Settings::set($key, '', 'string');
+            }
+        }
+
+        return redirect()
+            ->route('admin.settings.index', ['tab' => 'logo'])
+            ->with('status', 'Logo berhasil diperbarui.');
+    }
+
+    /** Simpan upload logo ke disk public folder branding/. */
+    protected function storeLogo(UploadedFile $file): string
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'png');
+        $filename = now()->format('YmdHis').'-'.Str::random(6).'.'.$ext;
+
+        return $file->storeAs('branding', $filename, 'public');
+    }
+
+    /** Hapus file logo lama HANYA bila milik kita (prefix branding/). */
+    protected function deleteLogo(mixed $path): void
+    {
+        if (is_string($path) && str_starts_with($path, 'branding/') && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     /**

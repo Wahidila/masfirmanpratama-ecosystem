@@ -291,6 +291,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('settings.whatsapp.test');
         Route::put('settings/footer', [SettingsController::class, 'updateFooter'])
             ->name('settings.footer.update');
+        Route::post('settings/logo', [SettingsController::class, 'updateLogo'])
+            ->name('settings.logo.update');
 
         Route::post('installment-schemes/{installment_scheme}/toggle',
             [InstallmentSchemeController::class, 'toggle'])

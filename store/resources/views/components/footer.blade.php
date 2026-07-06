@@ -35,6 +35,9 @@
 
     $legalLinks = $footer['legal'];
     $copyright = str_replace('{year}', (string) now()->year, (string) $footer['copyright']);
+
+    // Logo footer dinamis (tab Settings → Logo); fallback ikon+teks brand.
+    $footerLogo = \App\Services\Settings::getBranding()['footer_logo_url'];
 @endphp
 
 <footer
@@ -47,12 +50,16 @@
             {{-- Brand --}}
             <div>
                 <div class="flex items-center gap-2 mb-6">
-                    <span class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center text-white">
-                        <i data-lucide="brain-circuit" class="w-5 h-5"></i>
-                    </span>
-                    <span class="font-bold text-xl text-white">
-                        {{ $brandText }}<span class="text-primary-500">{{ $brandAccent }}</span>
-                    </span>
+                    @if ($footerLogo)
+                        <img src="{{ $footerLogo }}" alt="{{ $brandText }} {{ $brandAccent }}" class="h-9 w-auto max-w-[200px] object-contain">
+                    @else
+                        <span class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center text-white">
+                            <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+                        </span>
+                        <span class="font-bold text-xl text-white">
+                            {{ $brandText }}<span class="text-primary-500">{{ $brandAccent }}</span>
+                        </span>
+                    @endif
                 </div>
                 <p class="text-sm mb-6 text-slate-300 leading-relaxed">{{ $tagline }}</p>
 
