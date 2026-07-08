@@ -188,6 +188,7 @@ class SettingsController extends Controller
             'bank_accounts.*.number' => ['nullable', 'string', 'max:40'],
             'bank_accounts.*.holder' => ['nullable', 'string', 'max:120'],
             'bank_accounts.*.logo_color' => ['nullable', 'string', 'max:30'],
+            'bank_accounts.*.logo' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('bank_logos', [])))],
             'bank_accounts.*.primary' => ['nullable'],
         ]);
 
@@ -211,6 +212,7 @@ class SettingsController extends Controller
                 'bank' => $acc['bank'],
                 'number' => $acc['number'],
                 'holder' => $acc['holder'] ?? '',
+                'logo' => $acc['logo'] ?? '',
                 'logo_color' => $acc['logo_color'] ?? 'slate',
                 'primary' => ! empty($acc['primary']),
             ])

@@ -122,6 +122,32 @@ class SettingsTest extends TestCase
         $this->assertFalse($stored[1]['primary']);
     }
 
+    public function test_update_bank_accounts_persists_logo_slug(): void
+    {
+        $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.settings.bank-accounts.update'), [
+                'bank_accounts' => [
+                    ['bank' => 'BCA', 'number' => '1234-5678', 'holder' => 'PT MFP', 'logo' => 'bca'],
+                ],
+            ])
+            ->assertRedirect(route('admin.settings.index', ['tab' => 'bank-accounts']));
+
+        $stored = Setting::getValue('bank_accounts');
+        $this->assertSame('bca', $stored[0]['logo']);
+    }
+
+    public function test_update_bank_accounts_rejects_unknown_logo_slug(): void
+    {
+        $this->actingAs($this->admin, 'admin')
+            ->from(route('admin.settings.index', ['tab' => 'bank-accounts']))
+            ->put(route('admin.settings.bank-accounts.update'), [
+                'bank_accounts' => [
+                    ['bank' => 'BCA', 'number' => '1234-5678', 'logo' => 'not-a-bank'],
+                ],
+            ])
+            ->assertSessionHasErrors('bank_accounts.0.logo');
+    }
+
     public function test_update_bank_accounts_filters_empty_rows(): void
     {
         $response = $this->actingAs($this->admin, 'admin')
