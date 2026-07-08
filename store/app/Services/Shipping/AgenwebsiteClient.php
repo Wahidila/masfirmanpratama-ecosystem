@@ -185,19 +185,33 @@ class AgenwebsiteClient
 
         $cacheKey = 'shipping.data.'.md5(strtolower($keyword));
 
-        return Cache::remember($cacheKey, $this->cfg['cache_master_ttl'], function () use ($keyword) {
-            $result = $this->post('shipping/data', ['keyword' => $keyword]);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
 
-            if ($result['status'] !== 'success' || ! is_array($result['result'])) {
-                return [];
-            }
+        $result = $this->post('shipping/data', ['keyword' => $keyword]);
 
-            return array_values(array_map(fn ($r) => [
-                'province' => (string) ($r['province'] ?? ''),
-                'city' => (string) ($r['city'] ?? ''),
-                'district' => (string) ($r['district'] ?? ''),
-            ], $result['result']));
-        });
+        // Transient failure / error response: do NOT cache, so a momentary blip
+        // (API down, license not yet set, rate limit) never poisons the lookup.
+        if ($result['status'] !== 'success' || ! is_array($result['result'])) {
+            return [];
+        }
+
+        $data = array_values(array_map(fn ($r) => [
+            'province' => (string) ($r['province'] ?? ''),
+            'city' => (string) ($r['city'] ?? ''),
+            'district' => (string) ($r['district'] ?? ''),
+        ], $result['result']));
+
+        // Only cache non-empty results. An empty match set is cheap to re-query and
+        // must never be pinned for cache_master_ttl (24h) — that was the "kecamatan
+        // tidak muncul padahal ada" bug.
+        if ($data !== []) {
+            Cache::put($cacheKey, $data, $this->cfg['cache_master_ttl']);
+        }
+
+        return $data;
     }
 
     /**
