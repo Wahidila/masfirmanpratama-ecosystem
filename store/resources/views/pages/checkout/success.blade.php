@@ -16,16 +16,6 @@
     $isInstallment = $paymentType === 'cicilan';
     $waText = rawurlencode("Halo Admin, saya baru saja checkout order {$order}. Mau konfirmasi pembayaran.");
     $waLink = "https://wa.me/{$waAdmin['number']}?text={$waText}";
-
-    // Color palette per bank logo (Tailwind class names dipakai sebagai
-    // string statis supaya purge tetap bisa pickup).
-    $logoPalette = [
-        'sky' => 'bg-sky-50 text-sky-700 ring-sky-200',
-        'amber' => 'bg-amber-50 text-amber-700 ring-amber-200',
-        'emerald' => 'bg-secondary-50 text-secondary-700 ring-secondary-200',
-        'rose' => 'bg-rose-50 text-rose-700 ring-rose-200',
-        'indigo' => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-    ];
 @endphp
 
 <x-layouts.store
@@ -212,18 +202,12 @@
 
             <ul class="mt-6 grid gap-4 sm:grid-cols-2" role="list">
                 @foreach ($bankAccounts as $idx => $bank)
-                    @php
-                        $colorKey = $bank['logo_color'] ?? 'indigo';
-                        $logoClass = $logoPalette[$colorKey] ?? $logoPalette['indigo'];
-                    @endphp
                     <li
                         class="rounded-2xl border border-slate-100 bg-white/90 p-5 transition hover:border-primary-200 hover:shadow-md"
                         data-testid="bank-account"
                     >
                         <div class="flex items-center gap-3">
-                            <span class="inline-flex h-12 w-16 items-center justify-center rounded-xl text-xs font-extrabold uppercase tracking-wider ring-1 {{ $logoClass }}">
-                                {{ $bank['bank'] }}
-                            </span>
+                            <x-bank-logo :bank="$bank" size="lg" />
                             <div class="min-w-0">
                                 <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Bank {{ $bank['bank'] }}</p>
                                 <p class="text-sm font-semibold text-slate-900">a.n. {{ $bank['holder'] }}</p>

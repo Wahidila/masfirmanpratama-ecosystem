@@ -16,14 +16,6 @@
     $waText = rawurlencode("Halo Admin, saya baru daftar kelas {$course->title} (order {$order->order_number}). Mau konfirmasi pembayaran.");
     $waLink = "https://wa.me/{$waAdmin['number']}?text={$waText}";
     $imageUrl = $course->image_path ? asset($course->image_path) : null;
-
-    $logoPalette = [
-        'sky' => 'bg-sky-50 text-sky-700 ring-sky-200',
-        'amber' => 'bg-amber-50 text-amber-700 ring-amber-200',
-        'emerald' => 'bg-secondary-50 text-secondary-700 ring-secondary-200',
-        'rose' => 'bg-rose-50 text-rose-700 ring-rose-200',
-        'indigo' => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-    ];
 @endphp
 
 <x-layouts.store
@@ -162,10 +154,9 @@
 
                 <ul class="mt-5 grid gap-3 sm:grid-cols-2" role="list">
                     @foreach ($bankAccounts as $idx => $bank)
-                        @php $logoClass = $logoPalette[$bank['logo_color'] ?? 'indigo'] ?? $logoPalette['indigo']; @endphp
                         <li class="rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-primary-200 hover:shadow-md" data-testid="bank-account">
                             <div class="flex items-center gap-3">
-                                <span class="inline-flex h-11 w-14 items-center justify-center rounded-xl text-xs font-extrabold uppercase tracking-wider ring-1 {{ $logoClass }}">{{ $bank['bank'] }}</span>
+                                <x-bank-logo :bank="$bank" size="sm" />
                                 <div class="min-w-0">
                                     <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Bank {{ $bank['bank'] }}</p>
                                     <p class="text-sm font-semibold text-slate-900 truncate">a.n. {{ $bank['holder'] }}</p>
