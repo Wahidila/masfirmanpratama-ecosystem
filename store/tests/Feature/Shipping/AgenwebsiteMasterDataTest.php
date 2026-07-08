@@ -131,4 +131,69 @@ class AgenwebsiteMasterDataTest extends TestCase
         $ids = array_column($result, 'courier_id');
         $this->assertContains('jne_reg', $ids);
     }
+
+    public function test_search_data_returns_parsed_results_from_api(): void
+    {
+        Http::fake([
+            '*/shipping/data' => Http::response([
+                'message' => 'Success',
+                'data' => [
+                    ['province' => 'Jawa Timur', 'city' => 'Malang', 'district' => 'Kalipare'],
+                ],
+            ], 200),
+        ]);
+
+        $result = app(AgenwebsiteClient::class)->searchData('Kalipare');
+
+        $this->assertCount(1, $result);
+        $this->assertSame(
+            ['province' => 'Jawa Timur', 'city' => 'Malang', 'district' => 'Kalipare'],
+            $result[0],
+        );
+    }
+
+    public function test_search_data_caches_non_empty_results(): void
+    {
+        Http::fake([
+            '*/shipping/data' => Http::response([
+                'message' => 'Success',
+                'data' => [
+                    ['province' => 'Jawa Timur', 'city' => 'Malang', 'district' => 'Kalipare'],
+                ],
+            ], 200),
+        ]);
+
+        $client = app(AgenwebsiteClient::class);
+        $client->searchData('Kalipare');
+        $client->searchData('Kalipare');
+
+        Http::assertSentCount(1);
+    }
+
+    /**
+     * Regression: an empty / failed response must NOT be cached, otherwise a
+     * transient blip pins "no results" for cache_master_ttl (24h) even after the
+     * API recovers — the "kecamatan tidak muncul padahal ada" bug.
+     */
+    public function test_search_data_does_not_cache_empty_results(): void
+    {
+        Http::fake([
+            '*/shipping/data' => Http::sequence()
+                ->push(['message' => 'Success', 'data' => []], 200)
+                ->push(['message' => 'Success', 'data' => [
+                    ['province' => 'Jawa Timur', 'city' => 'Malang', 'district' => 'Kalipare'],
+                ]], 200),
+        ]);
+
+        $client = app(AgenwebsiteClient::class);
+
+        $this->assertSame([], $client->searchData('Kalipare'));
+
+        $second = $client->searchData('Kalipare');
+        $this->assertCount(1, $second);
+        $this->assertSame('Kalipare', $second[0]['district']);
+
+        // Two real API calls => the empty first response was never cached.
+        Http::assertSentCount(2);
+    }
 }
