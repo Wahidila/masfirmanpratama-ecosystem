@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->validateCsrfTokens(except: ['webhooks/*']);
 
+        // Cookie referral dibaca lintas-app oleh Store (APP_KEY berbeda). Jangan
+        // enkripsi supaya Store bisa membacanya sebagai plaintext. Kode referral
+        // bukan rahasia (sudah ada di URL /ref/{code}). HARUS sama persis dengan
+        // except di app Store.
+        $middleware->encryptCookies(except: ['referral_code']);
+
         // App jalan di belakang TLS-proxy (domain .test HTTPS → 127.0.0.1 HTTP).
         // Trust proxy + honor X-Forwarded-Proto supaya URL/redirect yang
         // di-generate ikut skema https, bukan http.

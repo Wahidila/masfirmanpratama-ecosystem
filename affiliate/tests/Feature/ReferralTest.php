@@ -133,7 +133,9 @@ class ReferralTest extends TestCase
 
         $response = $this->get('/ref/TRACK001');
         $response->assertRedirect();
-        $response->assertCookie('referral_code', 'TRACK001');
+        // Cookie sengaja TIDAK dienkripsi (except di bootstrap/app.php) supaya bisa
+        // dibaca app Store yang APP_KEY-nya berbeda → assert sebagai plain cookie.
+        $response->assertPlainCookie('referral_code', 'TRACK001');
 
         $this->assertDatabaseHas('referral_clicks', [
             'referral_code_id' => $referral->id,

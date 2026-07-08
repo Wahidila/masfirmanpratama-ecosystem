@@ -370,8 +370,13 @@
                                 </div>
                             </template>
 
-                            {{-- Hidden select for backward compat (keeps id for tests) --}}
-                            <select id="shipping_method" name="shipping_method" x-model="form.shipping_method" class="hidden" aria-hidden="true">
+                            {{-- Hidden select for backward compat (keeps id for tests).
+                                 SENGAJA tanpa name= : radio di atas sudah memakai
+                                 name="shipping_method". Kalau select ini juga punya name,
+                                 nilainya (kosong, karena tak ada opsi yang match) menimpa
+                                 pilihan radio saat submit (last-wins) → server terima
+                                 shipping_method kosong → ongkir 0 → total mismatch. --}}
+                            <select id="shipping_method" x-model="form.shipping_method" class="hidden" aria-hidden="true">
                                 <option value="">Pilih</option>
                             </select>
 
