@@ -296,7 +296,7 @@ class AffiliateWebhookTest extends TestCase
             'type' => 'book',
         ]);
 
-        $response = $this->withCookie('referral_code', 'AFFILIATE99')
+        $response = $this->withUnencryptedCookie('referral_code', 'AFFILIATE99')
             ->post('/checkout', [
                 'customer_name' => 'Budi Test',
                 'customer_email' => 'budi@test.com',
@@ -329,7 +329,7 @@ class AffiliateWebhookTest extends TestCase
             'type' => 'book',
         ]);
 
-        $response = $this->withCookie('referral_code', 'COOKIE_CODE')
+        $response = $this->withUnencryptedCookie('referral_code', 'COOKIE_CODE')
             ->post('/checkout', [
                 'customer_name' => 'Budi Test',
                 'customer_email' => 'budi@test.com',
@@ -364,7 +364,7 @@ class AffiliateWebhookTest extends TestCase
 
         // Ada referral cookie tapi email dikosongkan → harus ditolak, tidak ada order.
         // Ini menutup lubang self-referral (affiliator beli buku via kodenya tanpa email).
-        $response = $this->withCookie('referral_code', 'AFFILIATE99')
+        $response = $this->withUnencryptedCookie('referral_code', 'AFFILIATE99')
             ->post('/checkout', [
                 'customer_name' => 'Budi Test',
                 'customer_email' => null,
@@ -394,7 +394,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 4500000,
         ]);
 
-        $response = $this->withCookie('referral_code', 'REFCOURSE01')
+        $response = $this->withUnencryptedCookie('referral_code', 'REFCOURSE01')
             ->post("/kelas/{$course->slug}/checkout", [
                 'customer_name' => 'Siti Test',
                 'customer_email' => 'siti@test.com',
@@ -417,7 +417,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 4500000,
         ]);
 
-        $response = $this->withCookie('referral_code', 'COOKIE_REF')
+        $response = $this->withUnencryptedCookie('referral_code', 'COOKIE_REF')
             ->post("/kelas/{$course->slug}/checkout", [
                 'customer_name' => 'Andi Test',
                 'customer_email' => 'andi@test.com',
