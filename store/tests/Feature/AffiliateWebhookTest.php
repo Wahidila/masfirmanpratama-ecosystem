@@ -39,6 +39,7 @@ class AffiliateWebhookTest extends TestCase
         $order = Order::factory()->create([
             'order_number' => 'MFP-20260618-ABC123',
             'customer_name' => 'Budi Santoso',
+            'email' => 'budi.buyer@example.com',
             'total' => 4500000,
             'status' => 'paid',
             'ref_code' => 'FIRMAN01',
@@ -100,6 +101,10 @@ class AffiliateWebhookTest extends TestCase
                 return false;
             }
             if ($payload['buyer_name'] !== 'Budi Santoso') {
+                return false;
+            }
+            // buyer_email wajib ada — affiliate menahan komisi kalau kosong.
+            if (($payload['buyer_email'] ?? null) !== 'budi.buyer@example.com') {
                 return false;
             }
             if ((float) $payload['order_total'] !== 4500000.0) {
@@ -293,7 +298,7 @@ class AffiliateWebhookTest extends TestCase
             'is_shippable' => false,
         ]);
 
-        $response = $this->withCookie('referral_code', 'AFFILIATE99')
+        $response = $this->withUnencryptedCookie('referral_code', 'AFFILIATE99')
             ->post('/checkout', [
                 'customer_name' => 'Budi Test',
                 'customer_email' => 'budi@test.com',
@@ -327,7 +332,7 @@ class AffiliateWebhookTest extends TestCase
             'is_shippable' => false,
         ]);
 
-        $response = $this->withCookie('referral_code', 'COOKIE_CODE')
+        $response = $this->withUnencryptedCookie('referral_code', 'COOKIE_CODE')
             ->post('/checkout', [
                 'customer_name' => 'Budi Test',
                 'customer_email' => 'budi@test.com',
@@ -358,7 +363,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 4500000,
         ]);
 
-        $response = $this->withCookie('referral_code', 'REFCOURSE01')
+        $response = $this->withUnencryptedCookie('referral_code', 'REFCOURSE01')
             ->post("/kelas/{$course->slug}/checkout", [
                 'customer_name' => 'Siti Test',
                 'customer_email' => 'siti@test.com',
@@ -381,7 +386,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 4500000,
         ]);
 
-        $response = $this->withCookie('referral_code', 'COOKIE_REF')
+        $response = $this->withUnencryptedCookie('referral_code', 'COOKIE_REF')
             ->post("/kelas/{$course->slug}/checkout", [
                 'customer_name' => 'Andi Test',
                 'customer_email' => 'andi@test.com',
