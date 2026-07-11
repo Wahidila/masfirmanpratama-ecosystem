@@ -22,6 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // signature in header, no session cookie or CSRF token.
         $middleware->validateCsrfTokens(except: ['webhooks/agenwebsite/*']);
 
+        // Cookie 'referral_code' di-set PLAINTEXT oleh app Affiliate (APP_KEY
+        // berbeda) di domain parent .masfirmanpratama.id. Jangan enkripsi di sini
+        // juga — kalau tidak, Store gagal mendekripsi cookie itu → Cookie::get(
+        // 'referral_code') = null → ref_code order kosong → webhook order-paid
+        // tak pernah terkirim → komisi affiliate hilang. WAJIB match app Affiliate.
+        $middleware->encryptCookies(except: ['referral_code']);
+
         // Untuk guard 'admin', redirect unauthenticated ke /admin/login
         // (default Laravel pakai route('login') yang tidak terdefinisi di app ini).
         $middleware->redirectGuestsTo(function ($request) {

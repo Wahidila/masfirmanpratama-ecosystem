@@ -213,6 +213,21 @@ class CheckoutStoreTest extends TestCase
         $this->assertSame('AFF-PURNOMO-2026', $order->ref_code);
     }
 
+    /**
+     * Regression: Affiliate men-set cookie 'referral_code' PLAINTEXT (APP_KEY beda,
+     * domain parent). Store harus meng-except cookie itu dari enkripsi, kalau tidak
+     * Cookie::get('referral_code') null → ref_code kosong → webhook order-paid tak
+     * terkirim → komisi tidak terhitung.
+     */
+    public function test_ref_code_read_from_unencrypted_referral_cookie(): void
+    {
+        $this->withUnencryptedCookie('referral_code', 'HUQJUMKG')
+            ->post('/checkout', $this->validPayload(['ref_code' => null]));
+
+        $order = Order::first();
+        $this->assertSame('HUQJUMKG', $order->ref_code);
+    }
+
     public function test_checkout_to_success_to_upload_flow_end_to_end(): void
     {
         // POST /checkout → redirect ke success page.
