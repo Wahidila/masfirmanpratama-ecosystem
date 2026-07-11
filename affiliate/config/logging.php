@@ -65,6 +65,16 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Heartbeat eksekusi cron/scheduler. Level info fixed (bukan LOG_LEVEL)
+        // supaya tiap run tercatat walau LOG_LEVEL global = warning.
+        'cron' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/cron.log'),
+            'level' => 'info',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
