@@ -7,6 +7,7 @@ use App\Models\AffiliateEventReward;
 use App\Services\Gamification\EventScoringService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Finalisasi event yang sudah melewati end_date.
@@ -83,6 +84,11 @@ class FinalizeEvents extends Command
         }
 
         $this->info("Berhasil finalisasi {$totalFinalized} event, {$totalRewardsGranted} reward diberikan.");
+
+        Log::channel('cron')->info('events:finalize selesai', [
+            'events_finalized' => $totalFinalized,
+            'rewards_granted' => $totalRewardsGranted,
+        ]);
 
         return self::SUCCESS;
     }

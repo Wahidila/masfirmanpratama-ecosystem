@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Commission;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Release komisi yang sudah melewati cooling period.
@@ -35,6 +36,8 @@ class ReleaseCommissions extends Command
             ->update(['status' => 'available']);
 
         $this->info("Berhasil release {$released} komisi dari cooling ke available.");
+
+        Log::channel('cron')->info('commissions:release selesai', ['released' => $released]);
 
         return self::SUCCESS;
     }
