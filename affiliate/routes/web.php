@@ -18,6 +18,7 @@ use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferralController;
+use App\Http\Controllers\Webhooks\ReferralInfoController;
 use App\Http\Controllers\Webhooks\StoreWebhookController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Middleware\AdminAuthenticate;
@@ -32,6 +33,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/ref/{code}', [ReferralController::class, 'track'])->name('referral.track');
+
+// Lookup nama affiliator dari kode referral (server-to-server, dipanggil Store).
+// Diproteksi HMAC di controller. Throttle untuk cegah enumerasi.
+Route::get('/referral-info/{code}', [ReferralInfoController::class, 'show'])
+    ->middleware('throttle:120,1')
+    ->name('referral.info');
 
 // Living style guide — hanya di environment non-produksi.
 if (! app()->environment('production')) {
