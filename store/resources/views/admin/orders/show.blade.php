@@ -473,8 +473,16 @@
 
                     @if ($order->ref_code)
                         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                            <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Kode Referral</dt>
-                            <dd class="mt-0.5 font-mono text-gray-700 dark:text-gray-300">{{ $order->ref_code }}</dd>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Referral / Affiliator</dt>
+                            <dd class="mt-0.5 text-gray-700 dark:text-gray-300">
+                                @if (! empty($affiliatorName ?? null))
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $affiliatorName }}</span>
+                                    <span class="font-mono text-xs text-gray-500 dark:text-gray-400">({{ $order->ref_code }})</span>
+                                @else
+                                    <span class="font-mono">{{ $order->ref_code }}</span>
+                                    <span class="text-xs text-gray-400 dark:text-gray-500">— nama affiliator tak tersedia</span>
+                                @endif
+                            </dd>
                         </div>
                     @endif
                 @endif
