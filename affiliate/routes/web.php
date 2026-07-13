@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\CronTriggerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\LandingController;
@@ -39,6 +40,12 @@ Route::get('/ref/{code}', [ReferralController::class, 'track'])->name('referral.
 Route::get('/referral-info/{code}', [ReferralInfoController::class, 'show'])
     ->middleware('throttle:120,1')
     ->name('referral.info');
+
+// Trigger scheduler via HTTP (pengganti cron Hostinger yang tidak jalan).
+// Diproteksi token di controller (whitelist command). Dipicu GitHub Actions.
+Route::post('/cron/run', CronTriggerController::class)
+    ->middleware('throttle:12,1')
+    ->name('cron.run');
 
 // Living style guide — hanya di environment non-produksi.
 if (! app()->environment('production')) {

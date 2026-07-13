@@ -1,0 +1,28 @@
+name: Affiliate scheduler (pengganti cron)
+
+# Cron daemon Hostinger tidak menjalankan cron jobs akun ini, jadi scheduler
+# affiliate (commissions:release + events:finalize — keduanya idempotent)
+# dipicu via HTTP dari GitHub Actions terjadwal.
+#
+# Endpoint: POST https://affiliate.masfirmanpratama.id/cron/run
+# Auth: header X-Cron-Token = secret CRON_TRIGGER_TOKEN (GitHub repo secret).
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # ~tiap 30 menit (GitHub bisa telat beberapa menit — tidak masalah, cooling 7 hari)
+  workflow_dispatch: {}       # bisa dijalankan manual dari tab Actions
+
+# Cegah tumpang tindih kalau satu run kelamaan.
+concurrency:
+  group: affiliate-scheduler
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger affiliate scheduler
+        run: |
+          curl -fsS --max-time 30 -X POST \
+            -H "X-Cron-Token: ${{ secrets.CRON_TRIGGER_TOKEN }}" \
+            https://affiliate.masfirmanpratama.id/cron/run

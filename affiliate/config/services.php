@@ -49,4 +49,19 @@ return [
         'secret' => env('STORE_WEBHOOK_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cron Trigger (HTTP)
+    |--------------------------------------------------------------------------
+    |
+    | Token untuk memicu scheduler via HTTP, karena cron daemon Hostinger tidak
+    | berjalan. Dipanggil oleh GitHub Actions terjadwal. Lihat CronTriggerController
+    | — hanya menjalankan whitelist command, bukan command sembarang.
+    |
+    */
+
+    'cron_trigger' => [
+        'token' => env('CRON_TRIGGER_TOKEN'),
+    ],
+
 ];

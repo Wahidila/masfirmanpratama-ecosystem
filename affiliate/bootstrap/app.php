@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->validateCsrfTokens(except: ['webhooks/*']);
+        $middleware->validateCsrfTokens(except: ['webhooks/*', 'cron/*']);
 
         // Cookie referral dibaca lintas-app oleh Store (APP_KEY berbeda). Jangan
         // enkripsi supaya Store bisa membacanya sebagai plaintext. Kode referral
