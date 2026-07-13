@@ -14,6 +14,7 @@ use App\Models\OrderPayment;
 use App\Services\Installment\InstallmentReminder;
 use App\Services\Settings;
 use App\Services\Shipping\AgenwebsiteClient;
+use App\Services\Webhook\AffiliateLookupClient;
 use App\Services\WhatsappNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -120,7 +121,7 @@ class OrderController extends Controller
     /**
      * Show order detail with items, payments, customer info.
      */
-    public function show(Order $order, InstallmentReminder $reminder): View
+    public function show(Order $order, InstallmentReminder $reminder, AffiliateLookupClient $affiliateLookup): View
     {
         $order->load([
             'items' => fn ($q) => $q->orderBy('id'),
@@ -156,8 +157,14 @@ class OrderController extends Controller
             ];
         }
 
+        // Nama affiliator yang mereferralkan (lookup ke app Affiliate, di-cache).
+        $affiliatorName = $order->ref_code
+            ? $affiliateLookup->affiliatorName($order->ref_code)
+            : null;
+
         return view('admin.orders.show', [
             'order' => $order,
+            'affiliatorName' => $affiliatorName,
             'totalPaid' => $totalPaid,
             'totalPending' => $totalPending,
             'totalRejected' => $totalRejected,
