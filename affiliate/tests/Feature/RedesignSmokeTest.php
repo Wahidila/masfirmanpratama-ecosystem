@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Affiliator;
 use App\Models\AffiliateEvent;
+use App\Models\Affiliator;
 use App\Models\ReferralCode;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;

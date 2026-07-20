@@ -15,7 +15,10 @@ class ProfileController extends Controller
         $affiliator = Auth::guard('affiliator')->user();
         $affiliator->load('type');
 
-        return view('profile.edit', compact('affiliator'));
+        return view('profile.edit', [
+            'affiliator' => $affiliator,
+            'payoutAccountCount' => $affiliator->payoutAccounts()->count(),
+        ]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -43,29 +46,5 @@ class ProfileController extends Controller
 
         return redirect()->route('profile.edit')
             ->with('success', 'Profil berhasil diperbarui.');
-    }
-
-    public function updateBank(Request $request): RedirectResponse
-    {
-        $affiliator = Auth::guard('affiliator')->user();
-
-        $request->validate([
-            'bank_name' => ['required', 'string', 'max:100'],
-            'bank_account_number' => ['required', 'string', 'max:50'],
-            'bank_account_name' => ['required', 'string', 'max:100'],
-        ], [
-            'bank_name.required' => 'Nama bank wajib diisi.',
-            'bank_account_number.required' => 'Nomor rekening wajib diisi.',
-            'bank_account_name.required' => 'Nama pemilik rekening wajib diisi.',
-        ]);
-
-        $affiliator->update([
-            'bank_name' => $request->bank_name,
-            'bank_account_number' => $request->bank_account_number,
-            'bank_account_name' => $request->bank_account_name,
-        ]);
-
-        return redirect()->route('profile.edit')
-            ->with('success', 'Informasi bank berhasil diperbarui.');
     }
 }

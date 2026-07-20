@@ -14,13 +14,19 @@
         </x-empty-state>
     </x-card>
 @else
-    <x-table :heads="['Tanggal', 'Metode', 'Rekening', 'Jumlah', 'Status']">
+    <x-table :heads="['Tanggal', 'Metode', 'Rekening', 'Jumlah', 'Diterima', 'Status']">
         @foreach ($withdrawals as $withdrawal)
             <tr class="hover:bg-slate-50/70 transition-colors">
                 <td class="px-5 py-3.5 text-slate-600 whitespace-nowrap">{{ $withdrawal->created_at->format('d M Y H:i') }}</td>
-                <td class="px-5 py-3.5 text-slate-700">{{ $withdrawal->method->name }}</td>
+                <td class="px-5 py-3.5 text-slate-700">{{ $withdrawal->methodName() }}</td>
                 <td class="px-5 py-3.5 text-slate-600">{{ $withdrawal->account_name }} · {{ $withdrawal->account_number }}</td>
                 <td class="px-5 py-3.5 font-semibold text-slate-800 whitespace-nowrap">Rp {{ number_format($withdrawal->amount, 0, ',', '.') }}</td>
+                <td class="px-5 py-3.5 text-slate-600 whitespace-nowrap">
+                    Rp {{ number_format($withdrawal->net_amount, 0, ',', '.') }}
+                    @if ($withdrawal->fee > 0)
+                        <span class="block text-xs text-slate-400">biaya Rp {{ number_format($withdrawal->fee, 0, ',', '.') }}</span>
+                    @endif
+                </td>
                 <td class="px-5 py-3.5"><x-status-badge :status="$withdrawal->status" /></td>
             </tr>
         @endforeach

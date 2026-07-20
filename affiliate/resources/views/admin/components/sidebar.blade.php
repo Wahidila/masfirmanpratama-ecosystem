@@ -15,6 +15,7 @@
 
     <div class="space-y-1">
         <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Sistem</p>
+        <x-nav-link :href="route('admin.withdrawal-methods.index')" :active="request()->routeIs('admin.withdrawal-methods.*')" icon="landmark">Metode Penarikan</x-nav-link>
         <x-nav-link :href="route('admin.commissions.settings')" :active="request()->routeIs('admin.commissions.settings')" icon="settings">Pengaturan Komisi</x-nav-link>
     </div>
 </nav>

@@ -21,8 +21,11 @@ class WithdrawalMethodSeeder extends Seeder
             ['name' => 'ShopeePay', 'type' => 'e_wallet', 'min_withdrawal' => 25000],
         ];
 
+        // firstOrCreate, bukan updateOrCreate: minimum dan biaya tiap metode kini
+        // diatur admin lewat panel. updateOrCreate akan mengembalikannya ke angka
+        // di bawah setiap kali seeder ikut jalan setelah migrasi.
         foreach ($methods as $method) {
-            WithdrawalMethod::updateOrCreate(
+            WithdrawalMethod::firstOrCreate(
                 ['name' => $method['name']],
                 $method
             );

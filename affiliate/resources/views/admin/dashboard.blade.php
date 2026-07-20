@@ -44,7 +44,7 @@
                 <div class="flex items-center justify-between gap-3 px-5 py-3.5">
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-slate-800 truncate">{{ $wd->affiliator->name }}</p>
-                        <p class="text-xs text-slate-400 truncate">{{ $wd->method->name }} · {{ $wd->account_number }}</p>
+                        <p class="text-xs text-slate-400 truncate">{{ $wd->methodName() }} · {{ $wd->account_number }}</p>
                     </div>
                     <p class="text-sm font-bold text-slate-800 shrink-0">Rp {{ number_format($wd->amount, 0, ',', '.') }}</p>
                 </div>

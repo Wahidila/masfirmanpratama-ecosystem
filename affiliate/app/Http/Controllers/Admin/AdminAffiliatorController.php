@@ -34,7 +34,7 @@ class AdminAffiliatorController extends Controller
 
     public function show(Affiliator $affiliator): View
     {
-        $affiliator->load(['type', 'referralCodes', 'commissions', 'withdrawals']);
+        $affiliator->load(['type', 'referralCodes', 'commissions', 'withdrawals', 'payoutAccounts.method']);
 
         $stats = [
             'total_earnings' => $affiliator->totalEarnings(),

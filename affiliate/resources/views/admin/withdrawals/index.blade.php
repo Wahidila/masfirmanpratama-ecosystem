@@ -16,13 +16,18 @@
 @if ($withdrawals->isEmpty())
     <x-card :padded="false"><x-empty-state icon="wallet" title="Belum ada penarikan" /></x-card>
 @else
-    <x-table :heads="['Affiliator', 'Metode', 'Rekening', 'Jumlah', 'Status', 'Aksi']">
+    <x-table :heads="['Affiliator', 'Metode', 'Rekening', 'Ditransfer', 'Status', 'Aksi']">
         @foreach ($withdrawals as $wd)
             <tr class="hover:bg-slate-50/70 transition-colors">
                 <td class="px-5 py-3.5 font-medium text-slate-700">{{ $wd->affiliator->name }}</td>
-                <td class="px-5 py-3.5 text-slate-600">{{ $wd->method->name }}</td>
+                <td class="px-5 py-3.5 text-slate-600">{{ $wd->methodName() }}</td>
                 <td class="px-5 py-3.5 text-slate-600 text-xs">{{ $wd->account_name }}<br>{{ $wd->account_number }}</td>
-                <td class="px-5 py-3.5 font-semibold text-slate-800 whitespace-nowrap">Rp {{ number_format($wd->amount, 0, ',', '.') }}</td>
+                <td class="px-5 py-3.5 font-semibold text-slate-800 whitespace-nowrap">
+                    Rp {{ number_format($wd->net_amount, 0, ',', '.') }}
+                    @if ($wd->fee > 0)
+                        <span class="block text-xs font-normal text-slate-400">dari Rp {{ number_format($wd->amount, 0, ',', '.') }} · biaya Rp {{ number_format($wd->fee, 0, ',', '.') }}</span>
+                    @endif
+                </td>
                 <td class="px-5 py-3.5"><x-status-badge :status="$wd->status" /></td>
                 <td class="px-5 py-3.5">
                     @if ($wd->status === 'pending')

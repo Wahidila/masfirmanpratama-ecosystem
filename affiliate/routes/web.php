@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AdminEventController;
 use App\Http\Controllers\Admin\AdminLoginController;
 use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminWithdrawalController;
+use App\Http\Controllers\Admin\AdminWithdrawalMethodController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PayoutAccountController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\Webhooks\ReferralInfoController;
@@ -123,7 +125,11 @@ Route::middleware('auth:affiliator')->group(function () {
         // Profile
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-        Route::put('/profile/bank', [ProfileController::class, 'updateBank'])->name('profile.bank');
+        // Rekening tujuan penarikan
+        Route::get('/payout-accounts', [PayoutAccountController::class, 'index'])->name('payout-accounts.index');
+        Route::post('/payout-accounts', [PayoutAccountController::class, 'store'])->name('payout-accounts.store');
+        Route::post('/payout-accounts/{payoutAccount}/primary', [PayoutAccountController::class, 'setPrimary'])->name('payout-accounts.primary');
+        Route::delete('/payout-accounts/{payoutAccount}', [PayoutAccountController::class, 'destroy'])->name('payout-accounts.destroy');
 
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -167,6 +173,15 @@ Route::prefix('admin')->group(function () {
         Route::get('/withdrawals', [AdminWithdrawalController::class, 'index'])->name('admin.withdrawals.index');
         Route::post('/withdrawals/{withdrawal}/approve', [AdminWithdrawalController::class, 'approve'])->name('admin.withdrawals.approve');
         Route::post('/withdrawals/{withdrawal}/reject', [AdminWithdrawalController::class, 'reject'])->name('admin.withdrawals.reject');
+
+        // Metode Penarikan
+        Route::get('/withdrawal-methods', [AdminWithdrawalMethodController::class, 'index'])->name('admin.withdrawal-methods.index');
+        Route::get('/withdrawal-methods/create', [AdminWithdrawalMethodController::class, 'create'])->name('admin.withdrawal-methods.create');
+        Route::post('/withdrawal-methods', [AdminWithdrawalMethodController::class, 'store'])->name('admin.withdrawal-methods.store');
+        Route::get('/withdrawal-methods/{withdrawalMethod}/edit', [AdminWithdrawalMethodController::class, 'edit'])->name('admin.withdrawal-methods.edit');
+        Route::put('/withdrawal-methods/{withdrawalMethod}', [AdminWithdrawalMethodController::class, 'update'])->name('admin.withdrawal-methods.update');
+        Route::post('/withdrawal-methods/{withdrawalMethod}/toggle', [AdminWithdrawalMethodController::class, 'toggle'])->name('admin.withdrawal-methods.toggle');
+        Route::delete('/withdrawal-methods/{withdrawalMethod}', [AdminWithdrawalMethodController::class, 'destroy'])->name('admin.withdrawal-methods.destroy');
 
         // Materials
         Route::get('/materials', [AdminMaterialController::class, 'index'])->name('admin.materials.index');

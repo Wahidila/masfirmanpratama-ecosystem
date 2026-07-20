@@ -22,7 +22,16 @@
 <x-card title="Informasi" class="mb-6">
     <div class="grid sm:grid-cols-2 gap-4 text-sm">
         <div><span class="text-slate-500">Telepon:</span> <span class="text-slate-800">{{ $affiliator->phone ?: '—' }}</span></div>
-        <div><span class="text-slate-500">Bank:</span> <span class="text-slate-800">{{ $affiliator->bank_name ?: '—' }} {{ $affiliator->bank_account_number }}</span></div>
+        <div>
+            <span class="text-slate-500">Rekening tujuan:</span>
+            @forelse ($affiliator->payoutAccounts as $account)
+                <span class="block text-slate-800">
+                    {{ $account->method?->name ?? '—' }} · {{ $account->account_number }} a.n. {{ $account->account_name }}@if ($account->is_primary) <span class="text-xs text-primary-600">(utama)</span>@endif
+                </span>
+            @empty
+                <span class="text-slate-800">—</span>
+            @endforelse
+        </div>
         <div><span class="text-slate-500">Terdaftar:</span> <span class="text-slate-800">{{ $affiliator->created_at->format('d M Y H:i') }}</span></div>
         <div><span class="text-slate-500">Disetujui:</span> <span class="text-slate-800">{{ $affiliator->approved_at ? $affiliator->approved_at->format('d M Y') : '—' }}</span></div>
     </div>

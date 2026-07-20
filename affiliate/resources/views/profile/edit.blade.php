@@ -1,7 +1,7 @@
 @extends('layouts.dashboard')
 
 @section('content')
-<x-page-header title="Profil Saya" subtitle="Kelola informasi akun dan data bank Anda." />
+<x-page-header title="Profil Saya" subtitle="Kelola informasi akun dan rekening tujuan penarikan Anda." />
 
 <div class="max-w-2xl space-y-6">
     {{-- Personal info --}}
@@ -41,23 +41,19 @@
         </form>
     </x-card>
 
-    {{-- Bank info --}}
-    <x-card title="Informasi Bank / E-Wallet">
-        <form method="POST" action="{{ route('profile.bank') }}" class="space-y-4">
-            @csrf @method('PUT')
-            <x-form.group label="Nama Bank / E-Wallet" name="bank_name">
-                <x-form.input name="bank_name" value="{{ old('bank_name', $affiliator->bank_name) }}" placeholder="BCA, Mandiri, Dana, dll" />
-            </x-form.group>
-            <div class="grid sm:grid-cols-2 gap-4">
-                <x-form.group label="Nomor Rekening" name="bank_account_number">
-                    <x-form.input name="bank_account_number" value="{{ old('bank_account_number', $affiliator->bank_account_number) }}" />
-                </x-form.group>
-                <x-form.group label="Nama Pemilik" name="bank_account_name">
-                    <x-form.input name="bank_account_name" value="{{ old('bank_account_name', $affiliator->bank_account_name) }}" />
-                </x-form.group>
-            </div>
-            <x-button type="submit" icon="save">Simpan Data Bank</x-button>
-        </form>
+    {{-- Rekening tujuan penarikan.
+         Dulu satu isian teks bebas di sini; sekarang jadi daftar rekening tersimpan
+         yang terikat ke metode resmi, dikelola di halamannya sendiri. --}}
+    <x-card title="Rekening Tujuan Penarikan">
+        <p class="text-sm text-slate-500 mb-4">
+            Simpan rekening atau e-wallet Anda sekali, lalu tinggal pilih setiap kali menarik saldo.
+            @if ($payoutAccountCount > 0)
+                Saat ini tersimpan {{ $payoutAccountCount }} rekening.
+            @else
+                Anda belum menyimpan rekening apa pun.
+            @endif
+        </p>
+        <x-button :href="route('payout-accounts.index')" icon="landmark">Kelola Rekening Tujuan</x-button>
     </x-card>
 </div>
 @endsection
