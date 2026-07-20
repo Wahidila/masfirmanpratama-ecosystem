@@ -178,6 +178,7 @@ if (! app()->environment('production')) {
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BlogCategoryController as AdminBlogCategoryController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Admin\CourseParticipantController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InstallmentSchemeController;
 use App\Http\Controllers\Admin\OrderController;
@@ -235,6 +236,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('courses', AdminCourseController::class)
             ->except(['show'])
             ->parameters(['courses' => 'course']);
+
+        // Peserta kursus (roster kelas). Terisi otomatis dari order kelas yang
+        // sudah ada pembayaran terverifikasi, plus bisa ditambah manual.
+        Route::resource('participants', CourseParticipantController::class)
+            ->except(['show'])
+            ->parameters(['participants' => 'participant']);
 
         Route::resource('video-testimonials', VideoTestimonialController::class)
             ->except(['show'])

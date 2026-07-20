@@ -20,6 +20,7 @@ return [
         ['key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'grid', 'route' => 'admin.dashboard', 'enabled' => true],
         ['key' => 'products', 'label' => 'Produk', 'icon' => 'package', 'route' => 'admin.products.index', 'enabled' => true],
         ['key' => 'courses', 'label' => 'Kelas', 'icon' => 'graduation-cap', 'route' => 'admin.courses.index', 'enabled' => true],
+        ['key' => 'participants', 'label' => 'Peserta Kursus', 'icon' => 'users', 'route' => 'admin.participants.index', 'enabled' => true],
         ['key' => 'posts', 'label' => 'Blog', 'icon' => 'file-text', 'route' => 'admin.posts.index', 'enabled' => true],
         ['key' => 'video-testimonials', 'label' => 'Testimoni Video', 'icon' => 'video', 'route' => 'admin.video-testimonials.index', 'enabled' => true],
         ['key' => 'promo-banners', 'label' => 'Banner Promo', 'icon' => 'image', 'route' => 'admin.promo-banners.index', 'enabled' => true],
@@ -35,7 +36,7 @@ return [
     // grup yang jadi kosong tidak dirender.
     'groups' => [
         ['title' => 'Utama', 'items' => ['dashboard', 'orders', 'reports']],
-        ['title' => 'Katalog', 'items' => ['products', 'courses', 'installments']],
+        ['title' => 'Katalog', 'items' => ['products', 'courses', 'participants', 'installments']],
         ['title' => 'Konten & Promosi', 'items' => ['posts', 'video-testimonials', 'promo-banners']],
         ['title' => 'Sistem', 'items' => ['wa-notifications', 'settings']],
     ],
