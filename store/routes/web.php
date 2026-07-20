@@ -239,6 +239,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Peserta kursus (roster kelas). Terisi otomatis dari order kelas yang
         // sudah ada pembayaran terverifikasi, plus bisa ditambah manual.
+        // Export didaftarkan sebelum resource agar tidak tertangkap wildcard.
+        Route::get('participants/export', [CourseParticipantController::class, 'export'])
+            ->name('participants.export');
         Route::resource('participants', CourseParticipantController::class)
             ->except(['show'])
             ->parameters(['participants' => 'participant']);

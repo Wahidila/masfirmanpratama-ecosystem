@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Helpers\MenuHelper;
 use App\Models\Admin;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,6 +83,29 @@ class SidebarIconWhitelistTest extends TestCase
             $missing,
             'Nav config request icon yang ngga di whitelist: '.implode(', ', $missing).
                 ". Tambahin path SVG-nya di {$iconPath} \$paths array."
+        );
+    }
+
+    /**
+     * Guard KEDUA — ini yang sebenarnya dipakai sidebar.
+     *
+     * layouts/partials/admin-sidebar.blade.php merender icon lewat
+     * MenuHelper::getIconSvg(), yang punya peta icon TERPISAH dari
+     * components/admin/icon.blade.php. Icon 'users' sempat kosong di sidebar
+     * karena hanya ditambahkan di salah satunya — test di atas tetap hijau.
+     */
+    public function test_menu_helper_has_svg_for_every_nav_icon(): void
+    {
+        $required = array_unique(array_column(config('admin-nav.primary', []), 'icon'));
+
+        $missing = array_values(array_filter($required, function (string $icon) {
+            return ! preg_match('/<(path|rect|circle|polyline|polygon|line)/', MenuHelper::getIconSvg($icon));
+        }));
+
+        $this->assertEmpty(
+            $missing,
+            'MenuHelper::getIconSvg() tidak punya path SVG untuk: '.implode(', ', $missing).
+                '. Tambahkan di app/Helpers/MenuHelper.php (peta icon sidebar asli).'
         );
     }
 }
