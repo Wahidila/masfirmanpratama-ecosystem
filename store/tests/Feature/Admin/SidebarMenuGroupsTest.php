@@ -24,7 +24,7 @@ class SidebarMenuGroupsTest extends TestCase
         $groups = collect(MenuHelper::getMenuGroups())->keyBy('title');
 
         $this->assertSame(['Dashboard', 'Pesanan', 'Laporan'], array_column($groups['Utama']['items'], 'name'));
-        $this->assertSame(['Produk', 'Kelas', 'Skema Cicilan'], array_column($groups['Katalog']['items'], 'name'));
+        $this->assertSame(['Produk', 'Kelas', 'Peserta Kursus', 'Skema Cicilan'], array_column($groups['Katalog']['items'], 'name'));
         $this->assertSame(['Blog', 'Testimoni Video', 'Banner Promo'], array_column($groups['Konten & Promosi']['items'], 'name'));
         $this->assertSame(['WA Notifikasi', 'Settings'], array_column($groups['Sistem']['items'], 'name'));
     }
@@ -35,7 +35,7 @@ class SidebarMenuGroupsTest extends TestCase
             ->flatMap(fn ($g) => array_column($g['items'], 'name'))
             ->all();
 
-        $expected = ['Dashboard', 'Produk', 'Kelas', 'Blog', 'Testimoni Video', 'Banner Promo', 'Pesanan', 'Laporan', 'WA Notifikasi', 'Skema Cicilan', 'Settings'];
+        $expected = ['Dashboard', 'Produk', 'Kelas', 'Peserta Kursus', 'Blog', 'Testimoni Video', 'Banner Promo', 'Pesanan', 'Laporan', 'WA Notifikasi', 'Skema Cicilan', 'Settings'];
 
         $this->assertCount(count($expected), $names); // tidak ada yang hilang
         $this->assertCount(count($names), array_unique($names)); // tidak ada dobel
@@ -91,6 +91,6 @@ class SidebarMenuGroupsTest extends TestCase
 
         $this->assertCount(1, $groups);
         $this->assertSame('Menu', $groups[0]['title']);
-        $this->assertCount(11, $groups[0]['items']);
+        $this->assertCount(12, $groups[0]['items']);
     }
 }
