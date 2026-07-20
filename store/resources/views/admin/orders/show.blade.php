@@ -361,9 +361,15 @@
             <x-admin.card>
                 @php
                     $isCourseOrder = str_starts_with($order->order_number, 'COURSE-');
+
+                    // Data pendaftaran kelas disimpan di order_meta. (Dulu sempat
+                    // dititipkan di ref_code; sejak referral aktif, ref_code khusus
+                    // menyimpan kode referral — bukan JSON pendaftaran.)
                     $registrationMeta = null;
-                    if ($isCourseOrder && $order->ref_code) {
-                        $decoded = json_decode($order->ref_code, true);
+                    if ($isCourseOrder && ! empty($order->order_meta)) {
+                        $decoded = is_array($order->order_meta)
+                            ? $order->order_meta
+                            : json_decode((string) $order->order_meta, true);
                         if (is_array($decoded)) {
                             $registrationMeta = $decoded;
                         }
@@ -471,20 +477,23 @@
                         </a>
                     </div>
 
-                    @if ($order->ref_code)
-                        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                            <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Referral / Affiliator</dt>
-                            <dd class="mt-0.5 text-gray-700 dark:text-gray-300">
-                                @if (! empty($affiliatorName ?? null))
-                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $affiliatorName }}</span>
-                                    <span class="font-mono text-xs text-gray-500 dark:text-gray-400">({{ $order->ref_code }})</span>
-                                @else
-                                    <span class="font-mono">{{ $order->ref_code }}</span>
-                                    <span class="text-xs text-gray-400 dark:text-gray-500">— nama affiliator tak tersedia</span>
-                                @endif
-                            </dd>
-                        </div>
-                    @endif
+                @endif
+
+                {{-- Referral / Affiliator — tampil untuk SEMUA jenis order (kelas & produk),
+                     jadi harus di LUAR percabangan $isCourseOrder. --}}
+                @if ($order->ref_code)
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Referral / Affiliator</dt>
+                        <dd class="mt-0.5 text-gray-700 dark:text-gray-300">
+                            @if (! empty($affiliatorName ?? null))
+                                <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $affiliatorName }}</span>
+                                <span class="font-mono text-xs text-gray-500 dark:text-gray-400">({{ $order->ref_code }})</span>
+                            @else
+                                <span class="font-mono">{{ $order->ref_code }}</span>
+                                <span class="text-xs text-gray-400 dark:text-gray-500">— nama affiliator tak tersedia</span>
+                            @endif
+                        </dd>
+                    </div>
                 @endif
             </x-admin.card>
 
