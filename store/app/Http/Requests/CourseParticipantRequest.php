@@ -14,6 +14,18 @@ class CourseParticipantRequest extends FormRequest
     }
 
     /**
+     * Peserta yang berasal dari pesanan: status pembayaran disinkronkan dari
+     * order (lihat CourseParticipantSync), jadi tidak diinput manual —
+     * field-nya tidak dirender di form dan diabaikan di controller.
+     */
+    public function isOrderLinked(): bool
+    {
+        $participant = $this->route('participant');
+
+        return $participant instanceof CourseParticipant && $participant->order_id !== null;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array
@@ -26,7 +38,10 @@ class CourseParticipantRequest extends FormRequest
             'occupation' => ['nullable', 'string', 'max:100'],
             'motivation' => ['nullable', 'string', 'max:500'],
             'status' => ['required', Rule::in(array_keys(CourseParticipant::STATUSES))],
-            'payment_status' => ['required', Rule::in(array_keys(CourseParticipant::PAYMENT_STATUSES))],
+            'payment_status' => [
+                $this->isOrderLinked() ? 'nullable' : 'required',
+                Rule::in(array_keys(CourseParticipant::PAYMENT_STATUSES)),
+            ],
             'notes' => ['nullable', 'string', 'max:1000'],
             'joined_at' => ['nullable', 'date'],
         ];

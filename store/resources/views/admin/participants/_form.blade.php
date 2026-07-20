@@ -51,14 +51,31 @@
         </select>
     </x-admin.form-group>
 
-    <x-admin.form-group label="Status pembayaran" name="payment_status" required
-        hint="Lunas = pembayaran penuh. Cicilan = cicilan masih berjalan.">
-        <select id="payment_status" name="payment_status" class="{{ $inputClass }}">
-            @foreach ($paymentStatuses as $key => $label)
-                <option value="{{ $key }}" @selected(old('payment_status', $participant->payment_status) === $key)>{{ $label }}</option>
-            @endforeach
-        </select>
-    </x-admin.form-group>
+    @if ($participant->order_id)
+        {{-- Peserta dari pesanan: status bayar mengikuti pembayaran order,
+             diperbarui otomatis oleh listener. Sengaja tidak bisa diedit manual. --}}
+        <x-admin.form-group label="Status pembayaran"
+            hint="Mengikuti pembayaran pada pesanan — otomatis berubah jadi Lunas saat cicilan selesai diverifikasi. Tidak bisa diubah manual.">
+            <div class="flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                <span class="inline-flex rounded-full px-2.5 py-0.5 text-theme-xs font-medium
+                    {{ $participant->payment_status === 'lunas'
+                        ? 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500'
+                        : 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500' }}">
+                    {{ $participant->paymentStatusLabel() }}
+                </span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">disinkronkan dari pesanan</span>
+            </div>
+        </x-admin.form-group>
+    @else
+        <x-admin.form-group label="Status pembayaran" name="payment_status" required
+            hint="Lunas = pembayaran penuh. Cicilan = cicilan masih berjalan.">
+            <select id="payment_status" name="payment_status" class="{{ $inputClass }}">
+                @foreach ($paymentStatuses as $key => $label)
+                    <option value="{{ $key }}" @selected(old('payment_status', $participant->payment_status) === $key)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </x-admin.form-group>
+    @endif
 
     <x-admin.form-group label="Tanggal bergabung" name="joined_at">
         <input type="date" id="joined_at" name="joined_at"
