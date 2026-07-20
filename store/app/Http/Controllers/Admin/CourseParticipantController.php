@@ -153,7 +153,16 @@ class CourseParticipantController extends Controller
 
     public function update(CourseParticipantRequest $request, CourseParticipant $participant): RedirectResponse
     {
-        $participant->update($request->validated());
+        $data = $request->validated();
+
+        // Peserta dari pesanan: status pembayaran disinkronkan dari order,
+        // jadi abaikan apa pun yang dikirim (form tidak merendernya, tapi
+        // request bisa dipalsukan).
+        if ($participant->order_id !== null) {
+            unset($data['payment_status']);
+        }
+
+        $participant->update($data);
 
         return redirect()
             ->route('admin.participants.index')

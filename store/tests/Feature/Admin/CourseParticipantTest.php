@@ -229,6 +229,90 @@ class CourseParticipantTest extends TestCase
         $this->assertSame('Sudah lulus batch 1', $participant->notes);
     }
 
+    // ─── Status pembayaran: terkunci untuk peserta dari order ───────────────
+
+    public function test_payment_status_is_locked_for_order_linked_participant(): void
+    {
+        $order = $this->courseOrder(1_000_000, 400_000); // cicilan berjalan
+        $participant = app(CourseParticipantSync::class)->fromOrder($order);
+        $this->assertSame('cicil', $participant->payment_status);
+
+        // Form tidak merender field ini, tapi request bisa dipalsukan.
+        $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.participants.update', $participant), [
+                'course_id' => $this->course->id,
+                'name' => 'Nama Dikoreksi',
+                'status' => 'active',
+                'payment_status' => 'lunas', // harus DIABAIKAN
+            ])
+            ->assertRedirect(route('admin.participants.index'));
+
+        $participant->refresh();
+        $this->assertSame('cicil', $participant->payment_status, 'Status bayar peserta dari order tidak boleh diubah manual.');
+        // Field lain tetap boleh diedit admin.
+        $this->assertSame('Nama Dikoreksi', $participant->name);
+        $this->assertSame('active', $participant->status);
+    }
+
+    public function test_order_linked_update_without_payment_status_passes_validation(): void
+    {
+        $order = $this->courseOrder(1_000_000, 1_000_000);
+        $participant = app(CourseParticipantSync::class)->fromOrder($order);
+
+        $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.participants.update', $participant), [
+                'course_id' => $this->course->id,
+                'name' => 'Tanpa Payment Status',
+                'status' => 'graduated',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.participants.index'));
+
+        $this->assertSame('lunas', $participant->fresh()->payment_status);
+    }
+
+    public function test_payment_status_is_editable_for_manual_participant(): void
+    {
+        $participant = CourseParticipant::create([
+            'course_id' => $this->course->id, 'name' => 'Peserta Manual',
+            'status' => 'registered', 'payment_status' => 'cicil',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.participants.update', $participant), [
+                'course_id' => $this->course->id,
+                'name' => 'Peserta Manual',
+                'status' => 'active',
+                'payment_status' => 'lunas',
+            ])->assertRedirect();
+
+        $this->assertSame('lunas', $participant->fresh()->payment_status);
+    }
+
+    public function test_edit_form_renders_payment_status_readonly_for_order_linked(): void
+    {
+        $order = $this->courseOrder(1_000_000, 400_000);
+        $participant = app(CourseParticipantSync::class)->fromOrder($order);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.participants.edit', $participant))
+            ->assertOk()
+            ->assertSee('disinkronkan dari pesanan')
+            ->assertDontSee('name="payment_status"', false);
+    }
+
+    public function test_edit_form_renders_payment_status_select_for_manual_participant(): void
+    {
+        $participant = CourseParticipant::create([
+            'course_id' => $this->course->id, 'name' => 'Manual', 'status' => 'registered', 'payment_status' => 'lunas',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.participants.edit', $participant))
+            ->assertOk()
+            ->assertSee('name="payment_status"', false);
+    }
+
     public function test_admin_can_delete_participant(): void
     {
         $participant = CourseParticipant::create([
