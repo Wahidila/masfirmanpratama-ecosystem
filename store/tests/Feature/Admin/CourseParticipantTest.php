@@ -242,6 +242,54 @@ class CourseParticipantTest extends TestCase
         $this->assertSame(0, CourseParticipant::count());
     }
 
+    // ─── Export XLSX ────────────────────────────────────────────────────────
+
+    /** Ambil isi sheet hasil export sebagai array baris. */
+    private function exportRows(array $query = []): array
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.participants.export', $query));
+
+        $response->assertOk();
+        $content = $response->streamedContent();
+
+        // XLSX = arsip ZIP → wajib diawali signature "PK". Kalau ini CSV
+        // yang cuma diberi ekstensi .xlsx, assertion ini gagal.
+        $this->assertStringStartsWith('PK', $content, 'File export harus XLSX asli (arsip ZIP), bukan CSV.');
+
+        $path = tempnam(sys_get_temp_dir(), 'export').'.xlsx';
+        file_put_contents($path, $content);
+        $rows = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet()->toArray();
+        @unlink($path);
+
+        return $rows;
+    }
+
+    public function test_export_downloads_real_xlsx_with_headers_and_rows(): void
+    {
+        CourseParticipant::create([
+            'course_id' => $this->course->id, 'name' => 'Andi Export',
+            'email' => 'andi@example.com', 'status' => 'active', 'payment_status' => 'lunas',
+        ]);
+
+        $rows = $this->exportRows();
+
+        $this->assertSame('Nama', $rows[0][0]);
+        $this->assertSame('Status Pembayaran', $rows[0][5]);
+        $this->assertContains('Andi Export', array_column($rows, 0));
+    }
+
+    public function test_export_respects_active_filters(): void
+    {
+        CourseParticipant::create(['course_id' => $this->course->id, 'name' => 'Peserta Lunas', 'status' => 'active', 'payment_status' => 'lunas']);
+        CourseParticipant::create(['course_id' => $this->course->id, 'name' => 'Peserta Cicil', 'status' => 'active', 'payment_status' => 'cicil']);
+
+        $names = array_column($this->exportRows(['payment' => 'cicil']), 0);
+
+        $this->assertContains('Peserta Cicil', $names);
+        $this->assertNotContains('Peserta Lunas', $names);
+    }
+
     public function test_store_validates_required_fields(): void
     {
         $this->actingAs($this->admin, 'admin')
