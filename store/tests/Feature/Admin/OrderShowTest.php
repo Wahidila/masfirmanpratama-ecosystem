@@ -296,4 +296,48 @@ class OrderShowTest extends TestCase
         $response->assertSee(route('admin.orders.show', $order));
         $response->assertSee('MFP-LINK001');
     }
+
+    /**
+     * Regression: blok Referral/Affiliator dulu bersarang di cabang non-course,
+     * jadi order KELAS tidak pernah menampilkannya walau ref_code terisi.
+     */
+    public function test_course_order_shows_referral_affiliator_block(): void
+    {
+        // Matikan lookup affiliate supaya test tidak memanggil HTTP eksternal.
+        config(['webhook.affiliate_url' => '', 'webhook.secret' => '']);
+
+        $order = Order::factory()->create([
+            'order_number' => 'COURSE-20260720-NJB-TEST01',
+            'ref_code' => '0O15Y1ZN',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order))
+            ->assertStatus(200)
+            ->assertSee('Referral / Affiliator')
+            ->assertSee('0O15Y1ZN');
+    }
+
+    /**
+     * Regression: data pendaftaran kelas dibaca dari order_meta, bukan dari
+     * ref_code (ref_code sekarang khusus kode referral).
+     */
+    public function test_course_order_shows_registration_meta_from_order_meta(): void
+    {
+        config(['webhook.affiliate_url' => '', 'webhook.secret' => '']);
+
+        $order = Order::factory()->create([
+            'order_number' => 'COURSE-20260720-NJB-TEST02',
+            'ref_code' => '0O15Y1ZN',
+            'order_meta' => ['occupation' => 'Mahasiswa', 'motivation' => 'coba saja'],
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.orders.show', $order))
+            ->assertStatus(200)
+            ->assertSee('Mahasiswa')
+            ->assertSee('coba saja');
+    }
 }
