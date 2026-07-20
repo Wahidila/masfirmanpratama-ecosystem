@@ -35,7 +35,11 @@ class AdminWithdrawalController extends Controller
             'affiliator_id' => $withdrawal->affiliator_id,
             'type' => 'withdrawal_completed',
             'title' => 'Penarikan Diproses',
-            'message' => 'Penarikan sebesar Rp '.number_format($withdrawal->amount, 0, ',', '.').' telah ditransfer ke rekening Anda.',
+            // Yang ditransfer adalah neto; menyebut bruto di sini bikin affiliator
+            // mengira menerima lebih banyak dari yang masuk ke rekeningnya.
+            'message' => $withdrawal->fee > 0
+                ? 'Penarikan Rp '.number_format($withdrawal->amount, 0, ',', '.').' telah diproses. Rp '.number_format($withdrawal->net_amount, 0, ',', '.').' ditransfer ke rekening Anda setelah biaya admin Rp '.number_format($withdrawal->fee, 0, ',', '.').'.'
+                : 'Penarikan sebesar Rp '.number_format($withdrawal->net_amount, 0, ',', '.').' telah ditransfer ke rekening Anda.',
         ]);
 
         return back()->with('success', 'Penarikan berhasil disetujui dan ditandai selesai.');

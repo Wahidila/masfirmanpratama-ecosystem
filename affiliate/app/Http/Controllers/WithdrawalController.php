@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Withdrawal;
-use App\Models\WithdrawalMethod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class WithdrawalController extends Controller
@@ -29,9 +29,15 @@ class WithdrawalController extends Controller
     {
         $affiliator = Auth::guard('affiliator')->user();
         $availableBalance = $affiliator->availableBalance();
-        $methods = WithdrawalMethod::where('is_active', true)->get();
 
-        return view('withdrawals.create', compact('availableBalance', 'methods'));
+        // Rekening yang metodenya sedang dinonaktifkan admin tidak ditawarkan.
+        $accounts = $affiliator->payoutAccounts()
+            ->with('method')
+            ->whereHas('method', fn ($query) => $query->where('is_active', true))
+            ->orderByDesc('is_primary')
+            ->get();
+
+        return view('withdrawals.create', compact('availableBalance', 'accounts'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -40,20 +46,30 @@ class WithdrawalController extends Controller
         $availableBalance = $affiliator->availableBalance();
 
         $request->validate([
-            'withdrawal_method_id' => ['required', 'exists:withdrawal_methods,id'],
+            // Terikat pemilik: ID rekening mudah ditebak, dan tanpa penjepitan ini
+            // affiliator bisa menarik ke rekening milik orang lain.
+            'payout_account_id' => [
+                'required',
+                Rule::exists('affiliator_payout_accounts', 'id')->where('affiliator_id', $affiliator->id),
+            ],
             'amount' => ['required', 'numeric', 'min:1', "max:{$availableBalance}"],
-            'account_number' => ['required', 'string', 'max:50'],
-            'account_name' => ['required', 'string', 'max:100'],
         ], [
             'amount.required' => 'Jumlah penarikan wajib diisi.',
             'amount.min' => 'Jumlah penarikan minimal Rp 1.',
             'amount.max' => 'Jumlah penarikan melebihi saldo tersedia.',
-            'withdrawal_method_id.required' => 'Metode penarikan wajib dipilih.',
-            'account_number.required' => 'Nomor rekening wajib diisi.',
-            'account_name.required' => 'Nama pemilik rekening wajib diisi.',
+            'payout_account_id.required' => 'Rekening tujuan wajib dipilih.',
+            'payout_account_id.exists' => 'Rekening tujuan tidak ditemukan.',
         ]);
 
-        $method = WithdrawalMethod::findOrFail($request->withdrawal_method_id);
+        $account = $affiliator->payoutAccounts()->with('method')->findOrFail($request->payout_account_id);
+        $method = $account->method;
+
+        // Metode bisa dinonaktifkan admin setelah halaman ini dibuka.
+        if (! $method || ! $method->is_active) {
+            return back()->withErrors([
+                'payout_account_id' => 'Metode penarikan untuk rekening ini sedang tidak tersedia. Silakan pilih rekening lain.',
+            ])->withInput();
+        }
 
         if ($request->amount < $method->min_withdrawal) {
             return back()->withErrors([
@@ -72,14 +88,24 @@ class WithdrawalController extends Controller
             ])->withInput();
         }
 
-        DB::transaction(function () use ($affiliator, $request, $method) {
+        // Biaya admin dipotong dari yang ditransfer, bukan dari saldo: saldo
+        // berkurang sebesar bruto, affiliator menerima neto.
+        $fee = $method->feeFor((float) $request->amount);
+        $netAmount = $method->netAmountFor((float) $request->amount);
+
+        DB::transaction(function () use ($affiliator, $request, $method, $account, $fee, $netAmount) {
             // Create withdrawal
             $withdrawal = Withdrawal::create([
                 'affiliator_id' => $affiliator->id,
                 'withdrawal_method_id' => $method->id,
+                // Snapshot: rename metode di panel admin tidak boleh mengubah
+                // bunyi riwayat penarikan lama.
+                'method_name' => $method->name,
                 'amount' => $request->amount,
-                'account_number' => $request->account_number,
-                'account_name' => $request->account_name,
+                'fee' => $fee,
+                'net_amount' => $netAmount,
+                'account_number' => $account->account_number,
+                'account_name' => $account->account_name,
                 'status' => 'pending',
             ]);
 

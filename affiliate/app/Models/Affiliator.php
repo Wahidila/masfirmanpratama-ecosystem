@@ -66,6 +66,11 @@ class Affiliator extends Authenticatable
         return $this->hasMany(Withdrawal::class);
     }
 
+    public function payoutAccounts(): HasMany
+    {
+        return $this->hasMany(AffiliatorPayoutAccount::class);
+    }
+
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);

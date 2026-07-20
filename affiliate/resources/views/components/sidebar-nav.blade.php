@@ -18,6 +18,7 @@
     <div class="space-y-1">
         <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Akun</p>
         <x-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.*')" icon="user">Profil</x-nav-link>
+        <x-nav-link :href="route('payout-accounts.index')" :active="request()->routeIs('payout-accounts.*')" icon="landmark">Rekening Tujuan</x-nav-link>
         <x-nav-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')" icon="bell">Notifikasi</x-nav-link>
     </div>
 </nav>
