@@ -10,7 +10,7 @@
 |---|------|-----|--------|
 | 1 | Tambah **kode unik pembayaran** | store | 🔴 |
 | 2 | Input **email opsional** saat order | store | 🔴 |
-| 3 | Peserta masuk kelas **hanya saat cicilan lunas** (bukan cicilan pertama) | store | 🔴 |
+| 3 | Peserta masuk kelas **hanya saat cicilan lunas** (bukan cicilan pertama) | store | 🟢 |
 | 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🔴 |
 | 5 | Fitur **lupa password** | store + affiliate | 🔴 |
 | 6 | Halaman affiliator **lihat detail produk** (bukan cuma jumlah sukses) | affiliate | 🔴 |
@@ -37,11 +37,13 @@ identifikasi transfer per order. Ditampilkan ke customer di halaman pembayaran.
 - [ ] Pastikan alur yang pakai email (notifikasi/track) aman kalau email kosong
 - [ ] Test
 
-### 3. Peserta hanya masuk kelas saat lunas 🔴
-- [ ] Temukan titik pembuatan peserta (saat ini di cicilan pertama?)
-- [ ] Pindahkan trigger enrollment ke event "order lunas / paid"
-- [ ] Pastikan tidak dobel enroll; handle order non-cicilan (langsung lunas)
-- [ ] Test skenario: cicilan 1 → belum peserta; lunas → jadi peserta
+### 3. Peserta hanya masuk kelas saat lunas 🟢
+- [x] Titik pembuatan: `CourseParticipantSync::fromOrder()` — dulu enroll saat `verified > 0`
+- [x] Ubah guard → hanya enroll saat `verified >= total` (lunas); DP/cicilan pertama tidak enroll
+- [x] payment_status order-linked selalu `lunas`; idempotent (firstOrNew order_id) → tidak dobel
+- [x] Update doc listener `SyncCourseParticipant` + 4 test disesuaikan
+- [x] ✅ `CourseParticipantTest` 20/20 pass (termasuk XLSX setelah `composer install`)
+- Catatan: peserta manual (order_id null) tetap bisa `cicil`/`lunas` (tak terpengaruh).
 
 ### 4. Cicilan bebas (no deadline) 🔴
 - [ ] Hapus/nonaktifkan konsep jatuh tempo / due_date

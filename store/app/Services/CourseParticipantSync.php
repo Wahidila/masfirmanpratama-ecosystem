@@ -16,8 +16,9 @@ class CourseParticipantSync
     /**
      * Buat/perbarui peserta dari sebuah order.
      *
-     * Return null kalau: bukan order kelas, ATAU belum ada pembayaran
-     * terverifikasi (order belum bayar → tidak masuk daftar peserta).
+     * Return null kalau: bukan order kelas, ATAU pembayaran belum LUNAS.
+     * Peserta baru masuk daftar kelas setelah cicilan lunas (total terbayar
+     * penuh) — bukan setelah cicilan/DP pertama.
      */
     public function fromOrder(Order $order): ?CourseParticipant
     {
@@ -27,7 +28,11 @@ class CourseParticipantSync
         }
 
         $verified = (float) $order->payments()->where('status', 'verified')->sum('amount');
-        if ($verified <= 0) {
+        $total = (float) $order->total;
+
+        // Hanya enroll saat lunas. Cicilan/DP yang belum menutup total tidak
+        // menjadikan pembeli peserta kelas.
+        if ($verified <= 0 || $verified < $total) {
             return null;
         }
 
@@ -51,8 +56,8 @@ class CourseParticipantSync
             ]);
         }
 
-        // Selalu diperbarui: cicilan bisa berubah jadi lunas.
-        $participant->payment_status = $verified >= (float) $order->total ? 'lunas' : 'cicil';
+        // Sampai sini berarti sudah lunas (guard di atas menolak yang belum).
+        $participant->payment_status = 'lunas';
         $participant->save();
 
         return $participant;

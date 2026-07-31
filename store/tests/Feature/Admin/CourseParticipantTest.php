@@ -80,14 +80,13 @@ class CourseParticipantTest extends TestCase
         $this->assertSame($this->course->id, $participant->course_id);
     }
 
-    public function test_installment_course_order_becomes_participant_with_cicil_status(): void
+    public function test_installment_course_order_does_not_become_participant_until_lunas(): void
     {
+        // DP / cicilan pertama, belum menutup total → belum jadi peserta.
         $order = $this->courseOrder(1_000_000, 300_000);
 
-        $participant = app(CourseParticipantSync::class)->fromOrder($order);
-
-        $this->assertNotNull($participant);
-        $this->assertSame('cicil', $participant->payment_status);
+        $this->assertNull(app(CourseParticipantSync::class)->fromOrder($order));
+        $this->assertSame(0, CourseParticipant::count());
     }
 
     public function test_unpaid_course_order_does_not_become_participant(): void
@@ -127,19 +126,23 @@ class CourseParticipantTest extends TestCase
         $this->assertNull(app(CourseParticipantSync::class)->fromOrder($order->fresh()));
     }
 
-    public function test_installment_becomes_lunas_without_duplicating_participant(): void
+    public function test_installment_becomes_participant_only_once_when_lunas(): void
     {
-        $order = $this->courseOrder(1_000_000, 400_000);
+        $order = $this->courseOrder(1_000_000, 400_000); // DP, belum lunas
         $sync = app(CourseParticipantSync::class);
 
-        $first = $sync->fromOrder($order);
-        $this->assertSame('cicil', $first->payment_status);
+        // Cicilan pertama belum lunas → belum jadi peserta.
+        $this->assertNull($sync->fromOrder($order));
+        $this->assertSame(0, CourseParticipant::count());
 
-        // Sisa cicilan dibayar & diverifikasi.
+        // Sisa cicilan dibayar & diverifikasi → lunas.
         OrderPayment::factory()->create(['order_id' => $order->id, 'amount' => 600_000, 'status' => 'verified']);
-        $second = $sync->fromOrder($order->fresh());
+        $first = $sync->fromOrder($order->fresh());
+        $this->assertNotNull($first);
+        $this->assertSame('lunas', $first->payment_status);
 
-        $this->assertSame('lunas', $second->payment_status);
+        // Idempoten: sync ulang tidak menggandakan peserta.
+        $second = $sync->fromOrder($order->fresh());
         $this->assertSame(1, CourseParticipant::count());
         $this->assertSame($first->id, $second->id);
     }
@@ -233,9 +236,9 @@ class CourseParticipantTest extends TestCase
 
     public function test_payment_status_is_locked_for_order_linked_participant(): void
     {
-        $order = $this->courseOrder(1_000_000, 400_000); // cicilan berjalan
+        $order = $this->courseOrder(1_000_000, 1_000_000); // lunas → jadi peserta
         $participant = app(CourseParticipantSync::class)->fromOrder($order);
-        $this->assertSame('cicil', $participant->payment_status);
+        $this->assertSame('lunas', $participant->payment_status);
 
         // Form tidak merender field ini, tapi request bisa dipalsukan.
         $this->actingAs($this->admin, 'admin')
@@ -243,12 +246,12 @@ class CourseParticipantTest extends TestCase
                 'course_id' => $this->course->id,
                 'name' => 'Nama Dikoreksi',
                 'status' => 'active',
-                'payment_status' => 'lunas', // harus DIABAIKAN
+                'payment_status' => 'cicil', // harus DIABAIKAN
             ])
             ->assertRedirect(route('admin.participants.index'));
 
         $participant->refresh();
-        $this->assertSame('cicil', $participant->payment_status, 'Status bayar peserta dari order tidak boleh diubah manual.');
+        $this->assertSame('lunas', $participant->payment_status, 'Status bayar peserta dari order tidak boleh diubah manual.');
         // Field lain tetap boleh diedit admin.
         $this->assertSame('Nama Dikoreksi', $participant->name);
         $this->assertSame('active', $participant->status);
@@ -291,7 +294,7 @@ class CourseParticipantTest extends TestCase
 
     public function test_edit_form_renders_payment_status_readonly_for_order_linked(): void
     {
-        $order = $this->courseOrder(1_000_000, 400_000);
+        $order = $this->courseOrder(1_000_000, 1_000_000);
         $participant = app(CourseParticipantSync::class)->fromOrder($order);
 
         $this->actingAs($this->admin, 'admin')

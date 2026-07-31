@@ -10,9 +10,8 @@ use App\Services\CourseParticipantSync;
  *
  * Aturan (lihat CourseParticipantSync):
  * - Order tanpa item kelas → dilewati.
- * - Belum ada pembayaran terverifikasi → TIDAK masuk daftar peserta.
- * - Sudah bayar sebagian (cicilan berjalan) → masuk, payment_status 'cicil'.
- * - Sudah lunas → masuk / diperbarui jadi 'lunas'.
+ * - Belum lunas (belum bayar / cicilan berjalan) → TIDAK masuk daftar peserta.
+ * - Sudah lunas (total terbayar penuh) → masuk sebagai peserta 'lunas'.
  */
 class SyncCourseParticipant
 {
