@@ -14,7 +14,7 @@
 | 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🔴 |
 | 5 | Fitur **lupa password** | store + affiliate | 🔴 |
 | 6 | Halaman affiliator **lihat detail produk** (bukan cuma jumlah sukses) | affiliate | 🔴 |
-| 7 | **Icon show password** di semua form login | store + affiliate | 🔴 |
+| 7 | **Icon show password** di semua form login | store + affiliate | 🟢 |
 | 8 | Add referral link **langsung pilih produk** (tanpa copy-paste URL) | affiliate | 🔴 |
 
 ---
@@ -65,12 +65,12 @@ identifikasi transfer per order. Ditampilkan ke customer di halaman pembayaran.
 - [ ] Route + controller + view + nav link
 - [ ] Test
 
-### 7. Icon show/hide password 🔴
-- [ ] Store admin login
-- [ ] Affiliate affiliator login + admin login
-- [ ] (bonus) form register & reset password
-- [ ] Komponen toggle reusable (Alpine)
-- [ ] Test
+### 7. Icon show/hide password 🟢
+- [x] Store admin login — **sudah ada** toggle (`showPassword` + eye SVG)
+- [x] Affiliate: enhance komponen `x-form.input` → password-aware (Alpine `x-bind:type` + eye/eye-off SVG)
+- [x] Otomatis kena: affiliator login, admin login, register (2 field), + bonus profile change-password
+- [x] ✅ Affiliate `AuthTest` 13/13 pass
+- Catatan: field API key WhatsApp di store settings (bukan login) sengaja dilewati (out of scope).
 
 ### 8. Add referral link pilih produk 🔴
 - [ ] Ganti input URL manual → dropdown/select produk
