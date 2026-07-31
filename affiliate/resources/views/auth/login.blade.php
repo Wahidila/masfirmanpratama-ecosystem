@@ -16,7 +16,10 @@
         <x-form.group label="Password">
             <x-form.input type="password" name="password" required placeholder="••••••••" />
         </x-form.group>
-        <x-form.checkbox name="remember" label="Ingat saya" />
+        <div class="flex items-center justify-between">
+            <x-form.checkbox name="remember" label="Ingat saya" />
+            <a href="{{ route('password.request') }}" class="text-sm font-semibold text-primary-600 hover:text-primary-700">Lupa password?</a>
+        </div>
         <x-button type="submit" icon="log-in" class="w-full">Masuk</x-button>
     </form>
 

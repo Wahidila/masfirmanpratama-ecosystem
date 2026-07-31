@@ -12,7 +12,7 @@
 | 2 | Input **email opsional** saat order | store | 🟢 |
 | 3 | Peserta masuk kelas **hanya saat cicilan lunas** (bukan cicilan pertama) | store | 🟢 |
 | 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🔴 |
-| 5 | Fitur **lupa password** | store + affiliate | 🔴 |
+| 5 | Fitur **lupa password** | store + affiliate | 🟢 |
 | 6 | Halaman affiliator **lihat detail produk** (bukan cuma jumlah sukses) | affiliate | 🔴 |
 | 7 | **Icon show password** di semua form login | store + affiliate | 🟢 |
 | 8 | Add referral link **langsung pilih produk** (tanpa copy-paste URL) | affiliate | 🔴 |
@@ -56,12 +56,16 @@ karena sisi affiliate butuh email untuk atribusi komisi (cek self-referral).
 - [ ] Sesuaikan admin UI + validasi verifikasi cicilan
 - [ ] Test
 
-### 5. Lupa password 🔴
-- [ ] Store: cek password_reset_tokens + controller + view + mailable
-- [ ] Affiliate: idem
-- [ ] Implement flow yang belum ada (request → email → reset)
-- [ ] Konfigurasi mail (cek .env.example)
-- [ ] Test
+### 5. Lupa password 🟢
+Model Affiliator & Admin extend `Foundation\Auth\User` → `CanResetPassword` sudah built-in.
+- [x] Affiliate: broker `affiliators` sudah ada. Controllers PasswordResetLink + NewPassword,
+      views forgot/reset, routes `password.*`, link "Lupa password?" di login.
+- [x] Store admin: tambah broker `admins` (config/auth.php), controllers Admin\*, views admin/auth/*,
+      routes `password.*` di bawah `/admin` (nama global, bukan `admin.*`, agar notif bawaan jalan), link login.
+- [x] Password field di form reset dapat toggle show/hide otomatis (affiliate) / manual (admin).
+- [x] ✅ Test: Affiliate PasswordResetTest 6/6, Store AdminPasswordResetTest 5/5.
+- ⚠️ **Deploy**: `MAIL_MAILER` default `log`. Untuk email sungguhan set SMTP di `.env`
+      (MAIL_MAILER=smtp + host/port/user/pass) di KEDUA app.
 
 ### 6. Halaman affiliator lihat produk 🔴
 - [ ] Buat halaman list produk (nama, gambar, komisi, URL store)

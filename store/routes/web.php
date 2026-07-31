@@ -176,6 +176,8 @@ if (! app()->environment('production')) {
 */
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\NewPasswordController as AdminNewPasswordController;
+use App\Http\Controllers\Admin\PasswordResetLinkController as AdminPasswordResetLinkController;
 use App\Http\Controllers\Admin\BlogCategoryController as AdminBlogCategoryController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\CourseParticipantController;
@@ -189,6 +191,17 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\VideoTestimonialController;
 use App\Http\Controllers\Admin\WaNotificationController;
+
+// Admin lupa/reset password (broker 'admins'). Nama route dibuat GLOBAL
+// (password.*) — bukan admin.* — karena notifikasi ResetPassword bawaan Laravel
+// membangun URL via route('password.reset').
+Route::prefix('admin')->middleware('guest:admin')->group(function () {
+    Route::get('/forgot-password', [AdminPasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [AdminPasswordResetLinkController::class, 'store'])
+        ->middleware('throttle:6,1')->name('password.email');
+    Route::get('/reset-password/{token}', [AdminNewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [AdminNewPasswordController::class, 'store'])->name('password.update');
+});
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest:admin')->group(function () {
