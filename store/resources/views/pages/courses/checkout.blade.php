@@ -63,8 +63,20 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="customer_email" class="block text-sm font-medium text-slate-700 mb-1.5">Email <span class="text-rose-500">*</span></label>
-                                <input type="email" id="customer_email" name="customer_email" value="{{ old('customer_email') }}" required
+                                @php
+                                    // Email wajib hanya untuk pendaftaran via link referral (mirror
+                                    // requiredIf di CourseCheckoutController::store()).
+                                    $emailRequired = filled(request()->cookie('referral_code')) || filled(request()->input('ref_code'));
+                                @endphp
+                                <label for="customer_email" class="block text-sm font-medium text-slate-700 mb-1.5">
+                                    Email
+                                    @if ($emailRequired)
+                                        <span class="text-rose-500">*</span>
+                                    @else
+                                        <span class="text-slate-400 font-normal">(opsional)</span>
+                                    @endif
+                                </label>
+                                <input type="email" id="customer_email" name="customer_email" value="{{ old('customer_email') }}" @if ($emailRequired) required @endif
                                        placeholder="email@contoh.com"
                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition @error('customer_email') border-rose-400 @enderror">
                                 @error('customer_email') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror

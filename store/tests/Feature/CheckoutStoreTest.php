@@ -228,6 +228,32 @@ class CheckoutStoreTest extends TestCase
         $this->assertSame('HUQJUMKG', $order->ref_code);
     }
 
+    public function test_email_optional_for_non_referral_order(): void
+    {
+        // Order tanpa referral: email boleh kosong.
+        $payload = $this->validPayload();
+        unset($payload['customer_email']);
+
+        $this->post('/checkout', $payload)->assertSessionHasNoErrors();
+
+        $this->assertSame(1, Order::count());
+        $this->assertNull(Order::first()->email);
+    }
+
+    public function test_email_required_for_referral_order(): void
+    {
+        // Order via link referral (cookie): email tetap wajib supaya atribusi
+        // komisi affiliate jalan (sisi affiliate butuh email cek self-referral).
+        $payload = $this->validPayload(['ref_code' => null]);
+        unset($payload['customer_email']);
+
+        $this->withUnencryptedCookie('referral_code', 'HUQJUMKG')
+            ->post('/checkout', $payload)
+            ->assertSessionHasErrors(['customer_email']);
+
+        $this->assertSame(0, Order::count());
+    }
+
     public function test_checkout_to_success_to_upload_flow_end_to_end(): void
     {
         // POST /checkout → redirect ke success page.

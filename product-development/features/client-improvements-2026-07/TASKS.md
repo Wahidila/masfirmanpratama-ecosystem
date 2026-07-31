@@ -9,7 +9,7 @@
 | # | Task | App | Status |
 |---|------|-----|--------|
 | 1 | Tambah **kode unik pembayaran** | store | 🔴 |
-| 2 | Input **email opsional** saat order | store | 🔴 |
+| 2 | Input **email opsional** saat order | store | 🟢 |
 | 3 | Peserta masuk kelas **hanya saat cicilan lunas** (bukan cicilan pertama) | store | 🟢 |
 | 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🔴 |
 | 5 | Fitur **lupa password** | store + affiliate | 🔴 |
@@ -31,11 +31,15 @@ identifikasi transfer per order. Ditampilkan ke customer di halaman pembayaran.
 - [ ] Admin: tampilkan kode unik di detail order
 - [ ] Test
 
-### 2. Email opsional saat order 🔴
-- [ ] Ubah validasi email `required` → `nullable` (FormRequest / controller)
-- [ ] Update Blade checkout: label tidak wajib, hapus `required` attr
-- [ ] Pastikan alur yang pakai email (notifikasi/track) aman kalau email kosong
-- [ ] Test
+### 2. Email opsional saat order 🟢
+Keputusan: email **opsional**, KECUALI order via link referral (cookie/ref_code) —
+karena sisi affiliate butuh email untuk atribusi komisi (cek self-referral).
+- [x] Product checkout (`CheckoutController`) server sudah conditional (mirror di Blade)
+- [x] Blade `pages/checkout/index`: label `(opsional)` vs `*`, `required` kondisional, Alpine validate kondisional
+- [x] Course checkout (`CourseCheckoutController`): validasi `required` → conditional `requiredIf(referral)`
+- [x] Blade `pages/courses/checkout`: label + `required` kondisional
+- [x] ✅ Test: CheckoutStore (email optional non-referral / required referral) + CourseRegistrationEmail — semua pass
+- Catatan klien: kalau mau email **sepenuhnya opsional** (termasuk order referral), tinggal lepas `requiredIf`.
 
 ### 3. Peserta hanya masuk kelas saat lunas 🟢
 - [x] Titik pembuatan: `CourseParticipantSync::fromOrder()` — dulu enroll saat `verified > 0`

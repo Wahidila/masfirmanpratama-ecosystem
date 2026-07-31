@@ -18,6 +18,12 @@
         'address_postal' => old('address_postal', ''),
         'shipping_method' => old('shipping_method', ''),
     ];
+
+    // Email wajib HANYA kalau order datang dari link referral (cookie di-set app
+    // Affiliate, atau ref_code di URL) — supaya atribusi komisi affiliate tetap
+    // jalan (sisi affiliate butuh email untuk cek self-referral). Selain itu email
+    // opsional. Kondisi ini mirror requiredIf di CheckoutController::store().
+    $referralActive = filled(request()->cookie('referral_code')) || filled(request()->input('ref_code'));
 @endphp
 
 <x-layouts.store
@@ -168,7 +174,12 @@
 
                         <div>
                             <label for="customer_email" class="mb-1.5 block text-sm font-semibold text-slate-700">
-                                Email <span class="text-rose-500">*</span>
+                                Email
+                                @if ($referralActive)
+                                    <span class="text-rose-500">*</span>
+                                @else
+                                    <span class="font-normal text-slate-400">(opsional)</span>
+                                @endif
                             </label>
                             <input
                                 id="customer_email"
@@ -181,7 +192,7 @@
                                 :class="errorClasses('customer_email')"
                                 class="w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 transition focus:outline-none focus:ring-2"
                                 placeholder="nama@email.com"
-                                required
+                                @if ($referralActive) required @endif
                             >
                             <p x-text="errors.customer_email || '\u00A0'" class="mt-1.5 min-h-[1.25rem] text-xs font-medium text-rose-600" :class="errors.customer_email ? 'opacity-100' : 'opacity-0'" aria-live="polite"></p>
                         </div>
@@ -683,9 +694,17 @@
                             e.customer_name = 'Nama lengkap wajib diisi (min. 2 karakter).';
                         }
                         const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+@if ($referralActive)
+                        // Order via link referral: email wajib (atribusi komisi affiliate).
                         if (! this.form.customer_email || ! emailRe.test(this.form.customer_email)) {
+                            e.customer_email = 'Email wajib diisi untuk order via link referral.';
+                        }
+@else
+                        // Email opsional — hanya validasi format kalau diisi.
+                        if (this.form.customer_email && ! emailRe.test(this.form.customer_email)) {
                             e.customer_email = 'Format email tidak valid.';
                         }
+@endif
                         const phoneRe = /^(\+?62|0)8[1-9][0-9]{6,11}$/;
                         const phoneClean = (this.form.customer_phone || '').replace(/[\s-]/g, '');
                         if (! phoneClean || ! phoneRe.test(phoneClean)) {
