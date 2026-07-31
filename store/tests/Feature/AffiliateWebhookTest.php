@@ -39,7 +39,7 @@ class AffiliateWebhookTest extends TestCase
         $order = Order::factory()->create([
             'order_number' => 'MFP-20260618-ABC123',
             'customer_name' => 'Budi Santoso',
-            'email' => 'budi@example.com',
+            'email' => 'budi.buyer@example.com',
             'total' => 4500000,
             'status' => 'paid',
             'ref_code' => 'FIRMAN01',
@@ -103,7 +103,8 @@ class AffiliateWebhookTest extends TestCase
             if ($payload['buyer_name'] !== 'Budi Santoso') {
                 return false;
             }
-            if ($payload['buyer_email'] !== 'budi@example.com') {
+            // buyer_email wajib ada — affiliate menahan komisi kalau kosong.
+            if (($payload['buyer_email'] ?? null) !== 'budi.buyer@example.com') {
                 return false;
             }
             if ((float) $payload['order_total'] !== 4500000.0) {
@@ -294,6 +295,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 185_000,
             'status' => 'active',
             'type' => 'book',
+            'is_shippable' => false,
         ]);
 
         $response = $this->withUnencryptedCookie('referral_code', 'AFFILIATE99')
@@ -327,6 +329,7 @@ class AffiliateWebhookTest extends TestCase
             'price' => 185_000,
             'status' => 'active',
             'type' => 'book',
+            'is_shippable' => false,
         ]);
 
         $response = $this->withUnencryptedCookie('referral_code', 'COOKIE_CODE')

@@ -191,4 +191,55 @@ XML;
 
         @unlink($path);
     }
+
+    public function test_import_relinks_old_cross_post_links_to_blog(): void
+    {
+        // Post 701 links to post 700 using the old date-based permalink; after
+        // import that link must point at the new /blog/{slug} route.
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/"
+    xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+    <title>Relink</title>
+    <wp:wxr_version>1.2</wp:wxr_version>
+    <item>
+        <title><![CDATA[Sumber Kekuatan Doa]]></title>
+        <link>https://masfirmanpratama.com/sumber-kekuatan-doa/</link>
+        <content:encoded><![CDATA[<p>Artikel doa.</p>]]></content:encoded>
+        <wp:post_id>700</wp:post_id>
+        <wp:post_date><![CDATA[2025-03-01 09:00:00]]></wp:post_date>
+        <wp:post_name><![CDATA[sumber-kekuatan-doa]]></wp:post_name>
+        <wp:status><![CDATA[publish]]></wp:status>
+        <wp:post_type><![CDATA[post]]></wp:post_type>
+    </item>
+    <item>
+        <title><![CDATA[Artikel Perujuk]]></title>
+        <link>https://masfirmanpratama.com/artikel-perujuk/</link>
+        <content:encoded><![CDATA[<p>Baca ini juga : <a href="https://masfirmanpratama.com/2025/03/01/sumber-kekuatan-doa/">Inilah sumber utama kekuatan doa</a></p>]]></content:encoded>
+        <wp:post_id>701</wp:post_id>
+        <wp:post_date><![CDATA[2025-04-01 09:00:00]]></wp:post_date>
+        <wp:post_name><![CDATA[artikel-perujuk]]></wp:post_name>
+        <wp:status><![CDATA[publish]]></wp:status>
+        <wp:post_type><![CDATA[post]]></wp:post_type>
+    </item>
+</channel>
+</rss>
+XML;
+        $path = base_path('storage/framework/testing/relink-wxr.xml');
+        @mkdir(dirname($path), 0777, true);
+        file_put_contents($path, $xml);
+
+        $result = (new WxrImporter)->import($path);
+
+        $referrer = Post::where('wp_post_id', 701)->first();
+        $this->assertStringContainsString('href="/blog/sumber-kekuatan-doa"', $referrer->content);
+        $this->assertStringNotContainsString('masfirmanpratama.com/2025', $referrer->content);
+        $this->assertGreaterThanOrEqual(1, $result['summary']['links_relinked']);
+
+        @unlink($path);
+    }
 }

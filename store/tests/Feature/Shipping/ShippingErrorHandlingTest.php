@@ -7,9 +7,14 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
+/**
+ * Tests fail-closed shipping behavior. SEBELUMNYA: dummyRates() fabrikasi
+ * 9000/kg saat API error/empty → harga palsu disimpan sebagai shipping_cost
+ * order. SEKARANG: empty/error → no rates ditampilkan, checkout submit dengan
+ * shipping wajib diblokir dengan pesan error. Lihat ShippingRateService::getRates.
+ */
 class ShippingErrorHandlingTest extends TestCase
 {
     use RefreshDatabase;
@@ -37,11 +42,11 @@ class ShippingErrorHandlingTest extends TestCase
         ]);
     }
 
-    public function test_rate_endpoint_returns_dummy_rates_when_api_errors(): void
+    public function test_rate_endpoint_returns_error_when_api_errors(): void
     {
-        Log::spy();
-
         Http::fake([
+            '*/shipping/services' => Http::response(['message' => 'Success', 'data' => []], 200),
+            '*/shipping/couriers' => Http::response(['message' => 'Success', 'data' => []], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'License Anda sudah expired.',
             ], 403),
@@ -57,16 +62,15 @@ class ShippingErrorHandlingTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        // Fallback dummy rates returned instead of empty
-        $rates = $response->json('rates');
-        $this->assertNotEmpty($rates);
-        $this->assertSame('jne', $rates[0]['courier']);
-        $response->assertJsonMissing(['error']);
+        $this->assertSame([], $response->json('rates'));
+        $this->assertNotEmpty($response->json('error'));
     }
 
-    public function test_rate_endpoint_genuine_no_coverage_returns_dummy(): void
+    public function test_rate_endpoint_genuine_no_coverage_returns_empty(): void
     {
         Http::fake([
+            '*/shipping/services' => Http::response(['message' => 'Success', 'data' => []], 200),
+            '*/shipping/couriers' => Http::response(['message' => 'Success', 'data' => []], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'Success',
                 'data' => [],
@@ -83,15 +87,24 @@ class ShippingErrorHandlingTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        // Fallback dummy rates when API returns empty data
-        $rates = $response->json('rates');
-        $this->assertNotEmpty($rates);
+        $this->assertSame([], $response->json('rates'));
         $response->assertJsonMissing(['error']);
     }
 
     public function test_rate_endpoint_success_unchanged(): void
     {
         Http::fake([
+            '*/shipping/services' => Http::response([
+                'message' => 'Success',
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'is_premium' => 0, 'enable' => 1, 'extra_cost' => 0],
+                ],
+            ], 200),
+            '*/shipping/couriers' => Http::response([
+                'message' => 'Success',
+                'data' => [['id' => 'jne', 'title' => 'JNE', 'category' => 'domestic']],
+            ], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'Success',
                 'data' => [
@@ -122,9 +135,11 @@ class ShippingErrorHandlingTest extends TestCase
         $response->assertJsonMissing(['error']);
     }
 
-    public function test_checkout_submit_succeeds_with_dummy_rates_when_shipping_api_errors(): void
+    public function test_checkout_submit_blocked_when_shipping_api_errors(): void
     {
         Http::fake([
+            '*/shipping/services' => Http::response(['message' => 'Success', 'data' => []], 200),
+            '*/shipping/couriers' => Http::response(['message' => 'Success', 'data' => []], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'License Anda sudah expired.',
             ], 403),
@@ -137,8 +152,9 @@ class ShippingErrorHandlingTest extends TestCase
             'address_line' => 'Jl. Merdeka No. 12',
             'address_city' => 'Jakarta Selatan',
             'address_province' => 'DKI Jakarta',
+            'address_district' => 'Kebayoran Baru',
             'address_postal' => '12110',
-            'shipping_method' => 'REG',
+            'shipping_method' => 'jne_reg',
             'payment_type' => 'lunas',
             'installment_scheme_id' => null,
             'cart_json' => json_encode([
@@ -148,14 +164,10 @@ class ShippingErrorHandlingTest extends TestCase
             'ref_code' => null,
         ]);
 
-        $response->assertRedirect();
-        $response->assertSessionHasNoErrors();
-
-        $order = Order::first();
-        $this->assertNotNull($order);
-        // Shipping cost from dummy: 1kg * 9000 = 9000
-        $this->assertSame(9000, (int) $order->shipping_cost);
-        $this->assertSame('REG', $order->shipping_courier);
+        // Sekarang fail-closed: redirect back dengan error, BUKAN persist order
+        // dengan harga palsu.
+        $response->assertSessionHasErrors(['shipping_method']);
+        $this->assertNull(Order::first(), 'No order should be persisted when shipping rate API fails.');
     }
 
     public function test_checkout_class_only_unaffected(): void

@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header
         title="Skema Cicilan Baru"
-        subtitle="Tambah skema pembayaran yang akan tampil di dropdown checkout.">
+        subtitle="Skema cicilan untuk pendaftaran kelas. Akan tampil di checkout kelas terkait.">
         <x-slot:actions>
             <x-admin.button href="{{ route('admin.installment-schemes.index') }}" variant="outline" size="sm">
                 ← Kembali
@@ -15,7 +15,7 @@
 
     @include('admin.installment-schemes._form', [
         'scheme' => $scheme,
-        'products' => $products,
+        'courses' => $courses,
         'action' => route('admin.installment-schemes.store'),
         'method' => 'POST',
     ])

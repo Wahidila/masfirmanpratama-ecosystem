@@ -10,20 +10,19 @@ class InstallmentSchemeSeeder extends Seeder
 {
     public function run(): void
     {
-        // Skema global (product_id = null, course_id = null) berlaku untuk semua produk
-        // yang belum punya skema spesifik.
+        // Skema global (course_id = null) berlaku untuk SEMUA kelas.
         InstallmentScheme::updateOrCreate(
-            ['product_id' => null, 'course_id' => null, 'name' => 'Lunas (cash)'],
+            ['course_id' => null, 'name' => 'Lunas (cash)'],
             ['dp_pct' => 100, 'n_installments' => 1, 'interval_days' => 0, 'active' => true],
         );
 
         InstallmentScheme::updateOrCreate(
-            ['product_id' => null, 'course_id' => null, 'name' => '3x Cicilan'],
+            ['course_id' => null, 'name' => '3x Cicilan'],
             ['dp_pct' => 30, 'n_installments' => 3, 'interval_days' => 30, 'active' => true],
         );
 
         InstallmentScheme::updateOrCreate(
-            ['product_id' => null, 'course_id' => null, 'name' => '6x Cicilan'],
+            ['course_id' => null, 'name' => '6x Cicilan'],
             ['dp_pct' => 20, 'n_installments' => 6, 'interval_days' => 30, 'active' => true],
         );
 

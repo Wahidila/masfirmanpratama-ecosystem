@@ -25,9 +25,11 @@
                                 <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand-50 text-xs font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 shrink-0">
                                     {{ $index + 1 }}
                                 </span>
-                                <span class="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
+                                {{-- Drill-down: klik nama → halaman edit produk. --}}
+                                <a href="{{ route('admin.products.edit', $product['slug']) }}"
+                                   class="text-sm font-medium text-gray-800 dark:text-white/90 truncate hover:text-brand-600 dark:hover:text-brand-400">
                                     {{ $product['title'] }}
-                                </span>
+                                </a>
                             </div>
                             <span class="text-sm font-semibold text-gray-800 dark:text-white/90 shrink-0 ml-2">
                                 Rp {{ number_format((float) $product['revenue'], 0, ',', '.') }}

@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # Route the bare /admin app path to Laravel even though a public/admin/ asset
+    # dir exists (holds admin.css). Without this the web server treats /admin as a
+    # directory and returns 403. Static files under /admin/ are still served directly
+    # because this only matches the bare path.
+    RewriteRule ^admin/?$ index.php [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

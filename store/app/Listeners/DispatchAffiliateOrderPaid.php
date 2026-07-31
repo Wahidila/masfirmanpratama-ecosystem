@@ -29,7 +29,8 @@ class DispatchAffiliateOrderPaid
             'store_order_id' => $order->order_number,
             'ref_code' => $order->ref_code,
             'buyer_name' => $order->customer_name,
-            // Dikirim agar receiver bisa mendeteksi self-referral (pembeli == affiliator).
+            // Affiliate butuh buyer_email untuk verifikasi anti self-referral;
+            // tanpa ini komisi ditahan ("Buyer unverifiable, commission withheld").
             'buyer_email' => $order->email,
             'order_total' => (float) $order->total,
             'product_type' => $productType,

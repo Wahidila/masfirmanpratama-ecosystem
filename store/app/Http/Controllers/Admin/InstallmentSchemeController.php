@@ -3,35 +3,42 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
 use App\Models\InstallmentScheme;
-use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
+/**
+ * Skema cicilan — HANYA untuk kelas/kursus. Skema bisa global (berlaku semua
+ * kelas) atau dikunci ke satu kelas. Produk/buku tidak punya cicilan.
+ */
 class InstallmentSchemeController extends Controller
 {
     public function index(Request $request): View
     {
-        $filterScope = $request->query('scope'); // null|global|product
+        $filterScope = $request->query('scope'); // null|global|course
+        $filterCourse = $request->integer('course') ?: null; // filter ke 1 kelas
         $search = trim((string) $request->query('q', ''));
 
         $query = InstallmentScheme::query()
-            ->with('product:id,title,slug')
-            ->orderByRaw('product_id IS NULL DESC') // global first
+            ->with('course:id,title,slug')
+            ->orderByRaw('course_id IS NULL DESC') // global dulu
             ->orderBy('n_installments');
 
-        if ($filterScope === 'global') {
-            $query->whereNull('product_id');
-        } elseif ($filterScope === 'product') {
-            $query->whereNotNull('product_id');
+        if ($filterCourse !== null) {
+            $query->where('course_id', $filterCourse);
+        } elseif ($filterScope === 'global') {
+            $query->whereNull('course_id');
+        } elseif ($filterScope === 'course') {
+            $query->whereNotNull('course_id');
         }
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('product', fn ($p) => $p->where('title', 'like', "%{$search}%"));
+                    ->orWhereHas('course', fn ($c) => $c->where('title', 'like', "%{$search}%"));
             });
         }
 
@@ -40,28 +47,30 @@ class InstallmentSchemeController extends Controller
         $stats = [
             'total' => InstallmentScheme::count(),
             'active' => InstallmentScheme::where('active', true)->count(),
-            'global' => InstallmentScheme::whereNull('product_id')->count(),
-            'product' => InstallmentScheme::whereNotNull('product_id')->count(),
+            'global' => InstallmentScheme::whereNull('course_id')->count(),
+            'course' => InstallmentScheme::whereNotNull('course_id')->count(),
         ];
 
         return view('admin.installment-schemes.index', [
             'schemes' => $schemes,
             'stats' => $stats,
             'filterScope' => $filterScope,
+            'filterCourseModel' => $filterCourse ? Course::find($filterCourse) : null,
             'search' => $search,
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         return view('admin.installment-schemes.create', [
             'scheme' => new InstallmentScheme([
+                'course_id' => $request->integer('course') ?: null,
                 'dp_pct' => 30,
                 'n_installments' => 3,
                 'interval_days' => 30,
                 'active' => true,
             ]),
-            'products' => $this->productOptions(),
+            'courses' => $this->courseOptions(),
         ]);
     }
 
@@ -80,7 +89,7 @@ class InstallmentSchemeController extends Controller
     {
         return view('admin.installment-schemes.edit', [
             'scheme' => $installmentScheme,
-            'products' => $this->productOptions(),
+            'courses' => $this->courseOptions(),
         ]);
     }
 
@@ -125,28 +134,33 @@ class InstallmentSchemeController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'dp_pct' => ['required', 'numeric', 'min:0', 'max:100'],
             'n_installments' => ['required', 'integer', 'min:1', 'max:36'],
             'interval_days' => ['required', 'integer', 'min:0', 'max:365'],
             'active' => ['nullable', 'boolean'],
         ], [
             'name.required' => 'Nama skema wajib diisi.',
+            'course_id.exists' => 'Kelas yang dipilih tidak valid.',
             'dp_pct.max' => 'DP maksimum 100%.',
             'n_installments.min' => 'Jumlah pembayaran minimal 1 (lunas).',
         ]);
 
+        $validated['course_id'] = $validated['course_id'] ?? null;
         $validated['active'] = (bool) ($validated['active'] ?? false);
 
         return $validated;
     }
 
     /**
-     * @return Collection<int, Product>
+     * Kelas aktif untuk dropdown scope skema.
+     *
+     * @return Collection<int, Course>
      */
-    protected function productOptions()
+    protected function courseOptions()
     {
-        return Product::query()
+        return Course::query()
+            ->where('status', 'active')
             ->orderBy('title')
             ->get(['id', 'title', 'slug']);
     }

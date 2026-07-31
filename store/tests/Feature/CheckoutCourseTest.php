@@ -65,6 +65,8 @@ class CheckoutCourseTest extends TestCase
             'price' => 185000,
             'status' => 'active',
             'type' => 'book',
+            // Fokus test: resolusi product_id/course_id, bukan ongkir.
+            'is_shippable' => false,
         ]);
 
         $this->post('/checkout', $this->validPayload([
@@ -99,6 +101,8 @@ class CheckoutCourseTest extends TestCase
             'slug' => 'buku-mpl',
             'title' => 'Buku MPL',
             'price' => 185000,
+            // Fokus test: cart campuran course+book resolve benar, bukan ongkir.
+            'is_shippable' => false,
         ]);
 
         $this->post('/checkout', $this->validPayload([

@@ -33,16 +33,22 @@
         existingImage: @js($existingImage),
         initialTitle: @js(old('title', $course->title)),
         initialSlug: @js(old('slug', $course->slug)),
+        initialStatus: @js(old('status', $course->status ?? 'draft')),
         initialSchedule: @js($initialSchedule),
         initialBenefits: @js($initialBenefits),
         initialTestimonials: @js($initialTestimonials),
     })"
-    @submit="onSubmit($event)"
-    class="space-y-6">
+    @submit="onSubmit($event)">
     @csrf
     @if ($isEdit)
         @method('PUT')
     @endif
+    {{-- Status disetir segmented control di sidebar Publikasi; dikirim via hidden. --}}
+    <input type="hidden" name="status" :value="status">
+
+    <div class="grid items-start gap-6 lg:grid-cols-3">
+        {{-- ══════════ MAIN COLUMN ══════════ --}}
+        <div class="space-y-6 lg:col-span-2">
 
     {{-- 1. Identitas Kelas --}}
     <x-admin.card title="Identitas kelas">
@@ -89,9 +95,9 @@
         </div>
     </x-admin.card>
 
-    {{-- 2. Harga & Status --}}
-    <x-admin.card title="Harga & status">
-        <div class="grid gap-5 sm:grid-cols-3">
+    {{-- 2. Harga --}}
+    <x-admin.card title="Harga">
+        <div class="grid gap-5 sm:grid-cols-2">
             <x-admin.form-group label="Harga (Rp)" for="price" name="price" required>
                 <input
                     type="number"
@@ -118,19 +124,7 @@
                     placeholder="250000">
             </x-admin.form-group>
 
-            <x-admin.form-group label="Status" for="status" name="status" required>
-                <select
-                    id="status"
-                    name="status"
-                    required
-                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    @foreach (['draft' => 'Draft (belum tayang)', 'active' => 'Active (live)', 'archived' => 'Archived'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('status', $course->status ?? 'draft') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </x-admin.form-group>
-
-            <div class="sm:col-span-3">
+            <div class="sm:col-span-2">
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                     <input
                         type="checkbox"
@@ -141,6 +135,13 @@
                     Tersedia cicilan
                 </label>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Centang jika kelas ini bisa dibayar dengan skema cicilan.</p>
+                @if ($course->exists ?? false)
+                    <a href="{{ route('admin.installment-schemes.index', ['course' => $course->id]) }}"
+                       class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400">
+                        <i data-lucide="layers" class="h-3.5 w-3.5"></i>
+                        Kelola skema cicilan kelas ini
+                    </a>
+                @endif
             </div>
         </div>
     </x-admin.card>
@@ -161,15 +162,8 @@
             </x-admin.form-group>
 
             <x-admin.form-group label="Ikon badge" for="badge_icon" name="badge_icon"
-                hint="Lucide icon name">
-                <input
-                    type="text"
-                    id="badge_icon"
-                    name="badge_icon"
-                    maxlength="40"
-                    value="{{ old('badge_icon', $course->badge_icon) }}"
-                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                    placeholder="zap">
+                hint="Pilih ikon dari daftar.">
+                <x-admin.icon-picker name="badge_icon" :value="old('badge_icon', $course->badge_icon)" />
             </x-admin.form-group>
 
             <x-admin.form-group label="Label kategori" for="category_label" name="category_label"
@@ -275,28 +269,14 @@
                     placeholder="Daftar Reguler">
             </x-admin.form-group>
 
-            <x-admin.form-group label="Ikon kartu (lucide)" for="card_icon" name="card_icon"
-                hint="Nama ikon dari Lucide Icons.">
-                <input
-                    type="text"
-                    id="card_icon"
-                    name="card_icon"
-                    maxlength="40"
-                    value="{{ old('card_icon', $course->card_icon) }}"
-                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                    placeholder="video / mic / gem">
+            <x-admin.form-group label="Ikon kartu" for="card_icon" name="card_icon"
+                hint="Pilih ikon dari daftar.">
+                <x-admin.icon-picker name="card_icon" :value="old('card_icon', $course->card_icon)" />
             </x-admin.form-group>
 
-            <x-admin.form-group label="Warna ikon (class Tailwind)" for="card_icon_color" name="card_icon_color"
-                hint="Class Tailwind untuk warna ikon.">
-                <input
-                    type="text"
-                    id="card_icon_color"
-                    name="card_icon_color"
-                    maxlength="60"
-                    value="{{ old('card_icon_color', $course->card_icon_color) }}"
-                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                    placeholder="text-blue-600 / text-accent-600">
+            <x-admin.form-group label="Warna ikon" for="card_icon_color" name="card_icon_color"
+                hint="Pilih warna dari palet.">
+                <x-admin.color-picker name="card_icon_color" :value="old('card_icon_color', $course->card_icon_color)" />
             </x-admin.form-group>
 
             <x-admin.form-group label="Fitur ringkas kartu (satu per baris)" for="card_features_raw" name="card_features_raw" class="sm:col-span-3"
@@ -309,47 +289,6 @@
                     class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     placeholder="Akses materi seumur hidup&#10;Sertifikat resmi&#10;Grup diskusi eksklusif">{{ $cardFeaturesRaw }}</textarea>
             </x-admin.form-group>
-        </div>
-    </x-admin.card>
-
-    {{-- 5. Gambar Kelas --}}
-    <x-admin.card title="Gambar kelas">
-        <div class="grid gap-5 sm:grid-cols-2">
-            <x-admin.form-group
-                label="{{ $isEdit ? 'Ganti gambar (opsional)' : 'Upload gambar' }}"
-                for="image"
-                name="image"
-                hint="JPG, PNG, atau WebP. Maks 2 MB. Resolusi minimal 600 × 600 piksel.">
-                <input
-                    type="file"
-                    id="image"
-                    name="image"
-                    accept="image/jpeg,image/png,image/webp"
-                    @change="onImageChange($event)"
-                    class="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-gray-400 dark:file:bg-brand-500/15 dark:file:text-brand-400">
-
-                @if ($isEdit && $course->image_path)
-                    <label class="mt-3 inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                        <input type="checkbox" name="remove_image" value="1" class="rounded border-gray-300 text-error-500 focus:ring-error-200 dark:border-gray-700">
-                        Hapus gambar saat ini
-                    </label>
-                @endif
-            </x-admin.form-group>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Preview</label>
-                <div class="relative aspect-square w-full max-w-[240px] overflow-hidden rounded-2xl border border-dashed border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <template x-if="previewUrl">
-                        <img :src="previewUrl" alt="Preview gambar kelas" class="h-full w-full object-cover">
-                    </template>
-                    <template x-if="!previewUrl">
-                        <div class="flex h-full w-full flex-col items-center justify-center gap-1.5 text-gray-400 dark:text-gray-500">
-                            <x-admin.icon name="image" class="h-8 w-8" />
-                            <span class="text-xs">Belum ada gambar</span>
-                        </div>
-                    </template>
-                </div>
-            </div>
         </div>
     </x-admin.card>
 
@@ -438,15 +377,46 @@
             <div class="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-white/[0.03]">
                 <div class="grid gap-3 sm:grid-cols-3">
                     <x-admin.form-group label="Ikon" for="benefit_icon" name="benefits[*][icon]"
-                        hint="Lucide icon name">
-                        <input
-                            type="text"
-                            :id="'benefit_icon_' + idx"
-                            :name="'benefits[' + idx + '][icon]'"
-                            x-model="item.icon"
-                            maxlength="40"
-                            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                            placeholder="brain">
+                        hint="Pilih ikon dari daftar.">
+                        <div
+                            x-data="{
+                                open: false,
+                                search: '',
+                                get icons() { return window.MFP_ICON_LIST || []; },
+                                filtered() { const q = this.search.trim().toLowerCase(); return q ? this.icons.filter(i => i.includes(q)) : this.icons; },
+                                renderSoon() { this.$nextTick(() => window.lucide && window.lucide.createIcons()); },
+                                pick(ic) { item.icon = ic; this.open = false; },
+                            }"
+                            @click.outside="open = false"
+                            @keydown.escape.window="open = false"
+                            class="relative"
+                        >
+                            <input type="hidden" :name="'benefits[' + idx + '][icon]'" :value="item.icon">
+                            <button type="button" @click="open = !open; if (open) renderSoon()"
+                                class="flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-transparent px-3 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                <span class="flex min-w-0 items-center gap-2">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center text-brand-600 dark:text-brand-400">
+                                        <template x-if="item.icon"><i :data-lucide="item.icon" class="h-5 w-5"></i></template>
+                                    </span>
+                                    <span class="truncate" :class="!item.icon && 'text-gray-400'" x-text="item.icon || 'Pilih ikon…'"></span>
+                                </span>
+                                <x-admin.icon name="chevron-right" class="h-4 w-4 shrink-0 text-gray-400" />
+                            </button>
+                            <div x-show="open" x-cloak
+                                class="absolute left-0 z-30 mt-1 w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-theme-xs dark:border-gray-700 dark:bg-gray-900">
+                                <input type="text" x-model="search" @input="renderSoon()" placeholder="Cari ikon…"
+                                    class="mb-2 h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                                <div class="grid max-h-72 grid-cols-6 gap-1 overflow-y-auto">
+                                    <template x-for="ic in filtered()" :key="ic">
+                                        <button type="button" @click="pick(ic)" :title="ic"
+                                            :class="item.icon === ic ? 'border-brand-500 bg-brand-50 text-brand-600 dark:bg-brand-500/15' : 'border-transparent text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/[0.03]'"
+                                            class="flex h-9 w-9 items-center justify-center rounded-lg border">
+                                            <i :data-lucide="ic" class="h-5 w-5"></i>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
                     </x-admin.form-group>
 
                     <x-admin.form-group label="Judul benefit" for="benefit_title" name="benefits[*][title]">
@@ -572,11 +542,74 @@
         </div>
     </x-admin.card>
 
-    {{-- Footer actions --}}
-    <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <x-admin.button href="{{ route('admin.courses.index') }}" variant="outline">
-            Batal
-        </x-admin.button>
+        </div>{{-- ══════════ /MAIN COLUMN ══════════ --}}
+
+        {{-- ══════════ SIDEBAR ══════════ --}}
+        <div class="space-y-6 lg:col-span-1 lg:sticky lg:top-28">
+
+            {{-- Publikasi (status paling menonjol) --}}
+            <x-admin.card title="Publikasi">
+                <div class="space-y-3">
+                    <div class="grid grid-cols-3 gap-1 rounded-xl border border-gray-200 p-1 dark:border-gray-700"
+                        role="radiogroup" aria-label="Status publikasi kelas">
+                        @foreach (['draft' => 'Draft', 'active' => 'Active', 'archived' => 'Arsip'] as $value => $label)
+                            <button type="button" @click="status = '{{ $value }}'"
+                                role="radio" :aria-checked="status === '{{ $value }}' ? 'true' : 'false'"
+                                :class="status === '{{ $value }}'
+                                    ? '{{ $value === 'active' ? 'bg-success-500 text-white' : ($value === 'archived' ? 'bg-gray-500 text-white' : 'bg-brand-500 text-white') }}'
+                                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/[0.03]'"
+                                class="rounded-lg px-2 py-2 text-xs font-semibold transition">
+                                {{ $label }}
+                            </button>
+                        @endforeach
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        <span x-show="status === 'draft'" x-cloak>Belum tayang — tersimpan tapi tak muncul di store.</span>
+                        <span x-show="status === 'active'" x-cloak>Live — tampil di store untuk pembeli.</span>
+                        <span x-show="status === 'archived'" x-cloak>Disembunyikan dari store.</span>
+                    </p>
+                    @error('status')<p class="text-theme-xs text-error-500">{{ $message }}</p>@enderror
+                </div>
+            </x-admin.card>
+
+            {{-- Gambar kelas --}}
+            <x-admin.card title="Gambar kelas">
+                <div class="space-y-4">
+                    <div class="relative aspect-square w-full overflow-hidden rounded-2xl border border-dashed border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <template x-if="previewUrl">
+                            <img :src="previewUrl" alt="Preview gambar kelas" class="h-full w-full object-cover">
+                        </template>
+                        <template x-if="!previewUrl">
+                            <div class="flex h-full w-full flex-col items-center justify-center gap-1.5 text-gray-400 dark:text-gray-500">
+                                <x-admin.icon name="image" class="h-8 w-8" />
+                                <span class="text-xs">Belum ada gambar</span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <x-admin.form-group
+                        label="{{ $isEdit ? 'Ganti gambar (opsional)' : 'Upload gambar' }}"
+                        for="image" name="image"
+                        hint="JPG, PNG, WebP. Maks 2 MB. Min 600 × 600 px.">
+                        <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp"
+                            @change="onImageChange($event)"
+                            class="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-gray-400 dark:file:bg-brand-500/15 dark:file:text-brand-400">
+                        @if ($isEdit && $course->image_path)
+                            <label class="mt-3 inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <input type="checkbox" name="remove_image" value="1" @change="if ($event.target.checked) previewUrl = null; else previewUrl = @js($existingImage)"
+                                    class="rounded border-gray-300 text-error-500 focus:ring-error-200 dark:border-gray-700">
+                                Hapus gambar saat ini
+                            </label>
+                        @endif
+                    </x-admin.form-group>
+                </div>
+            </x-admin.card>
+        </div>
+    </div>{{-- ══════════ /GRID ══════════ --}}
+
+    {{-- Sticky action bar — Simpan selalu terlihat saat scroll --}}
+    <div class="sticky bottom-0 z-20 mt-6 flex items-center justify-end gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
+        <x-admin.button href="{{ route('admin.courses.index') }}" variant="outline">Batal</x-admin.button>
         <button type="submit"
             :disabled="submitting"
             :class="submitting ? 'opacity-60 cursor-not-allowed' : ''"
@@ -589,10 +622,11 @@
 
 @push('scripts')
 <script>
-    function courseForm({ autoSlug, existingImage, initialTitle, initialSlug, initialSchedule, initialBenefits, initialTestimonials }) {
+    function courseForm({ autoSlug, existingImage, initialTitle, initialSlug, initialStatus, initialSchedule, initialBenefits, initialTestimonials }) {
         return {
             title: initialTitle || '',
             slug: initialSlug || '',
+            status: initialStatus || 'draft',
             autoSlug: autoSlug,
             previewUrl: existingImage || null,
             submitting: false,

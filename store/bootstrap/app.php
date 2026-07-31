@@ -22,11 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // signature in header, no session cookie or CSRF token.
         $middleware->validateCsrfTokens(except: ['webhooks/agenwebsite/*']);
 
-        // Cookie referral di-set oleh app Affiliate (APP_KEY berbeda). Kalau
-        // dienkripsi, Store gagal decrypt (MAC mismatch) → cookie di-drop →
-        // order kehilangan ref_code → webhook order-paid tak pernah terkirim.
-        // Kode referral bukan rahasia (sudah tampil di URL /ref/{code}), jadi
-        // aman dikirim plaintext. HARUS sama persis dengan except di app Affiliate.
+        // Cookie 'referral_code' di-set PLAINTEXT oleh app Affiliate (APP_KEY
+        // berbeda) di domain parent .masfirmanpratama.id. Jangan enkripsi di sini
+        // juga — kalau tidak, Store gagal mendekripsi cookie itu → Cookie::get(
+        // 'referral_code') = null → ref_code order kosong → webhook order-paid
+        // tak pernah terkirim → komisi affiliate hilang. WAJIB match app Affiliate.
         $middleware->encryptCookies(except: ['referral_code']);
 
         // Untuk guard 'admin', redirect unauthenticated ke /admin/login
