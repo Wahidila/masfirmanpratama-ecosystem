@@ -355,7 +355,7 @@ class AffiliateWebhookTest extends TestCase
         $this->assertSame('FORM_CODE', $order->ref_code);
     }
 
-    public function test_book_checkout_requires_email_when_referral_cookie_present(): void
+    public function test_book_checkout_with_referral_cookie_allows_empty_email(): void
     {
         Product::factory()->create([
             'slug' => 'buku-mpl',
@@ -363,10 +363,12 @@ class AffiliateWebhookTest extends TestCase
             'price' => 185_000,
             'status' => 'active',
             'type' => 'book',
+            // Fokus test: email opsional saat ada referral — bukan ongkir.
+            'is_shippable' => false,
         ]);
 
-        // Ada referral cookie tapi email dikosongkan → harus ditolak, tidak ada order.
-        // Ini menutup lubang self-referral (affiliator beli buku via kodenya tanpa email).
+        // Ada referral cookie tapi email dikosongkan → tetap boleh. Self-referral
+        // check dihapus, email opsional; order dibuat + ref_code ke-attach.
         $response = $this->withUnencryptedCookie('referral_code', 'AFFILIATE99')
             ->post('/checkout', [
                 'customer_name' => 'Budi Test',
@@ -385,8 +387,11 @@ class AffiliateWebhookTest extends TestCase
                 'ref_code' => null,
             ]);
 
-        $response->assertSessionHasErrors('customer_email');
-        $this->assertDatabaseCount('orders', 0);
+        $response->assertSessionHasNoErrors();
+        $order = Order::first();
+        $this->assertNotNull($order);
+        $this->assertNull($order->email);
+        $this->assertSame('AFFILIATE99', $order->ref_code);
     }
 
     public function test_course_checkout_captures_referral_code_from_cookie(): void

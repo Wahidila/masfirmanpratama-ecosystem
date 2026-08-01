@@ -48,16 +48,20 @@ class CourseRegistrationEmailTest extends TestCase
         $this->assertNull(Order::first()->email);
     }
 
-    public function test_email_required_for_referral_course_registration(): void
+    public function test_email_optional_even_for_referral_course_registration(): void
     {
+        // Self-referral check dihapus → email opsional meski ada referral.
         $this->course();
         $payload = $this->payload();
         unset($payload['customer_email']);
 
         $this->withUnencryptedCookie('referral_code', 'HUQJUMKG')
             ->post('/kelas/kelas-amc-reguler/checkout', $payload)
-            ->assertSessionHasErrors(['customer_email']);
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(0, Order::count());
+        $order = Order::first();
+        $this->assertNotNull($order);
+        $this->assertNull($order->email);
+        $this->assertSame('HUQJUMKG', $order->ref_code);
     }
 }

@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -53,12 +52,10 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
-            // Wajib kalau order terkait referral (form atau cookie), supaya sisi affiliate
-            // bisa mendeteksi self-referral via email pembeli. Selain itu tetap opsional.
-            'customer_email' => [
-                Rule::requiredIf(fn () => filled($request->input('ref_code')) || filled(Cookie::get('referral_code'))),
-                'nullable', 'email', 'max:120',
-            ],
+            // Email selalu OPSIONAL. Sisi affiliate tidak lagi memakai email untuk
+            // verifikasi (pengecekan self-referral dihapus), jadi order referral pun
+            // tak perlu email.
+            'customer_email' => ['nullable', 'email', 'max:120'],
             'customer_phone' => ['required', 'string', 'min:8', 'max:25'],
             'address_line' => ['required', 'string', 'max:500'],
             'address_city' => ['nullable', 'string', 'max:120'],

@@ -244,18 +244,21 @@ class CheckoutStoreTest extends TestCase
         $this->assertNull(Order::first()->email);
     }
 
-    public function test_email_required_for_referral_order(): void
+    public function test_email_optional_even_for_referral_order(): void
     {
-        // Order via link referral (cookie): email tetap wajib supaya atribusi
-        // komisi affiliate jalan (sisi affiliate butuh email cek self-referral).
+        // Self-referral check dihapus → email tidak lagi wajib meski order via
+        // link referral. Referral tetap ke-attach ke order.
         $payload = $this->validPayload(['ref_code' => null]);
         unset($payload['customer_email']);
 
         $this->withUnencryptedCookie('referral_code', 'HUQJUMKG')
             ->post('/checkout', $payload)
-            ->assertSessionHasErrors(['customer_email']);
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(0, Order::count());
+        $order = Order::first();
+        $this->assertNotNull($order);
+        $this->assertNull($order->email);
+        $this->assertSame('HUQJUMKG', $order->ref_code);
     }
 
     public function test_checkout_to_success_to_upload_flow_end_to_end(): void

@@ -236,70 +236,39 @@ class StoreWebhookTest extends TestCase
     }
 
     /** @test */
-    public function self_referral_is_blocked_no_order_and_no_commission(): void
+    public function self_referral_now_earns_commission(): void
     {
-        // Pembeli memakai email yang sama dengan affiliator → self-referral.
+        // Pengecekan self-referral DIHAPUS (keputusan klien): pembelian lewat link
+        // sendiri tetap dapat komisi karena pembayaran tetap diverifikasi admin.
         $payload = $this->makeOrderPaidPayload([
             'store_order_id' => 'ORD-SELF',
             'buyer_email' => $this->affiliator->email,
         ]);
 
-        $response = $this->sendWebhook($payload);
+        $this->sendWebhook($payload)->assertStatus(200);
 
-        $response->assertStatus(200);
-
-        // Tidak ada referral order maupun commission yang dibuat.
-        $this->assertDatabaseCount('referral_orders', 0);
-        $this->assertDatabaseCount('commissions', 0);
-
-        // Webhook log processed dengan catatan self-referral.
-        $log = WebhookLog::latest('id')->first();
-        $this->assertNotNull($log);
-        $this->assertEquals('processed', $log->status);
-        $this->assertStringContainsString('Self-referral', $log->error_message);
+        $this->assertDatabaseCount('referral_orders', 1);
+        $this->assertDatabaseCount('commissions', 1);
+        $this->assertEquals('processed', WebhookLog::latest('id')->first()->status);
     }
 
     /** @test */
-    public function self_referral_detection_is_case_insensitive(): void
+    public function missing_buyer_email_still_earns_commission(): void
     {
-        $payload = $this->makeOrderPaidPayload([
-            'store_order_id' => 'ORD-SELF-CASE',
-            'buyer_email' => strtoupper($this->affiliator->email),
-        ]);
-
-        $response = $this->sendWebhook($payload);
-
-        $response->assertStatus(200);
-        $this->assertDatabaseCount('referral_orders', 0);
-        $this->assertDatabaseCount('commissions', 0);
-
-        // Pastikan skip memang karena deteksi self-referral (bukan early-return lain).
-        $log = WebhookLog::latest('id')->first();
-        $this->assertNotNull($log);
-        $this->assertEquals('processed', $log->status);
-        $this->assertStringContainsString('Self-referral', $log->error_message);
-    }
-
-    /** @test */
-    public function missing_buyer_email_withholds_commission(): void
-    {
-        // Tanpa email pembeli, receiver tidak bisa memastikan bukan self-referral →
-        // fail-closed: order & komisi di-skip, dicatat untuk tinjauan manual.
+        // Email pembeli tidak lagi dipakai untuk verifikasi → order tanpa email
+        // tetap menghasilkan komisi.
         $payload = $this->makeOrderPaidPayload([
             'store_order_id' => 'ORD-NO-EMAIL',
             'buyer_email' => null,
         ]);
 
-        $response = $this->sendWebhook($payload);
+        $this->sendWebhook($payload)->assertStatus(200);
 
-        $response->assertStatus(200);
-        $this->assertDatabaseCount('referral_orders', 0);
-        $this->assertDatabaseCount('commissions', 0);
+        $this->assertDatabaseCount('referral_orders', 1);
+        $this->assertDatabaseCount('commissions', 1);
 
-        $log = WebhookLog::latest('id')->first();
-        $this->assertNotNull($log);
-        $this->assertEquals('processed', $log->status);
-        $this->assertStringContainsString('withheld', $log->error_message);
+        $order = ReferralOrder::where('store_order_id', 'ORD-NO-EMAIL')->first();
+        $this->assertNull($order->buyer_email);
     }
 
     /** @test */

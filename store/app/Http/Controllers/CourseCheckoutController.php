@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -57,12 +56,9 @@ class CourseCheckoutController extends Controller
 
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
-            // Email opsional, KECUALI pendaftaran datang dari link referral (form
-            // atau cookie) — sisi affiliate butuh email untuk atribusi komisi.
-            'customer_email' => [
-                Rule::requiredIf(fn () => filled($request->input('ref_code')) || filled($request->cookie('referral_code'))),
-                'nullable', 'email', 'max:120',
-            ],
+            // Email selalu OPSIONAL (sisi affiliate tak lagi butuh email — self-referral
+            // check dihapus).
+            'customer_email' => ['nullable', 'email', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:30'],
             'occupation' => ['nullable', 'string', 'max:100'],
             'motivation' => ['nullable', 'string', 'max:500'],
@@ -72,7 +68,6 @@ class CourseCheckoutController extends Controller
             'ref_code' => ['nullable', 'string', 'max:64'],
         ], [
             'customer_name.required' => 'Nama lengkap wajib diisi.',
-            'customer_email.required' => 'Email wajib diisi untuk pendaftaran via link referral.',
             'customer_email.email' => 'Format email tidak valid.',
             'customer_phone.required' => 'Nomor WhatsApp wajib diisi.',
             'payment_type.required' => 'Pilih metode pembayaran.',

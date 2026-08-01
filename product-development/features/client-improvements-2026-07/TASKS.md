@@ -35,14 +35,12 @@ Nominal transfer = total + kode unik (1–999) → tiap order punya nominal khas
 - Catatan: webhook affiliate tetap kirim `order_total = total` (base) → komisi tidak kena kode unik.
 
 ### 2. Email opsional saat order 🟢
-Keputusan: email **opsional**, KECUALI order via link referral (cookie/ref_code) —
-karena sisi affiliate butuh email untuk atribusi komisi (cek self-referral).
-- [x] Product checkout (`CheckoutController`) server sudah conditional (mirror di Blade)
-- [x] Blade `pages/checkout/index`: label `(opsional)` vs `*`, `required` kondisional, Alpine validate kondisional
-- [x] Course checkout (`CourseCheckoutController`): validasi `required` → conditional `requiredIf(referral)`
-- [x] Blade `pages/courses/checkout`: label + `required` kondisional
-- [x] ✅ Test: CheckoutStore (email optional non-referral / required referral) + CourseRegistrationEmail — semua pass
-- Catatan klien: kalau mau email **sepenuhnya opsional** (termasuk order referral), tinggal lepas `requiredIf`.
+Keputusan final (2026-08-01): email **sepenuhnya opsional** — termasuk order via link referral.
+(Awalnya conditional-required untuk referral; dilepas setelah self-referral check dihapus — lihat §9.)
+- [x] Product checkout (`CheckoutController`): validasi email `nullable` polos
+- [x] Course checkout (`CourseCheckoutController`): idem
+- [x] Blade `pages/checkout/index` + `pages/courses/checkout`: label selalu `(opsional)`, tanpa `required`, Alpine hanya cek format kalau diisi
+- [x] ✅ Test: CheckoutStore + CourseRegistrationEmail + AffiliateWebhook (email opsional walau ada referral) — pass
 
 ### 3. Peserta hanya masuk kelas saat lunas 🟢
 - [x] Titik pembuatan: `CourseParticipantSync::fromOrder()` — dulu enroll saat `verified > 0`
@@ -123,3 +121,8 @@ Affiliate & Store app/DB terpisah → Store expose katalog JSON, Affiliate fetch
 - 2026-08-01 — 🎉 **8/8 task selesai.** Store 762 pass / affiliate 131 pass (2 store-fail sisa = env shipping fallback, pre-existing).
   Belum di-merge ke `main` & belum push — menunggu review/keputusan klien.
   Follow-up opsional: SMTP untuk email reset (task 5), hapus modul Skema Cicilan vestigial (task 4), build assets saat deploy.
+- 2026-08-01 — **§9 Hapus pengecekan self-referral** (permintaan klien): komisi baru cair setelah pembayaran
+  diverifikasi admin, jadi pembelian via link sendiri tetap transaksi nyata yang menguntungkan.
+  - Affiliate `StoreWebhookController`: guard self-referral + "buyer unverifiable (no email)" DIHAPUS → order + komisi tetap dibuat.
+  - Konsekuensi: email **tak lagi dipakai untuk verifikasi** → task 2 dijadikan email **sepenuhnya opsional** (lepas requiredIf).
+  - Test disesuaikan: affiliate StoreWebhook (self-referral & no-email → dapat komisi), store email/webhook. Store 762 / affiliate 130 pass.
