@@ -2,7 +2,7 @@
 
 > Task list & progress tracker untuk 8 permintaan klien.
 > Status: 🔴 belum · 🟡 in-progress · 🟢 selesai · ⚪ blocked/nunggu keputusan
-> Dibuat: 2026-07-31
+> Dibuat: 2026-07-31 · **SELESAI: 8/8 task 🟢 (2026-08-01)** di branch `feat/client-improvements-2026-07`
 
 ## Ringkasan permintaan
 
@@ -118,3 +118,8 @@ Affiliate & Store app/DB terpisah → Store expose katalog JSON, Affiliate fetch
 - 2026-07-31 — task list dibuat, eksplorasi codebase (4 agent paralel)
 - 2026-07-31 — ✅ Merge `feat/shipping-domestic-parity` → `feat/client-improvements-2026-07` (base main).
   4 konflik (comment-only + hidden select + test fixture) resolved. Test store+affiliate hijau (selain 4 env-fail).
+- 2026-07-31 — ✅ Task 3 (peserta lunas), 7 (show password), 2 (email opsional), 5 (lupa password) — commit + test hijau.
+- 2026-08-01 — ✅ Task 6 & 8 (produk affiliator + pilih produk), 1 (kode unik), 4 (cicilan bebas) — commit + test hijau.
+- 2026-08-01 — 🎉 **8/8 task selesai.** Store 762 pass / affiliate 131 pass (2 store-fail sisa = env shipping fallback, pre-existing).
+  Belum di-merge ke `main` & belum push — menunggu review/keputusan klien.
+  Follow-up opsional: SMTP untuk email reset (task 5), hapus modul Skema Cicilan vestigial (task 4), build assets saat deploy.
