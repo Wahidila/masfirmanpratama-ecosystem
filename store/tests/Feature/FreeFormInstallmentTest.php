@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Admin;
 use App\Models\Course;
+use App\Models\CourseParticipant;
 use App\Models\Order;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -172,7 +173,7 @@ class FreeFormInstallmentTest extends TestCase
         // Verifikasi DP (400rb + kode) → belum lunas → belum jadi peserta.
         $dp = $order->payments()->first();
         $this->actingAs($admin, 'admin')->post(route('admin.orders.payments.approve', [$order, $dp]));
-        $this->assertSame(0, \App\Models\CourseParticipant::count());
+        $this->assertSame(0, CourseParticipant::count());
 
         // Customer tambah pembayaran sisa (600rb) → admin verifikasi → lunas.
         $url = URL::temporarySignedRoute('upload.store', now()->addDay(), ['order_number' => $order->order_number]);
@@ -183,7 +184,7 @@ class FreeFormInstallmentTest extends TestCase
         $second = $order->payments()->orderByDesc('id')->first();
         $this->actingAs($admin, 'admin')->post(route('admin.orders.payments.approve', [$order, $second]));
 
-        $this->assertSame(1, \App\Models\CourseParticipant::count());
-        $this->assertSame('lunas', \App\Models\CourseParticipant::first()->payment_status);
+        $this->assertSame(1, CourseParticipant::count());
+        $this->assertSame('lunas', CourseParticipant::first()->payment_status);
     }
 }

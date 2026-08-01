@@ -75,7 +75,7 @@ class CourseParticipantController extends Controller
      */
     public function export(Request $request): StreamedResponse
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Peserta Kursus');
 

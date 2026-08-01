@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AffiliateCatalogController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BlogFeedController;
 use App\Http\Controllers\CheckoutController;
@@ -70,7 +71,7 @@ Route::get('/produk/{slug}', [ProductController::class, 'show'])
 
 // Katalog JSON untuk app Affiliate (buku + kelas aktif). Data publik, dipakai
 // halaman "Produk" affiliator + dropdown pilih produk saat buat link referral.
-Route::get('/api/affiliate/products', [\App\Http\Controllers\Api\AffiliateCatalogController::class, 'index'])
+Route::get('/api/affiliate/products', [AffiliateCatalogController::class, 'index'])
     ->name('api.affiliate.products');
 
 // Cart
@@ -181,14 +182,14 @@ if (! app()->environment('production')) {
 */
 
 use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\NewPasswordController as AdminNewPasswordController;
-use App\Http\Controllers\Admin\PasswordResetLinkController as AdminPasswordResetLinkController;
 use App\Http\Controllers\Admin\BlogCategoryController as AdminBlogCategoryController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\CourseParticipantController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InstallmentSchemeController;
+use App\Http\Controllers\Admin\NewPasswordController as AdminNewPasswordController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PasswordResetLinkController as AdminPasswordResetLinkController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\PromoBannerController;

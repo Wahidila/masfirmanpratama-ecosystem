@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Services\CourseParticipantSync;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 class CourseParticipantTest extends TestCase
@@ -346,7 +347,7 @@ class CourseParticipantTest extends TestCase
 
         $path = tempnam(sys_get_temp_dir(), 'export').'.xlsx';
         file_put_contents($path, $content);
-        $rows = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet()->toArray();
+        $rows = IOFactory::load($path)->getActiveSheet()->toArray();
         @unlink($path);
 
         return $rows;

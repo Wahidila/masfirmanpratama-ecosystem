@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BlogCategory;
 use App\Models\Post;
+use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -107,7 +108,7 @@ class BlogPageTest extends TestCase
 
     public function test_blog_show_lists_related_products_cta(): void
     {
-        $product = \App\Models\Product::factory()->create(['title' => 'Buku Mind Power', 'slug' => 'buku-mind-power', 'type' => 'book', 'status' => 'active']);
+        $product = Product::factory()->create(['title' => 'Buku Mind Power', 'slug' => 'buku-mind-power', 'type' => 'book', 'status' => 'active']);
         $post = Post::factory()->published()->create(['slug' => 'with-cta']);
         $post->products()->attach($product);
 
