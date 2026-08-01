@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
-use App\Models\InstallmentScheme;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -80,24 +79,17 @@ class CourseAddToCartTest extends TestCase
         $response->assertSee('customer_phone', false);
     }
 
-    /** Checkout cicilan → success page menonjolkan DP (bukan total penuh) + jadwal. */
-    public function test_cicilan_checkout_success_shows_dp_and_schedule(): void
+    /** Checkout cicilan bebas → success menonjolkan DP (nominal bebas), 1 payment DP, tanpa jadwal. */
+    public function test_cicilan_checkout_freeform_dp(): void
     {
         $course = $this->createCourse();
-        $scheme = InstallmentScheme::factory()->forCourse($course)->create([
-            'name' => '12x Cicilan',
-            'dp_pct' => 15,
-            'n_installments' => 12,
-            'interval_days' => 30,
-            'active' => true,
-        ]);
 
         $redirect = $this->post(route('courses.checkout.store', $course->slug), [
             'customer_name' => 'Budi Santoso',
             'customer_email' => 'budi@contoh.com',
             'customer_phone' => '08123456789',
             'payment_type' => 'cicilan',
-            'installment_scheme_id' => $scheme->id,
+            'dp_amount' => 1_000_000, // DP nominal bebas
         ]);
         $redirect->assertRedirect();
 
@@ -106,19 +98,16 @@ class CourseAddToCartTest extends TestCase
         $success->assertSee('Pendaftaran berhasil', false);
 
         $order = Order::where('email', 'budi@contoh.com')->firstOrFail();
-        // DP 15% dari 4.5jt = 675.000 + kode unik ditransfer sekarang (bukan 4.500.000 penuh).
-        $success->assertSee('Rp '.number_format(675_000 + $order->unique_code, 0, ',', '.'));
+        // DP nominal bebas (1jt) + kode unik ditransfer sekarang (bukan 4.5jt penuh).
+        $success->assertSee('Rp '.number_format(1_000_000 + $order->unique_code, 0, ',', '.'));
         $success->assertSee('Transfer sekarang (DP)');
-        // Jadwal cicilan tampil.
-        $success->assertSee('Jadwal pembayaran');
-        $success->assertSee('Cicilan ke-1');
-        $success->assertSee('H+30');
+        // Cicilan bebas: tanpa jadwal / jatuh tempo.
+        $success->assertDontSee('Jadwal pembayaran');
 
-        // Snapshot skema tersimpan di order_meta (dipakai success untuk interval).
-        $this->assertSame(30, (int) data_get($order->order_meta, 'installment.interval_days'));
-        $this->assertSame(12, (int) data_get($order->order_meta, 'installment.n_installments'));
-        // DP + 12 cicilan = 13 payment records.
-        $this->assertSame(13, $order->payments()->count());
+        // Free-form ditandai di order_meta; hanya 1 payment (DP) yang dibuat.
+        $this->assertTrue((bool) data_get($order->order_meta, 'installment.free_form'));
+        $this->assertSame(1, $order->payments()->count());
+        $this->assertSame(1_000_000 + $order->unique_code, (int) $order->payments()->first()->amount);
     }
 
     /** Checkout lunas → success page transfer = total penuh, tanpa jadwal cicilan. */

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
-use App\Models\InstallmentScheme;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
@@ -42,18 +41,8 @@ class CourseCheckoutController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        // Hanya skema CICILAN nyata: harus ada sisa yang dicicil (dp_pct < 100).
-        // Skema "lunas" (dp 100%) sudah diwakili opsi "Bayar Lunas" terpisah —
-        // jangan tampil lagi di daftar cicilan (membingungkan).
-        $schemes = InstallmentScheme::active()
-            ->forCourse($course->id)
-            ->where('dp_pct', '<', 100)
-            ->orderBy('n_installments')
-            ->get();
-
         return view('pages.courses.checkout', [
             'course' => $course,
-            'schemes' => $schemes,
         ]);
     }
 
@@ -78,7 +67,8 @@ class CourseCheckoutController extends Controller
             'occupation' => ['nullable', 'string', 'max:100'],
             'motivation' => ['nullable', 'string', 'max:500'],
             'payment_type' => ['required', 'in:lunas,cicilan'],
-            'installment_scheme_id' => ['nullable', 'required_if:payment_type,cicilan', 'integer', 'exists:installment_schemes,id'],
+            // Cicilan bebas: customer isi nominal DP (bebas), sisa dicicil kapan saja.
+            'dp_amount' => ['nullable', 'required_if:payment_type,cicilan', 'integer', 'min:1', 'max:'.(int) $course->price],
             'ref_code' => ['nullable', 'string', 'max:64'],
         ], [
             'customer_name.required' => 'Nama lengkap wajib diisi.',
@@ -86,20 +76,15 @@ class CourseCheckoutController extends Controller
             'customer_email.email' => 'Format email tidak valid.',
             'customer_phone.required' => 'Nomor WhatsApp wajib diisi.',
             'payment_type.required' => 'Pilih metode pembayaran.',
-            'installment_scheme_id.required_if' => 'Pilih skema cicilan.',
+            'dp_amount.required_if' => 'Isi jumlah DP yang dibayar sekarang.',
+            'dp_amount.min' => 'DP minimal Rp 1.',
+            'dp_amount.max' => 'DP tidak boleh melebihi harga kelas.',
         ]);
 
-        // Resolve installment scheme if cicilan
-        $scheme = null;
-        if ($validated['payment_type'] === 'cicilan' && ! empty($validated['installment_scheme_id'])) {
-            $scheme = InstallmentScheme::active()
-                ->forCourse($course->id)
-                ->where('dp_pct', '<', 100) // hanya skema cicilan nyata (lihat create())
-                ->where('id', $validated['installment_scheme_id'])
-                ->firstOrFail();
-        }
+        // Cicilan bebas: nominal DP dari customer (0 untuk lunas).
+        $dpAmount = $validated['payment_type'] === 'cicilan' ? (int) $validated['dp_amount'] : 0;
 
-        $order = DB::transaction(function () use ($validated, $course, $scheme, $request) {
+        $order = DB::transaction(function () use ($validated, $course, $dpAmount, $request) {
             // Referral code: input form override, fallback ke cookie affiliate
             $refCode = $validated['ref_code'] ?? $request->cookie('referral_code');
 
@@ -124,22 +109,19 @@ class CourseCheckoutController extends Controller
                 'subtotal' => (int) $course->price,
             ]);
 
-            // Generate payment schedule
-            $this->generatePaymentSchedule($order, (int) $course->price, $validated['payment_type'], $scheme);
+            // Cicilan bebas: buat pembayaran DP saja (kode unik dibebankan ke DP).
+            $this->generatePaymentSchedule($order, (int) $course->price, $validated['payment_type'], $dpAmount);
 
-            // Simpan data tambahan + snapshot skema cicilan di order_meta.
-            // Snapshot dipakai halaman success untuk menampilkan jadwal (interval)
-            // tanpa bergantung pada scheme yang bisa berubah/terhapus nanti.
+            // Data tambahan + penanda cicilan bebas di order_meta (dipakai halaman
+            // upload/track & InstallmentReminder untuk mode free-form tanpa jadwal).
             $meta = [
                 'occupation' => $validated['occupation'] ?? '',
                 'motivation' => $validated['motivation'] ?? '',
             ];
-            if ($scheme) {
+            if ($validated['payment_type'] === 'cicilan') {
                 $meta['installment'] = [
-                    'scheme_name' => $scheme->name,
-                    'dp_pct' => (float) $scheme->dp_pct,
-                    'n_installments' => (int) $scheme->n_installments,
-                    'interval_days' => (int) $scheme->interval_days,
+                    'free_form' => true,
+                    'dp' => $dpAmount,
                 ];
             }
             $order->update(['order_meta' => $meta]);
@@ -167,16 +149,17 @@ class CourseCheckoutController extends Controller
         $orderModel->load(['payments' => fn ($q) => $q->orderBy('id')]);
 
         $payments = $orderModel->payments;
-        $isCicilan = $payments->count() > 1;
+        $isFreeForm = (bool) data_get($orderModel->order_meta, 'installment.free_form');
+        $isCicilan = $payments->count() > 1 || $isFreeForm;
         $firstPayment = $payments->first();
 
         // Yang HARUS ditransfer sekarang: DP (cicilan) atau total penuh (lunas).
         $totalTransfer = (int) ($firstPayment->amount ?? $orderModel->total);
 
-        // Jadwal pembayaran cicilan (DP + tiap angsuran) — interval dari snapshot
-        // skema di order_meta (default 30 hari bila tak ada).
+        // Jadwal tetap HANYA untuk model lama (>1 payment terjadwal). Cicilan bebas
+        // (free-form): tanpa jadwal / jatuh tempo — sisa dibayar bebas kapan saja.
         $schedule = [];
-        if ($isCicilan) {
+        if ($isCicilan && ! $isFreeForm) {
             $interval = (int) data_get($orderModel->order_meta, 'installment.interval_days', 30);
             foreach ($payments->values() as $i => $payment) {
                 $schedule[] = [
@@ -187,6 +170,10 @@ class CourseCheckoutController extends Controller
             }
         }
 
+        // Sisa tagihan untuk cicilan bebas (payableTotal − terverifikasi).
+        $verified = (int) $payments->where('status', 'verified')->sum('amount');
+        $remaining = max(0, $orderModel->payableTotal() - $verified);
+
         return view('pages.courses.checkout-success', [
             'course' => $course,
             'order' => $orderModel,
@@ -195,49 +182,31 @@ class CourseCheckoutController extends Controller
             'uploadUrl' => session('upload_url', $this->generateUploadUrl($orderModel)),
             'trackUrl' => $this->generateTrackUrl($orderModel->order_number),
             'isCicilan' => $isCicilan,
+            'isFreeForm' => $isFreeForm,
             'paymentType' => $isCicilan ? 'cicilan' : 'lunas',
             'totalTransfer' => $totalTransfer,
             'schedule' => $schedule,
+            'remaining' => $remaining,
         ]);
     }
 
     /**
-     * Generate payment schedule berdasarkan payment_type.
-     * Lunas = 1 record full amount.
-     * Cicilan = DP + n_installments sesuai scheme.
+     * Generate pembayaran awal berdasarkan payment_type.
+     * Lunas   = 1 record sebesar payableTotal (total + kode unik).
+     * Cicilan = 1 record DP (nominal bebas dari customer + kode unik). Sisa
+     *           dibayar bebas kapan saja lewat halaman upload (tanpa jadwal/tempo).
      */
-    protected function generatePaymentSchedule(Order $order, int $total, string $paymentType, ?InstallmentScheme $scheme): void
+    protected function generatePaymentSchedule(Order $order, int $total, string $paymentType, int $dpAmount): void
     {
-        if ($paymentType === 'cicilan' && $scheme) {
-            // DP amount
-            $dpAmount = (int) ceil($total * ((float) $scheme->dp_pct / 100));
-            $remaining = $total - $dpAmount;
-            $perInstallment = (int) ceil($remaining / $scheme->n_installments);
-
-            // DP payment — kode unik dibebankan ke DP (transfer pertama) supaya
-            // nominal DP khas & gampang dicocokkan admin. Total plan tetap
-            // total + kode unik (payableTotal).
+        if ($paymentType === 'cicilan') {
+            // DP saja — kode unik dibebankan ke DP (transfer pertama) supaya
+            // nominal khas & gampang dicocokkan admin.
             OrderPayment::create([
                 'order_id' => $order->id,
                 'amount' => $dpAmount + (int) $order->unique_code,
                 'method' => 'transfer',
                 'status' => 'pending',
             ]);
-
-            // Installment payments
-            for ($i = 1; $i <= $scheme->n_installments; $i++) {
-                // Last installment absorbs rounding difference
-                $amount = ($i === $scheme->n_installments)
-                    ? $remaining - ($perInstallment * ($scheme->n_installments - 1))
-                    : $perInstallment;
-
-                OrderPayment::create([
-                    'order_id' => $order->id,
-                    'amount' => max(0, $amount),
-                    'method' => 'transfer',
-                    'status' => 'pending',
-                ]);
-            }
         } else {
             // Lunas — single payment sebesar total + kode unik (payableTotal).
             OrderPayment::create([

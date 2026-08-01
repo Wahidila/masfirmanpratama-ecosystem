@@ -31,8 +31,8 @@
         <form
             method="POST"
             action="{{ route('courses.checkout.store', $course->slug) }}"
-            x-data="courseCheckout({{ json_encode($schemes) }}, {{ $price }})"
-            x-init="$watch('paymentType', v => { if (v === 'cicilan' && !selectedScheme && schemes.length) selectedScheme = schemes[0].id })"
+            x-data="courseCheckout({{ $price }})"
+            x-init="$watch('paymentType', v => { if (v === 'cicilan' && !dpAmount) dpAmount = Math.round(price * 0.2) })"
             class="grid grid-cols-1 lg:grid-cols-[1fr_384px] gap-6 lg:gap-8 items-start"
         >
             @csrf
@@ -134,72 +134,36 @@
                             <span class="font-bold text-sm text-slate-900">{{ 'Rp ' . number_format($price, 0, ',', '.') }}</span>
                         </label>
 
-                        @if ($schemes->count() > 0)
-                            {{-- Cicilan --}}
-                            <label class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition"
-                                   :class="paymentType === 'cicilan' ? 'border-primary-500 bg-primary-50/60' : 'border-slate-200 hover:border-slate-300'">
-                                <input type="radio" name="payment_type" value="cicilan" x-model="paymentType" class="sr-only">
-                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
-                                      :class="paymentType === 'cicilan' ? 'border-primary-600' : 'border-slate-300'">
-                                    <span class="h-2.5 w-2.5 rounded-full bg-primary-600" x-show="paymentType === 'cicilan'"></span>
-                                </span>
-                                <span class="flex-1">
-                                    <span class="font-semibold text-sm text-slate-900">Bayar Cicilan</span>
-                                    <span class="block text-xs text-slate-500 mt-0.5">DP dulu, sisanya dicicil — tanpa bunga.</span>
-                                </span>
-                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-600">0% bunga</span>
+                        {{-- Cicilan (bebas: DP nominal bebas, sisa dibayar kapan saja tanpa jatuh tempo) --}}
+                        <label class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition"
+                               :class="paymentType === 'cicilan' ? 'border-primary-500 bg-primary-50/60' : 'border-slate-200 hover:border-slate-300'">
+                            <input type="radio" name="payment_type" value="cicilan" x-model="paymentType" class="sr-only">
+                            <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                                  :class="paymentType === 'cicilan' ? 'border-primary-600' : 'border-slate-300'">
+                                <span class="h-2.5 w-2.5 rounded-full bg-primary-600" x-show="paymentType === 'cicilan'"></span>
+                            </span>
+                            <span class="flex-1">
+                                <span class="font-semibold text-sm text-slate-900">Bayar Cicilan</span>
+                                <span class="block text-xs text-slate-500 mt-0.5">Bayar DP dulu, sisanya dicicil bebas kapan saja — tanpa jatuh tempo, tanpa bunga.</span>
+                            </span>
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-600">0% bunga</span>
+                        </label>
+
+                        {{-- DP cicilan: nominal BEBAS diisi customer --}}
+                        <div x-show="paymentType === 'cicilan'" x-collapse class="space-y-2 pt-1">
+                            <label class="block px-1">
+                                <span class="text-xs font-medium text-slate-600">Jumlah DP dibayar sekarang (Rp)</span>
+                                <input type="number" name="dp_amount" x-model.number="dpAmount" min="1" max="{{ $price }}" inputmode="numeric"
+                                       class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition @error('dp_amount') border-rose-400 @enderror"
+                                       placeholder="Contoh: {{ number_format((int) round($price * 0.2), 0, ',', '.') }}">
                             </label>
-
-                            {{-- Pilihan skema cicilan --}}
-                            <div x-show="paymentType === 'cicilan'" x-collapse class="space-y-2.5 pt-1">
-                                <p class="text-xs font-medium text-slate-500 px-1">Pilih skema cicilan:</p>
-                                @foreach ($schemes as $scheme)
-                                    @php
-                                        $dp = (int) ceil($price * (float) $scheme->dp_pct / 100);
-                                        $isLunasScheme = $scheme->n_installments <= 1 && (float) $scheme->dp_pct >= 100;
-                                    @endphp
-                                    <label class="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition"
-                                           :class="selectedScheme == {{ $scheme->id }} ? 'border-primary-400 bg-primary-50/50 ring-1 ring-primary-200' : 'border-slate-200 hover:border-slate-300'">
-                                        <input type="radio" name="installment_scheme_id" value="{{ $scheme->id }}" x-model="selectedScheme" class="sr-only">
-                                        <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2"
-                                              :class="selectedScheme == {{ $scheme->id }} ? 'border-primary-600' : 'border-slate-300'">
-                                            <span class="h-2 w-2 rounded-full bg-primary-600" x-show="selectedScheme == {{ $scheme->id }}"></span>
-                                        </span>
-                                        <span class="flex-1 min-w-0">
-                                            <span class="font-semibold text-sm text-slate-900">{{ $scheme->name }}</span>
-                                            <span class="block text-xs text-slate-500 mt-0.5">
-                                                @if ($isLunasScheme)
-                                                    Bayar penuh di awal
-                                                @else
-                                                    DP {{ $scheme->dp_label }}% (Rp {{ number_format($dp, 0, ',', '.') }}) + {{ $scheme->n_installments }}× cicilan / {{ $scheme->interval_days }} hari
-                                                @endif
-                                            </span>
-                                        </span>
-                                    </label>
-                                @endforeach
-
-                                {{-- Timeline jadwal --}}
-                                <div x-show="selectedScheme" x-cloak class="rounded-xl bg-slate-50 border border-slate-100 p-4 mt-1">
-                                    <p class="text-xs font-semibold text-slate-700 mb-2.5 flex items-center gap-1.5">
-                                        <i data-lucide="calendar-clock" class="h-4 w-4 text-primary-500"></i>
-                                        Jadwal pembayaran
-                                    </p>
-                                    <ul class="space-y-0">
-                                        <template x-for="(item, idx) in schedule" :key="idx">
-                                            <li class="flex items-center justify-between gap-3 py-2 text-xs border-b border-slate-100 last:border-0">
-                                                <span class="flex items-center gap-2 text-slate-600">
-                                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-                                                          :class="idx === 0 ? 'bg-primary-100 text-primary-700' : 'bg-slate-200 text-slate-600'"
-                                                          x-text="idx === 0 ? 'DP' : idx"></span>
-                                                    <span x-text="item.label"></span>
-                                                </span>
-                                                <span class="font-semibold text-slate-900" x-text="fmt(item.amount)"></span>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                </div>
-                            </div>
-                        @endif
+                            @error('dp_amount') <p class="px-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            <p class="px-1 text-xs text-slate-500">
+                                Bebas — bayar berapa saja untuk DP sekarang. Sisa
+                                <span class="font-semibold text-slate-700" x-text="fmt(remaining)"></span>
+                                bisa dicicil kapan saja &amp; berapa saja sampai lunas, tanpa jatuh tempo.
+                            </p>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -269,14 +233,14 @@
                             <span class="text-slate-500">Total investasi</span>
                             <span class="font-semibold text-slate-900">{{ 'Rp ' . number_format($price, 0, ',', '.') }}</span>
                         </div>
-                        <div class="flex items-center justify-between" :class="paymentType === 'cicilan' && selectedScheme ? '' : 'hidden'">
-                            <span class="text-sm text-slate-500">Sisa dicicil</span>
-                            <span class="text-sm text-slate-600" x-text="nInstall + '× ' + fmt((price - dpAmount) / Math.max(1, nInstall))"></span>
+                        <div class="flex items-center justify-between" :class="paymentType === 'cicilan' ? '' : 'hidden'">
+                            <span class="text-sm text-slate-500">Sisa dicicil (bebas, tanpa jatuh tempo)</span>
+                            <span class="text-sm text-slate-600" x-text="fmt(remaining)"></span>
                         </div>
                         <div class="flex items-center justify-between border-t border-slate-200 pt-2.5">
                             <span class="text-sm font-medium text-slate-700">
-                                <span x-show="paymentType === 'cicilan' && selectedScheme">Bayar sekarang (DP)</span>
-                                <span x-show="!(paymentType === 'cicilan' && selectedScheme)">Bayar sekarang</span>
+                                <span x-show="paymentType === 'cicilan'">Bayar sekarang (DP)</span>
+                                <span x-show="paymentType !== 'cicilan'">Bayar sekarang</span>
                             </span>
                             <span class="text-xl font-extrabold text-primary-600" x-text="fmt(payNow)"></span>
                         </div>
@@ -317,42 +281,20 @@
 </x-layouts.store>
 
 <script>
-function courseCheckout(schemes, price) {
+function courseCheckout(price) {
     return {
         paymentType: 'lunas',
-        selectedScheme: null,
-        schemes: schemes,
+        dpAmount: 0,
         price: price,
 
         fmt(v) { return 'Rp ' + Math.max(0, Math.round(v)).toLocaleString('id-ID'); },
-        scheme() { return this.schemes.find(s => s.id == this.selectedScheme) || null; },
 
-        get dpAmount() {
-            const s = this.scheme();
-            return s ? Math.ceil(this.price * (parseFloat(s.dp_pct) / 100)) : 0;
-        },
-        get nInstall() {
-            const s = this.scheme();
-            return s ? s.n_installments : 0;
+        get remaining() {
+            return Math.max(0, this.price - (this.dpAmount || 0));
         },
         get payNow() {
-            return (this.paymentType === 'cicilan' && this.scheme()) ? this.dpAmount : this.price;
+            return this.paymentType === 'cicilan' ? (this.dpAmount || 0) : this.price;
         },
-        get schedule() {
-            const s = this.scheme();
-            if (!s) return [];
-            const dp = Math.ceil(this.price * (parseFloat(s.dp_pct) / 100));
-            const remaining = this.price - dp;
-            const n = Math.max(1, s.n_installments);
-            const per = Math.ceil(remaining / n);
-            const items = [{ label: 'Bayar sekarang', amount: dp }];
-            for (let i = 1; i <= n; i++) {
-                const amount = (i === n) ? remaining - (per * (n - 1)) : per;
-                const days = s.interval_days * i;
-                items.push({ label: 'Cicilan ke-' + i + ' · H+' + days, amount: Math.max(0, amount) });
-            }
-            return items;
-        }
     };
 }
 </script>

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
-use App\Models\InstallmentScheme;
 use App\Models\Order;
 use App\Models\OrderPayment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,33 +40,25 @@ class UniquePaymentCodeTest extends TestCase
         $this->assertSame(number_format($order->payableTotal(), 2, '.', ''), $payment->amount);
     }
 
-    public function test_course_cicilan_dp_carries_unique_code_and_plan_sums_to_payable(): void
+    public function test_course_cicilan_dp_carries_unique_code(): void
     {
-        $course = Course::factory()->active()->create(['slug' => 'kelas-amc-reguler', 'price' => 1_000_000]);
-        $scheme = InstallmentScheme::create([
-            'course_id' => $course->id,
-            'name' => 'DP 30% + 2x',
-            'dp_pct' => 30,
-            'n_installments' => 2,
-            'interval_days' => 30,
-            'active' => true,
-        ]);
+        Course::factory()->active()->create(['slug' => 'kelas-amc-reguler', 'price' => 1_000_000]);
 
+        // Cicilan bebas: DP nominal bebas dari customer.
         $this->post('/kelas/kelas-amc-reguler/checkout', [
             'customer_name' => 'Budi',
             'customer_email' => 'budi@example.com',
             'customer_phone' => '081234567890',
             'payment_type' => 'cicilan',
-            'installment_scheme_id' => $scheme->id,
+            'dp_amount' => 300_000,
         ]);
 
         $order = Order::first();
         $payments = $order->payments()->orderBy('id')->get();
 
-        // DP = ceil(1jt * 30%) + kode unik.
+        // Hanya 1 payment (DP) yang dibuat di checkout = dp + kode unik.
+        $this->assertSame(1, $payments->count());
         $this->assertSame(300_000 + $order->unique_code, (int) $payments->first()->amount);
-        // Total seluruh row = total + kode unik (payableTotal).
-        $this->assertSame($order->payableTotal(), (int) $payments->sum('amount'));
     }
 
     public function test_generate_unique_code_returns_valid_range(): void

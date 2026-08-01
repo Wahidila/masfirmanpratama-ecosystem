@@ -383,6 +383,49 @@
             </div>
         </form>
 
+        @if ($isFreeForm && $remaining > 0)
+            {{-- Cicilan bebas: tambah pembayaran berikutnya (nominal bebas, tanpa jatuh tempo) --}}
+            <div class="mt-8 rounded-3xl border border-primary-100 bg-primary-50/40 p-6 sm:p-8" data-testid="freeform-payment">
+                <div class="flex items-start gap-3">
+                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+                        <i data-lucide="plus" class="h-5 w-5"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Bayar cicilan lagi</h3>
+                        <p class="mt-0.5 text-sm text-slate-600">
+                            Bebas — bayar berapa saja, kapan saja, tanpa jatuh tempo. Sisa tagihan:
+                            <span class="font-bold text-primary-700">Rp {{ number_format($remaining, 0, ',', '.') }}</span>.
+                        </p>
+                    </div>
+                </div>
+
+                <form method="POST"
+                      action="{{ $uploadStoreUrl ?? route('upload.store', ['order_number' => $orderNumber]) }}"
+                      enctype="multipart/form-data"
+                      class="mt-5 space-y-4">
+                    @csrf
+                    <div>
+                        <label for="new_payment_amount" class="block text-sm font-bold text-slate-900">Nominal yang Anda transfer (Rp)</label>
+                        <input type="number" id="new_payment_amount" name="new_payment_amount" min="1" max="{{ $remaining }}" inputmode="numeric" required
+                               placeholder="Contoh: {{ number_format(min($remaining, 500000), 0, ',', '.') }}"
+                               class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200">
+                    </div>
+                    <div>
+                        <label for="new_proof_file" class="block text-sm font-bold text-slate-900">Bukti transfer</label>
+                        <input type="file" id="new_proof_file" name="proof_file" accept="image/jpeg,image/png,image/webp" required
+                               class="mt-1.5 block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-700">
+                        <p class="mt-1 text-xs text-slate-400">JPG, PNG, atau WebP. Maks 2 MB.</p>
+                    </div>
+                    @error('new_payment_amount') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <button type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-full bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-700">
+                        <i data-lucide="upload-cloud" class="h-5 w-5"></i>
+                        Kirim pembayaran
+                    </button>
+                </form>
+            </div>
+        @endif
+
         {{-- ====================================================== --}}
         {{-- Footer info                                              --}}
         {{-- ====================================================== --}}

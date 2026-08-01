@@ -54,6 +54,8 @@ class InstallmentReminder
             return [];
         }
 
+        // Cicilan bebas (free-form): TANPA jatuh tempo — tidak ada due_date/overdue.
+        $freeForm = (bool) data_get($order->order_meta, 'installment.free_form');
         $interval = $this->intervalDays($order);
         $checkout = $order->created_at ? $order->created_at->copy() : now();
         $now = now();
@@ -62,7 +64,9 @@ class InstallmentReminder
         $steps = [];
 
         foreach ($payments as $i => $payment) {
-            $due = $i === 0 ? $checkout->copy() : $checkout->copy()->addDays($i * $interval);
+            $due = $freeForm
+                ? null
+                : ($i === 0 ? $checkout->copy() : $checkout->copy()->addDays($i * $interval));
             $isPaid = $payment->status === 'verified';
 
             $isNext = false;
@@ -72,7 +76,7 @@ class InstallmentReminder
             }
 
             $overdueDays = 0;
-            if (! $isPaid && $now->greaterThan($due)) {
+            if ($due && ! $isPaid && $now->greaterThan($due)) {
                 // Timestamp math is Carbon-version-agnostic (avoids diffInDays
                 // sign/return-type differences between Carbon 2 and 3).
                 $overdueDays = (int) floor(($now->getTimestamp() - $due->getTimestamp()) / self::SECONDS_PER_DAY);
@@ -80,7 +84,7 @@ class InstallmentReminder
 
             $steps[] = [
                 'index' => $i,
-                'label' => $i === 0 ? 'DP' : 'Cicilan ke-'.$i,
+                'label' => $i === 0 ? 'DP' : ($freeForm ? 'Pembayaran ke-'.($i + 1) : 'Cicilan ke-'.$i),
                 'amount' => (float) $payment->amount,
                 'status' => $payment->status,
                 'due_date' => $due,
@@ -156,6 +160,14 @@ class InstallmentReminder
 
         if (! $order || ! $this->isInstallment($order)) {
             return $default;
+        }
+
+        // Cicilan bebas: tanpa jatuh tempo → link upload harus bertahan lama
+        // supaya customer bisa mencicil kapan saja (default ~1 tahun).
+        if ((bool) data_get($order->order_meta, 'installment.free_form')) {
+            $long = now()->addDays(max(1, (int) config('checkout.freeform_upload_ttl_days', 365)));
+
+            return $long->greaterThan($default) ? $long : $default;
         }
 
         $lastDue = null;

@@ -70,6 +70,12 @@ class UploadController extends Controller
         $isInstallment = $totalPayments > 1;
         $paymentType = $isInstallment ? 'cicilan' : 'lunas';
 
+        // Cicilan bebas (free-form): 1 DP row di checkout + customer bisa menambah
+        // pembayaran bebas kapan saja. Sisa = total tagihan (payableTotal) − verified.
+        $isFreeForm = (bool) data_get($order->order_meta, 'installment.free_form');
+        $verifiedAmount = (int) $payments->where('status', 'verified')->sum('amount');
+        $remaining = max(0, $order->payableTotal() - $verifiedAmount);
+
         // Default ke angsuran BERIKUTNYA yang bisa diupload (pending + belum ada
         // bukti) — bukan selalu DP. Kalau customer buka link reminder setelah DP
         // lunas, langsung ke-arah cicilan yang benar. ?seq= eksplisit tetap
@@ -98,6 +104,8 @@ class UploadController extends Controller
             'pendingPayments' => $pendingPayments,
             'installmentOptions' => $installmentOptions,
             'installmentAmounts' => $installmentAmounts,
+            'isFreeForm' => $isFreeForm,
+            'remaining' => $remaining,
             'uploadStoreUrl' => $this->signedStoreUrl($order_number, $order),
             'trackUrl' => $this->signedTrackUrl($order_number),
         ]);
@@ -164,12 +172,14 @@ class UploadController extends Controller
                 'max:2048', // KB → 2 MB
             ],
             'installment_sequence' => ['nullable', 'integer', 'min:0', 'max:23'],
+            'new_payment_amount' => ['nullable', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:500'],
         ], [
             'proof_file.required' => 'Pilih file bukti transfer dulu sebelum mengirim.',
             'proof_file.image' => 'File harus berupa gambar (JPG, PNG, atau WebP).',
             'proof_file.mimes' => 'Format tidak didukung. Pakai JPG, PNG, atau WebP.',
             'proof_file.max' => 'Ukuran file terlalu besar. Maksimal 2 MB.',
+            'new_payment_amount.min' => 'Nominal pembayaran minimal Rp 1.',
         ]);
 
         $order = Order::where('order_number', $order_number)->first();
@@ -179,6 +189,13 @@ class UploadController extends Controller
             // tanpa real order). Fallback ke behavior M1 stub: success flash
             // tanpa save, supaya mockup tetep work.
             return $this->m1StubFlashRedirect($request, $order_number);
+        }
+
+        // Cicilan bebas: customer menambah pembayaran baru dengan nominal bebas
+        // (di luar DP). Buat OrderPayment baru + lampirkan bukti sekaligus.
+        $isFreeForm = (bool) data_get($order->order_meta, 'installment.free_form');
+        if ($isFreeForm && filled($request->input('new_payment_amount'))) {
+            return $this->storeFreeFormPayment($request, $order, (int) $validated['new_payment_amount']);
         }
 
         $sequence = (int) ($validated['installment_sequence'] ?? 0);
@@ -238,6 +255,41 @@ class UploadController extends Controller
         PaymentSubmitted::dispatch($order->fresh(), $payment->fresh(), $sequence);
 
         return redirect($this->signedShowUrl($order_number, ['seq' => $sequence], $order))
+            ->with('upload.success', true)
+            ->with('upload.sequence', $sequence);
+    }
+
+    /**
+     * Cicilan bebas: buat pembayaran BARU (nominal bebas dari customer) +
+     * lampirkan bukti sekaligus. Status 'pending' → admin verify seperti biasa.
+     */
+    protected function storeFreeFormPayment(Request $request, Order $order, int $amount): RedirectResponse
+    {
+        $payment = new OrderPayment([
+            'order_id' => $order->id,
+            'amount' => $amount,
+            'method' => 'transfer',
+            'status' => 'pending',
+        ]);
+        $payment->save();
+
+        $file = $request->file('proof_file');
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
+        $filename = sprintf('%d-%s.%s', $payment->id, Str::random(8), $ext);
+        $path = $file->storeAs('payment-proofs/'.$order->order_number, $filename, 'public');
+
+        DB::transaction(function () use ($payment, $path) {
+            $payment->proof_path = $path;
+            $payment->paid_at = now();
+            $payment->save();
+        });
+
+        // Sequence = posisi payment ini di daftar (0-indexed by id).
+        $sequence = (int) $order->payments()->orderBy('id')->pluck('id')->search($payment->id);
+
+        PaymentSubmitted::dispatch($order->fresh(), $payment->fresh(), $sequence);
+
+        return redirect($this->signedShowUrl($order->order_number, ['seq' => $sequence], $order))
             ->with('upload.success', true)
             ->with('upload.sequence', $sequence);
     }
@@ -320,6 +372,8 @@ class UploadController extends Controller
             'pendingPayments' => collect(),
             'installmentOptions' => $installmentOptions,
             'installmentAmounts' => $installmentAmounts,
+            'isFreeForm' => false,
+            'remaining' => 0,
             'uploadStoreUrl' => $this->signedStoreUrl($order_number),
             'trackUrl' => $this->signedTrackUrl($order_number),
         ]);

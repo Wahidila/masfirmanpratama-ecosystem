@@ -106,10 +106,18 @@
                         </p>
                     @endif
                     @if ($isInstallment)
-                        <p class="mt-2 text-sm text-slate-600">
-                            Total investasi <span class="font-semibold text-slate-900">Rp {{ number_format((int) $order->total, 0, ',', '.') }}</span> —
-                            cukup bayar DP dulu sekarang, sisanya dicicil sesuai jadwal di bawah.
-                        </p>
+                        @if ($isFreeForm ?? false)
+                            <p class="mt-2 text-sm text-slate-600">
+                                Total investasi <span class="font-semibold text-slate-900">Rp {{ number_format((int) $order->total, 0, ',', '.') }}</span> —
+                                bayar DP dulu sekarang, sisa <span class="font-semibold text-slate-900">Rp {{ number_format((int) ($remaining ?? 0), 0, ',', '.') }}</span>
+                                dicicil <span class="font-semibold text-slate-700">bebas kapan saja &amp; berapa saja</span> lewat halaman bukti bayar — tanpa jatuh tempo.
+                            </p>
+                        @else
+                            <p class="mt-2 text-sm text-slate-600">
+                                Total investasi <span class="font-semibold text-slate-900">Rp {{ number_format((int) $order->total, 0, ',', '.') }}</span> —
+                                cukup bayar DP dulu sekarang, sisanya dicicil sesuai jadwal di bawah.
+                            </p>
+                        @endif
                     @else
                         <p class="mt-2 text-sm text-slate-600">Bayar sekali penuh. Kelas langsung diproses setelah bukti diverifikasi.</p>
                     @endif

@@ -11,7 +11,7 @@
 | 1 | Tambah **kode unik pembayaran** | store | 🟢 |
 | 2 | Input **email opsional** saat order | store | 🟢 |
 | 3 | Peserta masuk kelas **hanya saat cicilan lunas** (bukan cicilan pertama) | store | 🟢 |
-| 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🔴 |
+| 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🟢 |
 | 5 | Fitur **lupa password** | store + affiliate | 🟢 |
 | 6 | Halaman affiliator **lihat detail produk** (bukan cuma jumlah sukses) | affiliate | 🟢 |
 | 7 | **Icon show password** di semua form login | store + affiliate | 🟢 |
@@ -52,12 +52,16 @@ karena sisi affiliate butuh email untuk atribusi komisi (cek self-referral).
 - [x] ✅ `CourseParticipantTest` 20/20 pass (termasuk XLSX setelah `composer install`)
 - Catatan: peserta manual (order_id null) tetap bisa `cicil`/`lunas` (tak terpengaruh).
 
-### 4. Cicilan bebas (no deadline) 🔴
-- [ ] Hapus/nonaktifkan konsep jatuh tempo / due_date
-- [ ] Hapus batasan nominal minimum & jumlah tahapan tetap
-- [ ] Izinkan bayar kapan saja, nominal berapa saja sampai lunas
-- [ ] Sesuaikan admin UI + validasi verifikasi cicilan
-- [ ] Test
+### 4. Cicilan bebas (no deadline) 🟢
+Keputusan klien: **free-form penuh** + **DP nominal bebas diisi customer** saat checkout.
+- [x] Checkout kelas: skema cicilan (DP%/N/interval) DIGANTI input **DP nominal bebas** (Alpine di-rework)
+- [x] `CourseCheckoutController`: validasi `dp_amount` (bukan `installment_scheme_id`); 1 payment DP = dp + kode unik; `order_meta.installment = {free_form:true, dp}`
+- [x] Upload: form **"Bayar cicilan lagi"** (nominal bebas + bukti) → `UploadController::storeFreeFormPayment` buat OrderPayment baru pending
+- [x] Success page kelas: pesan free-form ("sisa dicicil bebas kapan saja, tanpa jatuh tempo"), tanpa jadwal H+30
+- [x] Hapus deadline: `InstallmentReminder` → `due_date=null` + tanpa overdue untuk free-form; link upload TTL panjang (~1 th) supaya bisa nyicil lama
+- [x] Admin order show sudah null-safe (jatuh tempo di-skip untuk free-form); peserta enroll tetap saat lunas (task 3)
+- [x] ✅ Test: FreeFormInstallmentTest 4/4 (DP, wajib DP, tambah bayar, enroll saat lunas), CourseAddToCart + UniquePaymentCode disesuaikan; store **762 pass** (2 sisa env pre-existing); InstallmentReminder/Upload lama 46 pass
+- ⚠️ Catatan: modul admin **Skema Cicilan** (`InstallmentScheme` CRUD) kini **vestigial** (checkout tak pakai skema lagi). Dibiarkan; bisa dihapus di follow-up.
 
 ### 5. Lupa password 🟢
 Model Affiliator & Admin extend `Foundation\Auth\User` → `CanResetPassword` sudah built-in.
