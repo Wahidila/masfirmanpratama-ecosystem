@@ -8,7 +8,7 @@
 
 | # | Task | App | Status |
 |---|------|-----|--------|
-| 1 | Tambah **kode unik pembayaran** | store | 🔴 |
+| 1 | Tambah **kode unik pembayaran** | store | 🟢 |
 | 2 | Input **email opsional** saat order | store | 🟢 |
 | 3 | Peserta masuk kelas **hanya saat cicilan lunas** (bukan cicilan pertama) | store | 🟢 |
 | 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🔴 |
@@ -21,15 +21,18 @@
 
 ## Detail & sub-task
 
-### 1. Kode unik pembayaran 🔴
-Tujuan: tambahkan angka unik (mis. 3 digit) ke total transfer supaya admin bisa
-identifikasi transfer per order. Ditampilkan ke customer di halaman pembayaran.
-- [ ] Riset: cek apakah sudah ada konsep kode unik (hasil eksplorasi)
-- [ ] Migration: kolom `unique_code` (+ mungkin `grand_total`) di `orders`
-- [ ] Generate kode unik saat order dibuat (hindari tabrakan per nominal)
-- [ ] Tampilkan total + kode unik di halaman payment / upload bukti
-- [ ] Admin: tampilkan kode unik di detail order
-- [ ] Test
+### 1. Kode unik pembayaran 🟢
+Nominal transfer = total + kode unik (1–999) → tiap order punya nominal khas.
+- [x] Migration `unique_code` (unsignedSmallInteger nullable) di `orders`
+- [x] `Order::generateUniqueCode($total)` (hindari tabrakan nominal antar order pending harga sama)
+- [x] `Order::payableTotal()` = total + kode unik (order lama tanpa kode = total)
+- [x] Kode dibebankan ke **pembayaran pertama**: lunas = payableTotal; cicilan = DP + kode
+      (plan total tetap = payableTotal). Threshold "lunas"/enroll tetap `verified >= total` → aman
+- [x] Generate di CheckoutController (buku) + CourseCheckoutController (kelas)
+- [x] Admin order show: tampil kode unik + total transfer
+- [x] Success page (buku + kelas): callout "3 digit terakhir XXX = kode unik, transfer PERSIS"
+- [x] ✅ Test: UniquePaymentCodeTest 4/4; CheckoutStore & CourseAddToCart disesuaikan; store 758 pass
+- Catatan: webhook affiliate tetap kirim `order_total = total` (base) → komisi tidak kena kode unik.
 
 ### 2. Email opsional saat order 🟢
 Keputusan: email **opsional**, KECUALI order via link referral (cookie/ref_code) —

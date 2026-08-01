@@ -127,6 +127,14 @@
                         Rp {{ number_format($totalTransfer, 0, ',', '.') }}
                     </p>
 
+                    @if (! empty($uniqueCode))
+                        <p class="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700">
+                            <span>3 digit terakhir</span>
+                            <span class="rounded bg-white px-1.5 py-0.5 font-bold tabular-nums">{{ str_pad((string) $uniqueCode, 3, '0', STR_PAD_LEFT) }}</span>
+                            <span>adalah kode unik Anda — transfer nominal PERSIS agar cepat diverifikasi.</span>
+                        </p>
+                    @endif
+
                     @if ($isInstallment)
                         <p class="mt-2 text-sm text-slate-600">
                             Pembayaran cicilan: total order

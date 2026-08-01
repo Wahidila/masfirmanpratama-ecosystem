@@ -98,6 +98,13 @@
                     <p class="mt-1 text-3xl font-extrabold leading-tight text-primary-600 sm:text-4xl" data-testid="total-transfer">
                         Rp {{ number_format($totalTransfer, 0, ',', '.') }}
                     </p>
+                    @if ($order->unique_code)
+                        <p class="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700">
+                            <span>3 digit terakhir</span>
+                            <span class="rounded bg-white px-1.5 py-0.5 font-bold tabular-nums">{{ str_pad((string) $order->unique_code, 3, '0', STR_PAD_LEFT) }}</span>
+                            <span>adalah kode unik Anda — transfer PERSIS agar cepat diverifikasi.</span>
+                        </p>
+                    @endif
                     @if ($isInstallment)
                         <p class="mt-2 text-sm text-slate-600">
                             Total investasi <span class="font-semibold text-slate-900">Rp {{ number_format((int) $order->total, 0, ',', '.') }}</span> —

@@ -198,6 +198,7 @@ class CheckoutController extends Controller
                 'shipping_village' => $address['village'] ?: null,
                 'shipping_zipcode' => $address['postal'] ?: null,
                 'total' => $grandTotal,
+                'unique_code' => Order::generateUniqueCode($grandTotal),
                 'status' => 'pending',
                 'ref_code' => $refCode ?: null,
                 'shipping_courier' => $shippingCourier,
@@ -268,6 +269,7 @@ class CheckoutController extends Controller
             'paymentType' => $paymentType,
             'cartTotal' => $cartTotal,
             'totalTransfer' => $totalTransfer,
+            'uniqueCode' => (int) $orderModel->unique_code,
             'schedule' => $schedule,
             'uploadUrl' => $this->generateUploadUrl($order),
             'trackUrl' => $this->generateTrackUrl($order),
@@ -445,6 +447,7 @@ class CheckoutController extends Controller
 
     /**
      * Generate single payment row (lunas) di order_payments (status='pending').
+     * Nominal = total + kode unik (payableTotal) supaya transfer mudah dicocokkan.
      * paid_at di-set null. Akan di-update saat customer upload bukti +
      * admin verify (handled task t_812d1980 udah merged).
      */
@@ -452,7 +455,7 @@ class CheckoutController extends Controller
     {
         OrderPayment::create([
             'order_id' => $order->id,
-            'amount' => $grandTotal,
+            'amount' => $order->payableTotal(),
             'method' => 'transfer',
             'status' => 'pending',
         ]);

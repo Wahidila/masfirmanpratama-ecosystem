@@ -104,8 +104,10 @@ class CourseAddToCartTest extends TestCase
         $success = $this->get($redirect->headers->get('Location'));
         $success->assertStatus(200);
         $success->assertSee('Pendaftaran berhasil', false);
-        // DP 15% dari 4.5jt = 675.000 ditransfer sekarang (bukan 4.500.000 penuh).
-        $success->assertSee('Rp 675.000');
+
+        $order = Order::where('email', 'budi@contoh.com')->firstOrFail();
+        // DP 15% dari 4.5jt = 675.000 + kode unik ditransfer sekarang (bukan 4.500.000 penuh).
+        $success->assertSee('Rp '.number_format(675_000 + $order->unique_code, 0, ',', '.'));
         $success->assertSee('Transfer sekarang (DP)');
         // Jadwal cicilan tampil.
         $success->assertSee('Jadwal pembayaran');
@@ -113,7 +115,6 @@ class CourseAddToCartTest extends TestCase
         $success->assertSee('H+30');
 
         // Snapshot skema tersimpan di order_meta (dipakai success untuk interval).
-        $order = Order::where('email', 'budi@contoh.com')->firstOrFail();
         $this->assertSame(30, (int) data_get($order->order_meta, 'installment.interval_days'));
         $this->assertSame(12, (int) data_get($order->order_meta, 'installment.n_installments'));
         // DP + 12 cicilan = 13 payment records.
@@ -136,10 +137,12 @@ class CourseAddToCartTest extends TestCase
         $success = $this->get($redirect->headers->get('Location'));
         $success->assertStatus(200);
         $success->assertSee('Transfer sekarang (Lunas)');
-        $success->assertSee('Rp 4.500.000');
-        $success->assertDontSee('Jadwal pembayaran');
 
         $order = Order::where('email', 'siti@contoh.com')->firstOrFail();
+        // Nominal transfer lunas = total + kode unik.
+        $success->assertSee('Rp '.number_format($order->payableTotal(), 0, ',', '.'));
+        $success->assertDontSee('Jadwal pembayaran');
+
         $this->assertSame(1, $order->payments()->count());
     }
 }

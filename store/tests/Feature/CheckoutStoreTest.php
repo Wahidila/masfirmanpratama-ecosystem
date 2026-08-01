@@ -85,10 +85,14 @@ class CheckoutStoreTest extends TestCase
         $this->assertSame('4500000.00', $item->unit_price);
         $this->assertSame('4500000.00', $item->subtotal);
 
-        // Payments: 1 row pending = full amount
+        // Kode unik 1–999 dibuat & nominal transfer = total + kode unik.
+        $this->assertGreaterThanOrEqual(1, $order->unique_code);
+        $this->assertLessThanOrEqual(999, $order->unique_code);
+
+        // Payments: 1 row pending = total + kode unik (payableTotal).
         $payments = OrderPayment::where('order_id', $order->id)->get();
         $this->assertCount(1, $payments);
-        $this->assertSame('4500000.00', $payments[0]->amount);
+        $this->assertSame(number_format($order->payableTotal(), 2, '.', ''), $payments[0]->amount);
         $this->assertSame('pending', $payments[0]->status);
         $this->assertSame('transfer', $payments[0]->method);
 

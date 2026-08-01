@@ -110,6 +110,7 @@ class CourseCheckoutController extends Controller
                 'email' => $validated['customer_email'] ?? null,
                 'address' => '',
                 'total' => (int) $course->price,
+                'unique_code' => Order::generateUniqueCode((int) $course->price),
                 'status' => 'pending',
                 'ref_code' => $refCode ?: null,
             ]);
@@ -213,10 +214,12 @@ class CourseCheckoutController extends Controller
             $remaining = $total - $dpAmount;
             $perInstallment = (int) ceil($remaining / $scheme->n_installments);
 
-            // DP payment
+            // DP payment — kode unik dibebankan ke DP (transfer pertama) supaya
+            // nominal DP khas & gampang dicocokkan admin. Total plan tetap
+            // total + kode unik (payableTotal).
             OrderPayment::create([
                 'order_id' => $order->id,
-                'amount' => $dpAmount,
+                'amount' => $dpAmount + (int) $order->unique_code,
                 'method' => 'transfer',
                 'status' => 'pending',
             ]);
@@ -236,10 +239,10 @@ class CourseCheckoutController extends Controller
                 ]);
             }
         } else {
-            // Lunas — single payment
+            // Lunas — single payment sebesar total + kode unik (payableTotal).
             OrderPayment::create([
                 'order_id' => $order->id,
-                'amount' => $total,
+                'amount' => $order->payableTotal(),
                 'method' => 'transfer',
                 'status' => 'pending',
             ]);

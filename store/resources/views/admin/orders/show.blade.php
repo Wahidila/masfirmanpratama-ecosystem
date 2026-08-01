@@ -58,6 +58,12 @@
             <div class="mt-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
                 Rp {{ number_format((float) $order->total, 0, ',', '.') }}
             </div>
+            @if ($order->unique_code)
+                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Transfer: <span class="font-semibold text-brand-600 dark:text-brand-400">Rp {{ number_format($order->payableTotal(), 0, ',', '.') }}</span>
+                    · kode unik <span class="font-bold text-brand-600 dark:text-brand-400">{{ str_pad((string) $order->unique_code, 3, '0', STR_PAD_LEFT) }}</span>
+                </div>
+            @endif
         </x-admin.card>
         <x-admin.card>
             <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Sudah Lunas</div>
