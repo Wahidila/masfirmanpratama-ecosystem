@@ -85,6 +85,25 @@ class FreeFormInstallmentTest extends TestCase
         $this->assertNotNull($new->proof_path);
     }
 
+    public function test_track_page_shows_cicilan_remaining_after_approval(): void
+    {
+        $this->seed(AdminSeeder::class);
+        $admin = Admin::first();
+        $this->course(1_000_000);
+        $order = $this->checkoutCicilan(300_000);
+
+        // Admin verifikasi DP → status & sisa terupdate.
+        $dp = $order->payments()->first();
+        $this->actingAs($admin, 'admin')->post(route('admin.orders.payments.approve', [$order, $dp]));
+
+        // Halaman lacak menampilkan ringkasan cicilan + sisa (Rp 700.000).
+        $this->get(URL::signedRoute('track.show', ['order_number' => $order->order_number]))
+            ->assertOk()
+            ->assertSee('Total Tagihan')
+            ->assertSee('Sisa')
+            ->assertSee('Rp '.number_format(700_000, 0, ',', '.'));
+    }
+
     public function test_participant_enrolls_only_after_freeform_paid_in_full(): void
     {
         $this->seed(AdminSeeder::class);

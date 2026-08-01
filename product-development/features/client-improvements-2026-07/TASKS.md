@@ -121,6 +121,15 @@ Affiliate & Store app/DB terpisah → Store expose katalog JSON, Affiliate fetch
 - 2026-08-01 — 🎉 **8/8 task selesai.** Store 762 pass / affiliate 131 pass (2 store-fail sisa = env shipping fallback, pre-existing).
   Belum di-merge ke `main` & belum push — menunggu review/keputusan klien.
   Follow-up opsional: SMTP untuk email reset (task 5), hapus modul Skema Cicilan vestigial (task 4), build assets saat deploy.
+- 2026-08-01 — **§10 Feedback test klien:**
+  1. *Payment proof 404* → BUKAN bug kode; file ada di disk, cuma `public/storage` symlink belum dibuat.
+     Fix: `php artisan storage:link`. **⚠️ WAJIB dijalankan sekali di server produksi juga.**
+  2. *Sisa cicilan* → status memang terupdate saat admin verifikasi (payment→verified, order→partial_paid/paid).
+     Ditambah **ringkasan cicilan** (Total Tagihan / Sudah Dibayar / Sisa) di halaman **lacak** (`/track/{order}`)
+     + link "Bayar cicilan lagi" (signed URL dari TrackController). Teks "reminder H-3" yang menyesatkan diganti.
+  3. *Halaman /referrals* → tambah kolom **Produk** (nama dari katalog store, match by target_url) + ikon **mata**
+     di kolom Aksi → buka halaman produk di store (target `_blank`).
+  Test: store 763 pass, affiliate 131 pass (2 store-fail sisa = env pre-existing).
 - 2026-08-01 — **§9 Hapus pengecekan self-referral** (permintaan klien): komisi baru cair setelah pembayaran
   diverifikasi admin, jadi pembelian via link sendiri tetap transaksi nyata yang menguntungkan.
   - Affiliate `StoreWebhookController`: guard self-referral + "buyer unverifiable (no email)" DIHAPUS → order + komisi tetap dibuat.

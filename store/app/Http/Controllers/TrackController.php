@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\Installment\InstallmentReminder;
 use App\Services\Shipping\AgenwebsiteClient;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 class TrackController extends Controller
@@ -49,10 +51,22 @@ class TrackController extends Controller
             }
         }
 
+        // Signed URL ke halaman upload bukti (TTL schedule-aware; untuk cicilan
+        // bebas berlaku panjang) supaya customer bisa lanjut bayar cicilan dari
+        // halaman lacak. Null bila order tidak ada di DB.
+        $uploadUrl = $order
+            ? URL::temporarySignedRoute(
+                'upload.show',
+                app(InstallmentReminder::class)->uploadUrlExpiry($order),
+                ['order_number' => $orderNumber],
+            )
+            : null;
+
         return view('pages.track', [
             'orderNumber' => $orderNumber,
             'dbOrder' => $order,
             'trackingHistory' => $trackingHistory,
+            'uploadUrl' => $uploadUrl,
         ]);
     }
 

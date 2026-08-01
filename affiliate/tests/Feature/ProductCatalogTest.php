@@ -70,6 +70,23 @@ class ProductCatalogTest extends TestCase
         ]);
     }
 
+    public function test_referrals_index_shows_product_name_and_store_link(): void
+    {
+        $this->fakeCatalog();
+        $affiliator = $this->activeAffiliator();
+        $affiliator->referralCodes()->create([
+            'code' => 'ABCD1234',
+            'label' => 'IG Bio',
+            'target_url' => 'https://store.test/kelas/kelas-amc',
+        ]);
+
+        $this->actingAs($affiliator, 'affiliator')
+            ->get(route('referrals.index'))
+            ->assertOk()
+            ->assertSee('Kelas AMC Reguler')      // nama produk dari katalog
+            ->assertSee('Lihat produk di store'); // aria-label ikon eye
+    }
+
     public function test_products_page_handles_unavailable_catalog(): void
     {
         Http::fake(['*/api/affiliate/products' => Http::response('', 500)]);

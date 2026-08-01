@@ -39,7 +39,7 @@ class ReferralController extends Controller
             ->withCookie(cookie('referral_code', $code, 60 * 24 * 30));
     }
 
-    public function index(Request $request): View
+    public function index(Request $request, StoreCatalog $catalog): View
     {
         $affiliator = Auth::guard('affiliator')->user();
 
@@ -48,7 +48,12 @@ class ReferralController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('referrals.index', compact('referrals'));
+        // Peta URL produk → nama, untuk menampilkan nama produk per link referral.
+        $productNames = collect($catalog->products())
+            ->mapWithKeys(fn (array $p) => [$p['url'] => $p['title']])
+            ->all();
+
+        return view('referrals.index', compact('referrals', 'productNames'));
     }
 
     public function create(Request $request, StoreCatalog $catalog): View

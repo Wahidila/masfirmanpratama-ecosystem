@@ -298,6 +298,7 @@
     | pengiriman) di-derive dari order asli, bukan dummy suffix. Dummy di atas
     | hanya fallback saat order tidak ditemukan (URL demo/QA).
     */
+    $installmentSummary = null;
     if ($dbOrder) {
         $dbOrder->loadMissing([
             'payments' => fn ($q) => $q->orderBy('id'),
@@ -435,6 +436,17 @@
                 'note' => $p->rejection_reason,
             ];
         })->all();
+
+        // Ringkasan cicilan: total tagihan (termasuk kode unik), sudah dibayar
+        // (terverifikasi), dan sisa. Dipakai untuk menampilkan "sisa cicilan"
+        // di halaman lacak setelah admin verifikasi tiap pembayaran.
+        $ffPaid = (int) $payments->where('status', 'verified')->sum('amount');
+        $installmentSummary = [
+            'is_installment' => data_get($dbOrder->order_meta, 'installment') !== null || $paymentCount > 1,
+            'total' => $dbOrder->payableTotal(),
+            'paid' => $ffPaid,
+            'remaining' => max(0, $dbOrder->payableTotal() - $ffPaid),
+        ];
 
         // Pengiriman dari DB (hanya setelah resi terbit).
         $shipment = null;
@@ -823,13 +835,41 @@
                     </h2>
                     <p class="mt-1 text-sm text-slate-500">
                         @if ($isInstallment)
-                            Cicilan terdaftar untuk pesanan ini. Reminder otomatis dikirim H-3.
+                            Cicilan untuk pesanan ini — bayar bebas kapan saja sampai lunas.
                         @else
                             Status pembayaran untuk pesanan ini.
                         @endif
                     </p>
                 </div>
             </header>
+
+            @if ($installmentSummary && $installmentSummary['is_installment'])
+                {{-- Ringkasan cicilan: sisa terupdate otomatis setiap admin memverifikasi pembayaran. --}}
+                <div class="mt-5 grid grid-cols-3 gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 text-center">
+                    <div>
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Total Tagihan</p>
+                        <p class="mt-1 text-sm font-bold text-slate-900 sm:text-base">Rp {{ number_format($installmentSummary['total'], 0, ',', '.') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Sudah Dibayar</p>
+                        <p class="mt-1 text-sm font-bold text-secondary-600 sm:text-base">Rp {{ number_format($installmentSummary['paid'], 0, ',', '.') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Sisa</p>
+                        <p class="mt-1 text-sm font-bold {{ $installmentSummary['remaining'] > 0 ? 'text-accent-600' : 'text-secondary-600' }} sm:text-base">Rp {{ number_format($installmentSummary['remaining'], 0, ',', '.') }}</p>
+                    </div>
+                </div>
+                @if ($installmentSummary['remaining'] > 0 && ($uploadUrl ?? null))
+                    <a href="{{ $uploadUrl }}"
+                       class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 transition hover:text-primary-700">
+                        <i data-lucide="upload-cloud" class="h-4 w-4"></i> Bayar cicilan lagi
+                    </a>
+                @elseif ($installmentSummary['remaining'] <= 0)
+                    <p class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-600">
+                        <i data-lucide="badge-check" class="h-4 w-4"></i> Cicilan sudah lunas 🎉
+                    </p>
+                @endif
+            @endif
 
             @if (count($paymentHistory) === 0)
                 <div class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-center">
