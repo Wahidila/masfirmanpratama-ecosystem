@@ -141,7 +141,7 @@ class OrderController extends Controller
         $totalRejected = (float) $order->payments
             ->where('status', 'rejected')
             ->sum('amount');
-        $remaining = max(0, (float) $order->total - $totalPaid);
+        $remaining = max(0, (float) $order->payableTotal() - $totalPaid);
 
         // Ringkasan cicilan untuk kartu "Cicilan" + tombol Reminder Cicilan.
         $installment = null;
@@ -152,10 +152,14 @@ class OrderController extends Controller
                 'remaining' => $reminder->remaining($order),
                 'paid_count' => $reminder->paidCount($order),
                 'total_count' => $reminder->totalCount($order),
+                'is_free_form' => (bool) data_get($order->order_meta, 'installment.free_form'),
                 'can_remind' => $reminder->hasOutstanding($order)
                     && ! in_array($order->status, ['cancelled', 'refunded'], true),
             ];
         }
+
+        // Link halaman lacak untuk tombol admin (signed permanen — tanpa kedaluwarsa).
+        $trackUrl = URL::signedRoute('track.show', ['order_number' => $order->order_number]);
 
         // Nama affiliator yang mereferralkan (lookup ke app Affiliate, di-cache).
         $affiliatorName = $order->ref_code
@@ -170,6 +174,7 @@ class OrderController extends Controller
             'totalRejected' => $totalRejected,
             'remaining' => $remaining,
             'installment' => $installment,
+            'trackUrl' => $trackUrl,
             'statuses' => self::STATUSES,
             'couriers' => $this->courierOptions($order),
             'canShip' => in_array($order->status, self::SHIPPABLE_FROM, true),
@@ -301,7 +306,8 @@ class OrderController extends Controller
         $totalVerified = (float) $order->payments()
             ->where('status', 'verified')
             ->sum('amount');
-        $orderTotal = (float) $order->total;
+        // Lunas saat pembayaran menutup total + kode unik (payableTotal).
+        $orderTotal = (float) $order->payableTotal();
 
         if ($totalVerified <= 0) {
             $order->status = 'pending';

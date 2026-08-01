@@ -85,6 +85,37 @@ class FreeFormInstallmentTest extends TestCase
         $this->assertNotNull($new->proof_path);
     }
 
+    public function test_admin_can_remind_when_freeform_still_has_remaining(): void
+    {
+        $this->seed(AdminSeeder::class);
+        $admin = Admin::first();
+        $this->course(1_000_000);
+        $order = $this->checkoutCicilan(300_000);
+
+        // Verifikasi DP → masih ada sisa (belum lunas).
+        $dp = $order->payments()->first();
+        $this->actingAs($admin, 'admin')->post(route('admin.orders.payments.approve', [$order, $dp]));
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.orders.show', $order))
+            ->assertOk()
+            ->assertSee('Kirim Reminder Cicilan')            // tombol reminder muncul
+            ->assertDontSee('Semua cicilan sudah lunas');    // BUKAN "sudah lunas"
+    }
+
+    public function test_admin_order_page_has_track_button(): void
+    {
+        $this->seed(AdminSeeder::class);
+        $admin = Admin::first();
+        $this->course(1_000_000);
+        $order = $this->checkoutCicilan(300_000);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.orders.show', $order))
+            ->assertOk()
+            ->assertSee('Halaman Lacak');
+    }
+
     public function test_track_page_shows_cicilan_remaining_after_approval(): void
     {
         $this->seed(AdminSeeder::class);

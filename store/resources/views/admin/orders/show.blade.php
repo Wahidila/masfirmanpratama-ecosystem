@@ -21,6 +21,9 @@
         :title="'Pesanan ' . $order->order_number"
         :subtitle="'Dibuat ' . $order->created_at?->format('d M Y · H:i') . ' WIB'">
         <x-slot:actions>
+            <x-admin.button href="{{ $trackUrl }}" variant="primary" size="sm" target="_blank" rel="noopener">
+                Halaman Lacak ↗
+            </x-admin.button>
             <x-admin.button href="{{ route('admin.orders.index') }}" variant="outline" size="sm">
                 ← Kembali
             </x-admin.button>
@@ -509,7 +512,11 @@
                 <div class="mb-3 flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cicilan</h2>
                     <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400">
-                        {{ $installment['paid_count'] }}/{{ $installment['total_count'] }} lunas
+                        @if ($installment['is_free_form'])
+                            {{ $installment['remaining'] > 0 ? 'Cicilan berjalan' : 'Lunas' }}
+                        @else
+                            {{ $installment['paid_count'] }}/{{ $installment['total_count'] }} lunas
+                        @endif
                     </span>
                 </div>
 

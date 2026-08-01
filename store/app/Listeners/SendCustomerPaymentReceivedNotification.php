@@ -27,12 +27,7 @@ class SendCustomerPaymentReceivedNotification
 
         // Signed track URL (pola sama dgn payment_verified & order_shipped) supaya
         // pembeli bisa langsung pantau status pesanan tanpa login.
-        $ttlDays = (int) config('checkout.track_url_ttl_days', 30);
-        $trackUrl = URL::temporarySignedRoute(
-            'track.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $event->order->order_number],
-        );
+        $trackUrl = URL::signedRoute('track.show', ['order_number' => $event->order->order_number]);
 
         $this->notifier->send(
             template: 'customer_payment_received',

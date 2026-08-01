@@ -26,12 +26,7 @@ class SendCustomerOrderShippedNotification
             return;
         }
 
-        $ttlDays = (int) config('checkout.track_url_ttl_days', 30);
-        $trackUrl = URL::temporarySignedRoute(
-            'track.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $event->order->order_number],
-        );
+        $trackUrl = URL::signedRoute('track.show', ['order_number' => $event->order->order_number]);
 
         // Label kurir yang manusiawi (JNE, SiCepat) dari courier_id tersimpan (jne,
         // sicepat). Fallback strtoupper bila id tak ada di map.

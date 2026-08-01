@@ -112,12 +112,12 @@ class InstallmentReminder
         return null;
     }
 
-    /** Sisa = total order − jumlah pembayaran terverifikasi. */
+    /** Sisa = total tagihan (termasuk kode unik) − pembayaran terverifikasi. */
     public function remaining(Order $order): float
     {
         $verified = (float) $order->payments->where('status', 'verified')->sum('amount');
 
-        return max(0, (float) $order->total - $verified);
+        return max(0, (float) $order->payableTotal() - $verified);
     }
 
     public function paidCount(Order $order): int
@@ -130,12 +130,21 @@ class InstallmentReminder
         return $order->payments->count();
     }
 
-    /** Masih ada angsuran belum lunas (dan sisa > 0). */
+    /** Masih ada tagihan cicilan yang belum lunas (sisa > 0). */
     public function hasOutstanding(Order $order): bool
     {
-        return $this->isInstallment($order)
-            && $this->remaining($order) > 0
-            && $order->payments->contains(fn ($p) => $p->status !== 'verified');
+        if (! $this->isInstallment($order) || $this->remaining($order) <= 0) {
+            return false;
+        }
+
+        // Cicilan bebas: sisa > 0 sudah cukup untuk boleh kirim reminder —
+        // pembayaran berikutnya belum tentu punya row (dibuat customer saat bayar).
+        if ((bool) data_get($order->order_meta, 'installment.free_form')) {
+            return true;
+        }
+
+        // Model lama: butuh angsuran terjadwal yang belum terverifikasi.
+        return $order->payments->contains(fn ($p) => $p->status !== 'verified');
     }
 
     private function intervalDays(Order $order): int

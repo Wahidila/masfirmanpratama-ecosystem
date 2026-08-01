@@ -323,19 +323,12 @@ class UploadController extends Controller
     }
 
     /**
-     * Generate signed GET URL ke /track/{order_number}. TTL config-driven
-     * (default 30 days, lebih panjang dari upload supaya customer bisa
-     * monitor sampai delivered).
+     * Generate signed GET URL ke /track/{order_number}. Signed PERMANEN (tanpa
+     * kedaluwarsa) supaya customer bisa memantau pesanan kapan saja.
      */
     protected function signedTrackUrl(string $order_number): string
     {
-        $ttlDays = max(1, (int) config('checkout.track_url_ttl_days', 30));
-
-        return URL::temporarySignedRoute(
-            'track.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $order_number],
-        );
+        return URL::signedRoute('track.show', ['order_number' => $order_number]);
     }
 
     /**

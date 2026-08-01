@@ -28,10 +28,10 @@ class CourseParticipantSync
         }
 
         $verified = (float) $order->payments()->where('status', 'verified')->sum('amount');
-        $total = (float) $order->total;
+        $total = (float) $order->payableTotal();
 
-        // Hanya enroll saat lunas. Cicilan/DP yang belum menutup total tidak
-        // menjadikan pembeli peserta kelas.
+        // Hanya enroll saat lunas (menutup total + kode unik). Cicilan/DP yang
+        // belum menutup total tidak menjadikan pembeli peserta kelas.
         if ($verified <= 0 || $verified < $total) {
             return null;
         }

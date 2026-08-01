@@ -331,16 +331,10 @@ class CourseCheckoutController extends Controller
     }
 
     /**
-     * Signed URL untuk halaman lacak order (TTL lebih panjang, default 30 hari).
+     * Signed URL untuk halaman lacak order. Signed PERMANEN (tanpa kedaluwarsa).
      */
     protected function generateTrackUrl(string $orderNumber): string
     {
-        $ttlDays = max(1, (int) config('checkout.track_url_ttl_days', 30));
-
-        return URL::temporarySignedRoute(
-            'track.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $orderNumber],
-        );
+        return URL::signedRoute('track.show', ['order_number' => $orderNumber]);
     }
 }

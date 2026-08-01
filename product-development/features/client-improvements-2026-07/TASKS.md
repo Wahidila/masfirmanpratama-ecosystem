@@ -121,6 +121,17 @@ Affiliate & Store app/DB terpisah → Store expose katalog JSON, Affiliate fetch
 - 2026-08-01 — 🎉 **8/8 task selesai.** Store 762 pass / affiliate 131 pass (2 store-fail sisa = env shipping fallback, pre-existing).
   Belum di-merge ke `main` & belum push — menunggu review/keputusan klien.
   Follow-up opsional: SMTP untuk email reset (task 5), hapus modul Skema Cicilan vestigial (task 4), build assets saat deploy.
+- 2026-08-01 — **§11 Feedback test klien (batch 2):**
+  1. *"Cicilan sudah lunas" padahal masih ada sisa* → bug `hasOutstanding()`: dulu butuh row pembayaran belum
+     terverifikasi, padahal di cicilan bebas pembayaran berikutnya belum ada row-nya. Fix: free-form → outstanding
+     cukup dari `sisa > 0`. Sekarang **tombol "Kirim Reminder Cicilan" muncul** selama masih ada sisa.
+  2. Ambang lunas/sisa diseragamkan ke **`payableTotal`** (total + kode unik) di recalcStatus, InstallmentReminder,
+     CourseParticipantSync, & admin — supaya sisa tepat 0 saat lunas (konsisten admin & halaman lacak).
+  3. Badge kartu Cicilan free-form: "1/1 lunas" (menyesatkan) → "Cicilan berjalan"/"Lunas".
+  4. Admin order (`/admin/orders/{id}`): tambah tombol **"Halaman Lacak ↗"** (signed permanen, tab baru).
+  5. **Hapus kedaluwarsa link lacak**: semua generator track URL (checkout, upload, 3 listener, mail, admin) diubah
+     dari `temporarySignedRoute` → `signedRoute` (signed permanen, tetap anti-enumerasi tapi tak pernah expired).
+  Test: +3 test baru (reminder saat ada sisa, tombol lacak, sisa di lacak); store 763 pass (2 env pre-existing).
 - 2026-08-01 — **§10 Feedback test klien:**
   1. *Payment proof 404* → BUKAN bug kode; file ada di disk, cuma `public/storage` symlink belum dibuat.
      Fix: `php artisan storage:link`. **⚠️ WAJIB dijalankan sekali di server produksi juga.**
