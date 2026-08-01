@@ -98,9 +98,12 @@
                 </p>
             </div>
 
+            @if (! ($isFreeForm && count($pendingPayments) === 0))
             <div class="sm:text-right">
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-                    @if ($isInstallment)
+                    @if ($isFreeForm)
+                        Bayar DP Sekarang
+                    @elseif ($isInstallment)
                         Nominal Pembayaran (DP / Cicilan)
                     @else
                         Total Transfer (Lunas)
@@ -121,6 +124,7 @@
                     Pastikan nominal transfer sesuai sampai 3 digit terakhir.
                 </p>
             </div>
+            @endif
         </section>
 
         {{-- ====================================================== --}}
@@ -176,7 +180,10 @@
 
         {{-- ====================================================== --}}
         {{-- Form upload bukti                                        --}}
+        {{-- Cicilan bebas: form ini HANYA untuk upload bukti DP (saat DP belum  --}}
+        {{-- ada buktinya). Sesudah itu pakai form "Bayar cicilan lagi" di bawah.--}}
         {{-- ====================================================== --}}
+        @if (! $isFreeForm || count($pendingPayments) > 0)
         <form
             x-show="!success"
             x-cloak
@@ -382,9 +389,11 @@
                 </button>
             </div>
         </form>
+        @endif
 
-        @if ($isFreeForm && $remaining > 0)
-            {{-- Cicilan bebas: tambah pembayaran berikutnya (nominal bebas, tanpa jatuh tempo) --}}
+        @if ($isFreeForm && count($pendingPayments) === 0 && $remaining > 0)
+            {{-- Cicilan bebas: tambah pembayaran berikutnya (nominal bebas, tanpa jatuh tempo).
+                 Tampil setelah bukti DP terkirim — jadi hanya ada SATU form di layar. --}}
             <div class="mt-8 rounded-3xl border border-primary-100 bg-primary-50/40 p-6 sm:p-8" data-testid="freeform-payment">
                 <div class="flex items-start gap-3">
                     <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600">

@@ -121,6 +121,11 @@ Affiliate & Store app/DB terpisah → Store expose katalog JSON, Affiliate fetch
 - 2026-08-01 — 🎉 **8/8 task selesai.** Store 762 pass / affiliate 131 pass (2 store-fail sisa = env shipping fallback, pre-existing).
   Belum di-merge ke `main` & belum push — menunggu review/keputusan klien.
   Follow-up opsional: SMTP untuk email reset (task 5), hapus modul Skema Cicilan vestigial (task 4), build assets saat deploy.
+- 2026-08-01 — **§12 Feedback: 2 form di halaman upload cicilan bebas bikin bingung.**
+  Halaman upload dulu menampilkan 2 form sekaligus (Kirim bukti bayar + Kirim pembayaran).
+  Fix: tampilkan **satu form saja sesuai state** — selama DP belum ada buktinya → hanya form upload bukti DP;
+  setelah DP terverifikasi → hanya form "Bayar cicilan lagi" (nominal bebas). Label kartu nominal DP diperjelas.
+  Test: +1 (upload page single-form). Store 766 pass (2 env pre-existing).
 - 2026-08-01 — **§11 Feedback test klien (batch 2):**
   1. *"Cicilan sudah lunas" padahal masih ada sisa* → bug `hasOutstanding()`: dulu butuh row pembayaran belum
      terverifikasi, padahal di cicilan bebas pembayaran berikutnya belum ada row-nya. Fix: free-form → outstanding

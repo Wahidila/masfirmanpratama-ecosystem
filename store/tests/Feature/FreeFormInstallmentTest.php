@@ -65,6 +65,32 @@ class FreeFormInstallmentTest extends TestCase
         $this->assertSame(0, Order::count());
     }
 
+    public function test_upload_page_shows_single_form_for_freeform(): void
+    {
+        $this->seed(AdminSeeder::class);
+        $admin = Admin::first();
+        Storage::fake('public');
+        $this->course(1_000_000);
+        $order = $this->checkoutCicilan(300_000);
+
+        $uploadUrl = URL::signedRoute('upload.show', ['order_number' => $order->order_number]);
+
+        // Sebelum DP dibayar: hanya form upload bukti DP; TANPA form "Bayar cicilan lagi".
+        $this->get($uploadUrl)
+            ->assertOk()
+            ->assertSee('Kirim bukti bayar')
+            ->assertDontSee('Bayar cicilan lagi');
+
+        // Setelah DP terverifikasi: hanya form "Bayar cicilan lagi"; TANPA form DP.
+        $dp = $order->payments()->first();
+        $this->actingAs($admin, 'admin')->post(route('admin.orders.payments.approve', [$order, $dp]));
+
+        $this->get($uploadUrl)
+            ->assertOk()
+            ->assertSee('Bayar cicilan lagi')
+            ->assertDontSee('Kirim bukti bayar');
+    }
+
     public function test_customer_can_add_freeform_payment_of_any_amount(): void
     {
         Storage::fake('public');
