@@ -2,6 +2,7 @@
     <div class="space-y-1">
         <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Menu</p>
         <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="layout-dashboard">Dashboard</x-nav-link>
+        <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')" icon="package">Produk</x-nav-link>
         <x-nav-link :href="route('referrals.index')" :active="request()->routeIs('referrals.*')" icon="link">Link Referral</x-nav-link>
         <x-nav-link :href="route('commissions.index')" :active="request()->routeIs('commissions.*')" icon="coins">Komisi</x-nav-link>
         <x-nav-link :href="route('withdrawals.index')" :active="request()->routeIs('withdrawals.*')" icon="wallet">Penarikan</x-nav-link>

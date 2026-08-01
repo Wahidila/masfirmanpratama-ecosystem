@@ -68,6 +68,11 @@ Route::get('/produk/{slug}', [ProductController::class, 'show'])
     ->where('slug', '[A-Za-z0-9\-]+')
     ->name('products.show');
 
+// Katalog JSON untuk app Affiliate (buku + kelas aktif). Data publik, dipakai
+// halaman "Produk" affiliator + dropdown pilih produk saat buat link referral.
+Route::get('/api/affiliate/products', [\App\Http\Controllers\Api\AffiliateCatalogController::class, 'index'])
+    ->name('api.affiliate.products');
+
 // Cart
 Route::get('/cart', fn () => view('pages.cart'))->name('cart.index');
 

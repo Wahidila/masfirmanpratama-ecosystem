@@ -21,6 +21,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PayoutAccountController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\Webhooks\ReferralInfoController;
@@ -104,6 +105,9 @@ Route::middleware('auth:affiliator')->group(function () {
     Route::middleware(['verified', EnsureAffiliatorIsActive::class])->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Katalog produk (dari Store) yang bisa dipromosikan
+        Route::get('/produk', [ProductController::class, 'index'])->name('products.index');
 
         // Referral links
         Route::resource('referrals', ReferralController::class)->except(['show']);

@@ -13,9 +13,9 @@
 | 3 | Peserta masuk kelas **hanya saat cicilan lunas** (bukan cicilan pertama) | store | 🟢 |
 | 4 | Cicilan **bebas kapan saja & nominal bebas**, hapus jatuh tempo/deadline | store | 🔴 |
 | 5 | Fitur **lupa password** | store + affiliate | 🟢 |
-| 6 | Halaman affiliator **lihat detail produk** (bukan cuma jumlah sukses) | affiliate | 🔴 |
+| 6 | Halaman affiliator **lihat detail produk** (bukan cuma jumlah sukses) | affiliate | 🟢 |
 | 7 | **Icon show password** di semua form login | store + affiliate | 🟢 |
-| 8 | Add referral link **langsung pilih produk** (tanpa copy-paste URL) | affiliate | 🔴 |
+| 8 | Add referral link **langsung pilih produk** (tanpa copy-paste URL) | affiliate | 🟢 |
 
 ---
 
@@ -67,11 +67,14 @@ Model Affiliator & Admin extend `Foundation\Auth\User` → `CanResetPassword` su
 - ⚠️ **Deploy**: `MAIL_MAILER` default `log`. Untuk email sungguhan set SMTP di `.env`
       (MAIL_MAILER=smtp + host/port/user/pass) di KEDUA app.
 
-### 6. Halaman affiliator lihat produk 🔴
-- [ ] Buat halaman list produk (nama, gambar, komisi, URL store)
-- [ ] Tampilkan detail (bukan cuma count sukses)
-- [ ] Route + controller + view + nav link
-- [ ] Test
+### 6. Halaman affiliator lihat produk 🟢
+Affiliate & Store app/DB terpisah → Store expose katalog JSON, Affiliate fetch (cached).
+- [x] Store: `GET /api/affiliate/products` (AffiliateCatalogController) — buku (products) + kelas (courses) aktif
+- [x] Affiliate: `StoreCatalog` service (Http fetch + cache 30 mnt, hanya cache sukses)
+- [x] Affiliate: `ProductController@index` + view `products/index` (grid kartu: gambar, tipe, harga, **komisi Anda**, tombol buat link, link ke store)
+- [x] Rate komisi resolver per (tipe affiliator, tipe produk) — prioritas sama seperti webhook
+- [x] Nav "Produk" + route `products.index`
+- [x] ✅ Test: store AffiliateCatalogTest 2/2, affiliate ProductCatalogTest (list + empty-state) pass
 
 ### 7. Icon show/hide password 🟢
 - [x] Store admin login — **sudah ada** toggle (`showPassword` + eye SVG)
@@ -80,11 +83,12 @@ Model Affiliator & Admin extend `Foundation\Auth\User` → `CanResetPassword` su
 - [x] ✅ Affiliate `AuthTest` 13/13 pass
 - Catatan: field API key WhatsApp di store settings (bukan login) sengaja dilewati (out of scope).
 
-### 8. Add referral link pilih produk 🔴
-- [ ] Ganti input URL manual → dropdown/select produk
-- [ ] Auto-build URL store dari produk terpilih
-- [ ] Sesuaikan controller + validasi
-- [ ] Test
+### 8. Add referral link pilih produk 🟢
+- [x] Form create/edit referral: toggle **Pilih produk** (dropdown dari katalog) vs **URL custom** (Alpine)
+- [x] Pilih produk → `target_url` otomatis terisi URL store (`/produk/{slug}` atau `/kelas/{slug}`)
+- [x] Tombol "Buat Link" di halaman Produk → prefill create form dgn produk terpilih
+- [x] `ReferralController` create/edit inject `StoreCatalog`; validasi `target_url` (nullable url) tetap
+- [x] ✅ Test: affiliate ProductCatalogTest (picker render + create pakai product url) pass; full affiliate suite 131 pass
 
 ---
 
