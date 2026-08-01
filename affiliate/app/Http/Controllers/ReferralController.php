@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ReferralClick;
 use App\Models\ReferralCode;
+use App\Services\StoreCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,7 +39,7 @@ class ReferralController extends Controller
             ->withCookie(cookie('referral_code', $code, 60 * 24 * 30));
     }
 
-    public function index(Request $request): View
+    public function index(Request $request, StoreCatalog $catalog): View
     {
         $affiliator = Auth::guard('affiliator')->user();
 
@@ -47,12 +48,21 @@ class ReferralController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('referrals.index', compact('referrals'));
+        // Peta URL produk → nama, untuk menampilkan nama produk per link referral.
+        $productNames = collect($catalog->products())
+            ->mapWithKeys(fn (array $p) => [$p['url'] => $p['title']])
+            ->all();
+
+        return view('referrals.index', compact('referrals', 'productNames'));
     }
 
-    public function create(): View
+    public function create(Request $request, StoreCatalog $catalog): View
     {
-        return view('referrals.create');
+        return view('referrals.create', [
+            'products' => $this->productOptions($catalog),
+            'prefillUrl' => (string) $request->query('target_url', ''),
+            'prefillLabel' => (string) $request->query('label', ''),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -79,11 +89,32 @@ class ReferralController extends Controller
             ->with('success', 'Link referral berhasil dibuat!');
     }
 
-    public function edit(ReferralCode $referral): View
+    public function edit(ReferralCode $referral, StoreCatalog $catalog): View
     {
         $this->authorizeReferral($referral);
 
-        return view('referrals.edit', compact('referral'));
+        return view('referrals.edit', [
+            'referral' => $referral,
+            'products' => $this->productOptions($catalog),
+        ]);
+    }
+
+    /**
+     * Ringkas katalog store jadi opsi dropdown produk (url + label + harga).
+     *
+     * @return array<int, array{url:string,label:string,type:string,price:int}>
+     */
+    private function productOptions(StoreCatalog $catalog): array
+    {
+        return collect($catalog->products())
+            ->map(fn (array $p) => [
+                'url' => $p['url'],
+                'label' => $p['title'],
+                'type' => $p['type'],
+                'price' => $p['price'],
+            ])
+            ->values()
+            ->all();
     }
 
     public function update(Request $request, ReferralCode $referral): RedirectResponse

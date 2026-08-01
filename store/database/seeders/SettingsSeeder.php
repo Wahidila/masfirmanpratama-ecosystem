@@ -22,12 +22,14 @@ class SettingsSeeder extends Seeder
                 'bank' => 'BCA',
                 'number' => '1234-5678-9012',
                 'holder' => 'PT. Dummy AMC',
+                'logo' => 'bca',
                 'logo_color' => 'sky',
             ],
             [
                 'bank' => 'Mandiri',
                 'number' => '0987-6543-2109',
                 'holder' => 'PT. Dummy AMC',
+                'logo' => 'mandiri',
                 'logo_color' => 'amber',
             ],
         ], 'json');

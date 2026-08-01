@@ -122,6 +122,32 @@ class SettingsTest extends TestCase
         $this->assertFalse($stored[1]['primary']);
     }
 
+    public function test_update_bank_accounts_persists_logo_slug(): void
+    {
+        $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.settings.bank-accounts.update'), [
+                'bank_accounts' => [
+                    ['bank' => 'BCA', 'number' => '1234-5678', 'holder' => 'PT MFP', 'logo' => 'bca'],
+                ],
+            ])
+            ->assertRedirect(route('admin.settings.index', ['tab' => 'bank-accounts']));
+
+        $stored = Setting::getValue('bank_accounts');
+        $this->assertSame('bca', $stored[0]['logo']);
+    }
+
+    public function test_update_bank_accounts_rejects_unknown_logo_slug(): void
+    {
+        $this->actingAs($this->admin, 'admin')
+            ->from(route('admin.settings.index', ['tab' => 'bank-accounts']))
+            ->put(route('admin.settings.bank-accounts.update'), [
+                'bank_accounts' => [
+                    ['bank' => 'BCA', 'number' => '1234-5678', 'logo' => 'not-a-bank'],
+                ],
+            ])
+            ->assertSessionHasErrors('bank_accounts.0.logo');
+    }
+
     public function test_update_bank_accounts_filters_empty_rows(): void
     {
         $response = $this->actingAs($this->admin, 'admin')
@@ -203,5 +229,30 @@ class SettingsTest extends TestCase
         $info = Settings::getStoreInfo();
         $this->assertSame('Custom MFP Name', $info['name']);
         $this->assertSame('Surabaya', $info['city']);
+    }
+
+    public function test_whatsapp_tab_saves_admin_alert_number(): void
+    {
+        $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.settings.whatsapp.update'), [
+                'xsender_api_key' => 'KEY123',
+                'xsender_sender' => '6285111201722',
+                'wa_admin_number' => '081234000111', // format 0.. → dinormalisasi ke 62..
+            ])
+            ->assertRedirect(route('admin.settings.index', ['tab' => 'whatsapp']));
+
+        // Nomor admin ter-normalisasi & tersimpan → alert admin tidak lagi ke placeholder.
+        $this->assertSame('6281234000111', Settings::getWaAdmin()['number']);
+    }
+
+    public function test_whatsapp_tab_prefills_admin_number(): void
+    {
+        Settings::set('wa_admin', ['number' => '6285111201722', 'label' => 'Admin'], 'array');
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.settings.index', ['tab' => 'whatsapp']))
+            ->assertStatus(200)
+            ->assertSee('name="wa_admin_number"', false)
+            ->assertSee('value="6285111201722"', false);
     }
 }

@@ -18,7 +18,11 @@
 @endphp
 
 <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-    <div class="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
+    {{-- Baris atas: ikon (kiri) + badge (kanan). Badge dipindah ke sini supaya
+         tidak bertabrakan dengan teks hint saat kartu menyempit (grid 4 kolom
+         di layar 1024–1279px). --}}
+    <div class="flex items-start justify-between gap-2">
+        <div class="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800 shrink-0">
         @if($icon === 'orders')
             <svg class="fill-gray-800 dark:fill-white/90" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V21C21 21.2652 20.8946 21.5196 20.7071 21.7071C20.5196 21.8946 20.2652 22 20 22H4C3.73478 22 3.48043 21.8946 3.29289 21.7071C3.10536 21.5196 3 21.2652 3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3ZM5 5V19H19V5H5ZM8 8C8 7.44772 8.44772 7 9 7H15C15.5523 7 16 7.44772 16 8C16 8.55228 15.5523 9 15 9H9C8.44772 9 8 8.55228 8 8ZM9 12H15C15.5523 12 16 12.4477 16 13C16 13.5523 15.5523 14 15 14H9C8.44772 14 8 13.5523 8 13C8 12.4477 8.44772 12 9 12Z" fill=""/>
@@ -56,21 +60,21 @@
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V21C21 21.2652 20.8946 21.5196 20.7071 21.7071C20.5196 21.8946 20.2652 22 20 22H4C3.73478 22 3.48043 21.8946 3.29289 21.7071C3.10536 21.5196 3 21.2652 3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3ZM5 5V19H19V5H5Z" fill=""/>
             </svg>
         @endif
-    </div>
-
-    <div class="flex items-end justify-between mt-5">
-        <div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">{{ $title }}</span>
-            <h4 class="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">{{ $value }}</h4>
-            @if($hint)
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ $hint }}</p>
-            @endif
         </div>
 
         @if($badge)
-            <span class="flex items-center gap-1 rounded-full py-0.5 pl-2 pr-2.5 text-sm font-medium {{ $badgeClasses }}">
+            <span class="shrink-0 inline-flex items-center gap-1 rounded-full py-0.5 px-2.5 text-xs font-medium whitespace-nowrap {{ $badgeClasses }}">
                 {{ $badge }}
             </span>
+        @endif
+    </div>
+
+    {{-- Konten: judul, angka, hint — full-width, tanpa rebutan ruang dgn badge. --}}
+    <div class="mt-5">
+        <span class="text-sm text-gray-500 dark:text-gray-400">{{ $title }}</span>
+        <h4 class="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">{{ $value }}</h4>
+        @if($hint)
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ $hint }}</p>
         @endif
     </div>
 </div>

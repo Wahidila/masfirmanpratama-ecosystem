@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\AdminWithdrawalController;
 use App\Http\Controllers\Admin\AdminWithdrawalMethodController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CronTriggerController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PayoutAccountController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\Webhooks\ReferralInfoController;
@@ -65,6 +68,13 @@ Route::middleware('guest:affiliator')->group(function () {
     Route::post('/register', [RegisterController::class, 'register']);
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
+
+    // Lupa / reset password (broker 'affiliators')
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('throttle:6,1')->name('password.email');
+    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 });
 
 /*
@@ -95,6 +105,9 @@ Route::middleware('auth:affiliator')->group(function () {
     Route::middleware(['verified', EnsureAffiliatorIsActive::class])->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Katalog produk (dari Store) yang bisa dipromosikan
+        Route::get('/produk', [ProductController::class, 'index'])->name('products.index');
 
         // Referral links
         Route::resource('referrals', ReferralController::class)->except(['show']);

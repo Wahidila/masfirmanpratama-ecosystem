@@ -47,10 +47,14 @@ class WxrImporter
         'media_downloaded' => 0,
         'media_skipped' => 0,
         'items_skipped' => 0,
+        'links_relinked' => 0,
     ];
 
     /** @var list<string> */
     private array $slugCollisions = [];
+
+    /** @var list<int> ids of posts created/updated this run (for the relink pass) */
+    private array $importedPostIds = [];
 
     public function __construct(
         private bool $downloadMedia = false,
@@ -80,6 +84,7 @@ class WxrImporter
         $this->importTags($channel);
         $this->importAttachments($channel);
         $this->importPosts($channel);
+        $this->relinkInternalLinks();
 
         return $this->result();
     }
@@ -223,6 +228,7 @@ class WxrImporter
 
             if ($this->dryRun) {
                 $this->summary[$this->downloadMedia ? 'media_downloaded' : 'media_skipped']++;
+
                 continue;
             }
 
@@ -263,6 +269,7 @@ class WxrImporter
                 if ($postType !== 'attachment') {
                     $this->summary['items_skipped']++;
                 }
+
                 continue;
             }
 
@@ -284,6 +291,7 @@ class WxrImporter
 
             if ($this->dryRun) {
                 $this->summary[$exists ? 'posts_updated' : 'posts_created']++;
+
                 continue;
             }
 
@@ -321,8 +329,36 @@ class WxrImporter
             $this->applyPrimaryCategory($post, $meta);
             $post->save();
 
+            $this->importedPostIds[] = $post->id;
             $this->summary[$wasExisting ? 'posts_updated' : 'posts_created']++;
         }
+    }
+
+    /**
+     * Final pass: rewrite old masfirmanpratama.com cross-post links in the
+     * content of every post touched this run to the new /blog/{slug} route.
+     * Runs after all posts exist so every target slug is resolvable.
+     */
+    private function relinkInternalLinks(): void
+    {
+        if ($this->dryRun || $this->importedPostIds === []) {
+            return;
+        }
+
+        $rewriter = new InternalLinkRewriter;
+
+        Post::withTrashed()->whereIn('id', $this->importedPostIds)
+            ->get(['id', 'content'])
+            ->each(function (Post $post) use ($rewriter): void {
+                $content = $rewriter->rewrite((string) $post->content);
+                if ($content !== $post->content) {
+                    $post->content = $content;
+                    $post->timestamps = false;
+                    $post->saveQuietly();
+                }
+            });
+
+        $this->summary['links_relinked'] = $rewriter->rewrittenCount();
     }
 
     private function attachTaxonomy(Post $post, SimpleXMLElement $item): void
@@ -498,7 +534,9 @@ class WxrImporter
     private function fetchToDisk(string $url, string $diskPath): bool
     {
         try {
-            $response = Http::timeout(20)->get($url);
+            // Fail fast on dead/slow hosts: a bounded per-file budget stops one
+            // unreachable image URL from eating the whole request's time.
+            $response = Http::connectTimeout(8)->timeout(15)->get($url);
             if (! $response->successful()) {
                 return false;
             }

@@ -35,6 +35,7 @@
                         <span>
                             <span class="font-medium text-gray-800 dark:text-white/90">Download & rehost gambar</span>
                             <span class="block text-xs text-gray-500 dark:text-gray-400">Ambil featured image + gambar inline dari situs lama. <strong>Jalankan SEBELUM cutover DNS</strong> selagi situs lama masih online.</span>
+                            <span class="mt-1 block text-xs text-gray-400 dark:text-gray-500">Blog dengan banyak gambar bisa makan waktu beberapa menit — jangan tutup tab. Import aman diulang (idempotent), jadi kalau terputus tinggal jalankan lagi. Untuk migrasi sangat besar, pakai <span class="font-mono">php artisan blog:import-wordpress</span>.</span>
                         </span>
                     </label>
 
@@ -63,6 +64,7 @@
                                 'Kategori' => $s['categories'], 'Tag' => $s['tags'],
                                 'Artikel baru' => $s['posts_created'], 'Artikel diperbarui' => $s['posts_updated'],
                                 'Media (download)' => $s['media_downloaded'], 'Media (skip)' => $s['media_skipped'],
+                                'Link internal dirapikan' => $s['links_relinked'] ?? 0,
                                 'Item dilewati' => $s['items_skipped'],
                             ] as $label => $value)
                                 <div class="rounded-lg border border-gray-100 p-3 dark:border-gray-800">

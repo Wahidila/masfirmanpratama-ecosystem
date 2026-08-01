@@ -126,32 +126,11 @@ class StoreWebhookController extends Controller
 
         $affiliator = $referralCode->affiliator;
 
-        // Self-referral guard: affiliator tidak boleh dapat komisi (atau mengerek skor
-        // gamifikasi) dari pembelian dirinya sendiri. Deteksi via email pembeli == email
-        // affiliator (case-insensitive).
-        $isSelfReferral = $buyerEmail !== null
-            && strcasecmp(trim($buyerEmail), trim((string) $affiliator->email)) === 0;
-
-        // Fail-closed: tanpa email pembeli kita TIDAK bisa memastikan pembeli bukan si
-        // affiliator sendiri. Jangan bayar komisi / kerek skor untuk order tak terverifikasi
-        // — cukup catat di webhook_logs untuk ditinjau manual. (Sisi Store mewajibkan email
-        // saat ada referral, jadi order referral yang sah selalu membawa email.)
-        $buyerUnverifiable = trim((string) $buyerEmail) === '';
-
-        if ($isSelfReferral || $buyerUnverifiable) {
-            $webhookLog->update([
-                'status' => 'processed',
-                'error_message' => $isSelfReferral
-                    ? 'Self-referral detected (buyer email matches affiliator), order & commission skipped'
-                    : 'Buyer email missing — cannot verify self-referral, commission withheld',
-            ]);
-
-            return response()->json([
-                'message' => $isSelfReferral
-                    ? 'Self-referral detected, skipped'
-                    : 'Buyer unverifiable, commission withheld',
-            ]);
-        }
+        // Catatan: pengecekan self-referral DIHAPUS (keputusan klien 2026-08-01).
+        // Komisi baru masuk SETELAH pembayaran diverifikasi admin, jadi pembelian
+        // lewat link sendiri pun tetap transaksi nyata yang menguntungkan. Email
+        // pembeli tidak lagi dipakai untuk verifikasi apa pun (opsional) — tetap
+        // disimpan di referral_orders sebagai info admin bila ada.
 
         // Buat ReferralOrder
         $referralOrder = ReferralOrder::create([

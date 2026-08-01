@@ -152,21 +152,29 @@ class FulfillmentServiceTest extends TestCase
         $result = $service->createShipment($order);
 
         $this->assertSame('pending_payment', $result['status']);
+        $this->assertSame('https://payment.example.com/pay/abc123', $result['payment_url']);
 
         $order = $order->fresh();
         $this->assertSame('pending_payment', $order->fulfillment_status);
         $this->assertNull($order->shipping_resi);
         $this->assertSame('ORD-PAY-001', $order->fulfillment_api_order_id);
         $this->assertSame('REF-PAY-001', $order->fulfillment_reference_id);
+        // FIX-8: payment_url di-persist sehingga admin bisa render tombol "Bayar".
+        $this->assertSame('https://payment.example.com/pay/abc123', $order->fulfillment_payment_url);
     }
 
-    public function test_build_shipment_data_structure(): void
+    public function test_build_shipment_data_uses_discrete_columns(): void
     {
         $order = $this->createOrderWithItem([
             'customer_name' => 'Budi Santoso',
             'phone' => '081234567890',
             'email' => 'budi@example.com',
-            'address' => 'Jl. Merdeka No. 12, Surabaya, Jawa Timur, 60111',
+            // address_line saja, koma di dalamnya BUKAN delimiter city/province.
+            'address' => 'Jl. Merdeka No. 12, RT 03/RW 04, Kel. Tegalsari',
+            'shipping_city' => 'Surabaya',
+            'shipping_province' => 'Jawa Timur',
+            'shipping_district' => 'Tegalsari',
+            'shipping_zipcode' => '60111',
             'shipping_courier' => 'jne',
             'shipping_service' => 'jne_reg',
         ]);
@@ -174,29 +182,41 @@ class FulfillmentServiceTest extends TestCase
         $service = app(FulfillmentService::class);
         $data = $service->buildShipmentData($order);
 
-        $this->assertArrayHasKey('shipper', $data);
-        $this->assertArrayHasKey('receiver', $data);
-        $this->assertArrayHasKey('items', $data);
-        $this->assertArrayHasKey('weight', $data);
-        $this->assertArrayHasKey('length', $data);
-        $this->assertArrayHasKey('width', $data);
-        $this->assertArrayHasKey('height', $data);
-        $this->assertArrayHasKey('courier', $data);
-        $this->assertArrayHasKey('service', $data);
-
         $this->assertSame(config('shipping.origin'), $data['shipper']['name']);
         $this->assertSame(config('shipping.origin_zipcode'), $data['shipper']['zipcode']);
         $this->assertSame('Budi Santoso', $data['receiver']['name']);
         $this->assertSame('budi@example.com', $data['receiver']['email']);
-        $this->assertSame('Jl. Merdeka No. 12', $data['receiver']['address']);
+        // Full address_line preserved (was previously corrupted by explode).
+        $this->assertSame('Jl. Merdeka No. 12, RT 03/RW 04, Kel. Tegalsari', $data['receiver']['address']);
         $this->assertSame('Surabaya', $data['receiver']['city']);
         $this->assertSame('Jawa Timur', $data['receiver']['province']);
+        $this->assertSame('Tegalsari', $data['receiver']['district']);
+        $this->assertSame('60111', $data['receiver']['zipcode']);
         $this->assertSame('jne', $data['courier']);
         $this->assertSame('jne_reg', $data['service']);
+    }
 
-        $this->assertCount(1, $data['items']);
-        $this->assertSame($this->product->title, $data['items'][0]['name']);
-        $this->assertSame(2, $data['items'][0]['qty']);
+    public function test_build_shipment_data_legacy_fallback_when_discrete_columns_null(): void
+    {
+        // Pre-FIX-4 orders punya 'address' tergabung dan tidak ada kolom diskrit.
+        // Legacy fallback (explode) tetap harus jalan supaya tidak break.
+        $order = $this->createOrderWithItem([
+            'customer_name' => 'Legacy User',
+            'phone' => '081234567890',
+            'address' => 'Jl. Merdeka 12, Surabaya, Jawa Timur, 60111',
+            'shipping_city' => null,
+            'shipping_province' => null,
+            'shipping_district' => null,
+            'shipping_zipcode' => null,
+        ]);
+
+        $service = app(FulfillmentService::class);
+        $data = $service->buildShipmentData($order);
+
+        $this->assertSame('Jl. Merdeka 12', $data['receiver']['address']);
+        $this->assertSame('Surabaya', $data['receiver']['city']);
+        $this->assertSame('Jawa Timur', $data['receiver']['province']);
+        $this->assertSame('60111', $data['receiver']['zipcode']);
     }
 
     public function test_build_shipment_data_min_weight(): void

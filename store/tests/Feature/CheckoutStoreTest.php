@@ -36,6 +36,9 @@ class CheckoutStoreTest extends TestCase
             'price' => 185_000,
             'status' => 'active',
             'type' => 'book',
+            // Test ini fokus ke mekanik order/subtotal, bukan ongkir. Non-shippable
+            // supaya tidak butuh metode pengiriman (lihat CheckoutController FIX-A).
+            'is_shippable' => false,
         ]);
     }
 
@@ -82,17 +85,19 @@ class CheckoutStoreTest extends TestCase
         $this->assertSame('4500000.00', $item->unit_price);
         $this->assertSame('4500000.00', $item->subtotal);
 
-        // Payments: 1 row pending = full amount
+        // Kode unik 1–999 dibuat & nominal transfer = total + kode unik.
+        $this->assertGreaterThanOrEqual(1, $order->unique_code);
+        $this->assertLessThanOrEqual(999, $order->unique_code);
+
+        // Payments: 1 row pending = total + kode unik (payableTotal).
         $payments = OrderPayment::where('order_id', $order->id)->get();
         $this->assertCount(1, $payments);
-        $this->assertSame('4500000.00', $payments[0]->amount);
+        $this->assertSame(number_format($order->payableTotal(), 2, '.', ''), $payments[0]->amount);
         $this->assertSame('pending', $payments[0]->status);
         $this->assertSame('transfer', $payments[0]->method);
 
-        // Redirect to signed URL upload page
-        $response->assertRedirect();
-        $this->assertStringContainsString('/upload/'.$order->order_number, $response->headers->get('Location'));
-        $this->assertStringContainsString('signature=', $response->headers->get('Location'));
+        // Redirect ke halaman "Order berhasil dibuat" (bukan langsung upload).
+        $response->assertRedirect(route('checkout.success', ['order' => $order->order_number]));
     }
 
     public function test_validation_rejects_missing_required_fields(): void
@@ -108,6 +113,24 @@ class CheckoutStoreTest extends TestCase
             ]);
 
         $this->assertSame(0, Order::count());
+    }
+
+    public function test_checkout_flashes_one_time_clear_cart_signal(): void
+    {
+        // Tepat setelah checkout, success page dapat sinyal reset cart (one-time).
+        $response = $this->post('/checkout', $this->validPayload());
+        $response->assertSessionHas('checkout.clear_cart', true);
+
+        $order = Order::first();
+        // GET success pertama: sinyal masih ada → view render clearCart: true.
+        $this->get(route('checkout.success', ['order' => $order->order_number]))
+            ->assertOk()
+            ->assertSee('clearCart: true', false);
+
+        // Refresh: flash sudah hilang → clearCart: false (cart baru user tidak ikut terhapus).
+        $this->get(route('checkout.success', ['order' => $order->order_number]))
+            ->assertOk()
+            ->assertSee('clearCart: false', false);
     }
 
     public function test_validation_rejects_invalid_payment_type(): void
@@ -194,15 +217,67 @@ class CheckoutStoreTest extends TestCase
         $this->assertSame('AFF-PURNOMO-2026', $order->ref_code);
     }
 
-    public function test_redirect_url_is_signed_and_valid_for_24h(): void
+    /**
+     * Regression: Affiliate men-set cookie 'referral_code' PLAINTEXT (APP_KEY beda,
+     * domain parent). Store harus meng-except cookie itu dari enkripsi, kalau tidak
+     * Cookie::get('referral_code') null → ref_code kosong → webhook order-paid tak
+     * terkirim → komisi tidak terhitung.
+     */
+    public function test_ref_code_read_from_unencrypted_referral_cookie(): void
     {
+        $this->withUnencryptedCookie('referral_code', 'HUQJUMKG')
+            ->post('/checkout', $this->validPayload(['ref_code' => null]));
+
+        $order = Order::first();
+        $this->assertSame('HUQJUMKG', $order->ref_code);
+    }
+
+    public function test_email_optional_for_non_referral_order(): void
+    {
+        // Order tanpa referral: email boleh kosong.
+        $payload = $this->validPayload();
+        unset($payload['customer_email']);
+
+        $this->post('/checkout', $payload)->assertSessionHasNoErrors();
+
+        $this->assertSame(1, Order::count());
+        $this->assertNull(Order::first()->email);
+    }
+
+    public function test_email_optional_even_for_referral_order(): void
+    {
+        // Self-referral check dihapus → email tidak lagi wajib meski order via
+        // link referral. Referral tetap ke-attach ke order.
+        $payload = $this->validPayload(['ref_code' => null]);
+        unset($payload['customer_email']);
+
+        $this->withUnencryptedCookie('referral_code', 'HUQJUMKG')
+            ->post('/checkout', $payload)
+            ->assertSessionHasNoErrors();
+
+        $order = Order::first();
+        $this->assertNotNull($order);
+        $this->assertNull($order->email);
+        $this->assertSame('HUQJUMKG', $order->ref_code);
+    }
+
+    public function test_checkout_to_success_to_upload_flow_end_to_end(): void
+    {
+        // POST /checkout → redirect ke success page.
         $response = $this->post('/checkout', $this->validPayload());
+        $order = Order::first();
+        $response->assertRedirect(route('checkout.success', ['order' => $order->order_number]));
 
-        $location = $response->headers->get('Location');
-        $this->assertStringContainsString('signature=', $location);
+        // Success page: 200 + tombol upload pakai signed URL.
+        $success = $this->get(route('checkout.success', ['order' => $order->order_number]));
+        $success->assertOk()->assertSee('Order berhasil dibuat', false);
 
-        // Hit the signed URL — should be 200 (signed URL valid).
-        $this->get($location)->assertOk();
+        // Ekstrak signed upload URL dari tombol cta-upload, lalu GET → 200 (bukan 403).
+        preg_match('/href="([^"]*\/upload\/'.preg_quote($order->order_number, '/').'[^"]*)"/', $success->getContent(), $m);
+        $this->assertNotEmpty($m, 'Tombol upload signed harus ada di success page');
+        $uploadUrl = html_entity_decode($m[1]);
+        $this->assertStringContainsString('signature=', $uploadUrl);
+        $this->get($uploadUrl)->assertOk();
     }
 
     public function test_order_number_format_matches_spec(): void

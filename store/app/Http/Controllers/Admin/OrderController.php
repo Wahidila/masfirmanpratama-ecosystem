@@ -2,18 +2,30 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\OrderCompleted;
 use App\Events\OrderRefunded;
 use App\Events\OrderShipped;
 use App\Events\PaymentRejected;
 use App\Events\PaymentVerified;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\TrackController;
 use App\Models\Order;
 use App\Models\OrderPayment;
-use App\Services\Shipping\FulfillmentService;
+use App\Services\Installment\InstallmentReminder;
+use App\Services\Settings;
+use App\Services\Shipping\AgenwebsiteClient;
+use App\Services\Webhook\AffiliateLookupClient;
+use App\Services\WhatsappNotifier;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -32,11 +44,6 @@ class OrderController extends Controller
     ];
 
     /**
-     * Kurir yang didukung untuk input resi.
-     */
-    public const COURIERS = ['JNE', 'JNT', 'SiCepat', 'Pos', 'Other'];
-
-    /**
      * Status precondition yang valid untuk transition ke 'shipped'.
      * Schema enum source-of-truth: 'paid' = lunas terverifikasi, siap kirim.
      */
@@ -47,6 +54,14 @@ class OrderController extends Controller
      * Order bisa di-refund dari paid, partial_paid, shipped, atau completed.
      */
     public const REFUNDABLE_FROM = ['paid', 'partial_paid', 'shipped', 'completed'];
+
+    /**
+     * Status precondition yang valid untuk transition ke 'completed'.
+     * Hanya order yang sudah 'shipped' yang bisa ditandai selesai (paket harus
+     * dikirim dulu). Untuk alur resi-manual yang tak dapat callback AWB, ini
+     * jalan admin menutup siklus order secara eksplisit.
+     */
+    public const COMPLETABLE_FROM = ['shipped'];
 
     public function index(Request $request): View
     {
@@ -106,7 +121,7 @@ class OrderController extends Controller
     /**
      * Show order detail with items, payments, customer info.
      */
-    public function show(Order $order): View
+    public function show(Order $order, InstallmentReminder $reminder, AffiliateLookupClient $affiliateLookup): View
     {
         $order->load([
             'items' => fn ($q) => $q->orderBy('id'),
@@ -114,6 +129,7 @@ class OrderController extends Controller
             'items.course',
             'payments' => fn ($q) => $q->orderBy('created_at'),
             'payments.verifier',
+            'waNotifications' => fn ($q) => $q->orderBy('id'),
         ]);
 
         $totalPaid = (float) $order->payments
@@ -125,16 +141,42 @@ class OrderController extends Controller
         $totalRejected = (float) $order->payments
             ->where('status', 'rejected')
             ->sum('amount');
-        $remaining = max(0, (float) $order->total - $totalPaid);
+        $remaining = max(0, (float) $order->payableTotal() - $totalPaid);
+
+        // Ringkasan cicilan untuk kartu "Cicilan" + tombol Reminder Cicilan.
+        $installment = null;
+        if ($reminder->isInstallment($order)) {
+            $installment = [
+                'schedule' => $reminder->schedule($order),
+                'next_due' => $reminder->nextDue($order),
+                'remaining' => $reminder->remaining($order),
+                'paid_count' => $reminder->paidCount($order),
+                'total_count' => $reminder->totalCount($order),
+                'is_free_form' => (bool) data_get($order->order_meta, 'installment.free_form'),
+                'can_remind' => $reminder->hasOutstanding($order)
+                    && ! in_array($order->status, ['cancelled', 'refunded'], true),
+            ];
+        }
+
+        // Link halaman lacak untuk tombol admin (signed permanen — tanpa kedaluwarsa).
+        $trackUrl = URL::signedRoute('track.show', ['order_number' => $order->order_number]);
+
+        // Nama affiliator yang mereferralkan (lookup ke app Affiliate, di-cache).
+        $affiliatorName = $order->ref_code
+            ? $affiliateLookup->affiliatorName($order->ref_code)
+            : null;
 
         return view('admin.orders.show', [
             'order' => $order,
+            'affiliatorName' => $affiliatorName,
             'totalPaid' => $totalPaid,
             'totalPending' => $totalPending,
             'totalRejected' => $totalRejected,
             'remaining' => $remaining,
+            'installment' => $installment,
+            'trackUrl' => $trackUrl,
             'statuses' => self::STATUSES,
-            'couriers' => self::COURIERS,
+            'couriers' => $this->courierOptions($order),
             'canShip' => in_array($order->status, self::SHIPPABLE_FROM, true),
             'canRefund' => in_array($order->status, self::REFUNDABLE_FROM, true),
         ]);
@@ -162,18 +204,45 @@ class OrderController extends Controller
     public function approvePayment(Request $request, Order $order, OrderPayment $payment): RedirectResponse
     {
         abort_if($payment->order_id !== $order->id, 404);
-        abort_if($payment->status !== 'pending', 422, 'Payment sudah diproses sebelumnya.');
+
+        // Double-submit / tab basi: approve dikirim ke payment yang sudah
+        // diproses. Redirect ramah (bukan error 422) — upload bukti bikin request
+        // lambat sehingga double-click lebih mungkin terjadi.
+        if ($payment->status !== 'pending') {
+            return $this->alreadyProcessedRedirect($order, $payment, 'Approve');
+        }
 
         $validated = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:0'],
+            'proof_file' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+        ], [
+            'proof_file.image' => 'Bukti harus berupa gambar (JPG, PNG, atau WebP).',
+            'proof_file.mimes' => 'Format bukti tidak didukung. Pakai JPG, PNG, atau WebP.',
+            'proof_file.max' => 'Ukuran bukti terlalu besar. Maksimal 2 MB.',
         ]);
 
-        DB::transaction(function () use ($order, $payment, $validated, $request) {
+        // Simpan bukti yang di-lampirkan admin (kalau ada) SEBELUM transaction —
+        // IO file di luar DB. Berguna saat approve manual bukti dari luar (mis. WA)
+        // sementara customer belum upload sendiri.
+        $newProofPath = $request->hasFile('proof_file')
+            ? $this->storePaymentProof($request->file('proof_file'), $order, $payment)
+            : null;
+
+        DB::transaction(function () use ($order, $payment, $validated, $request, $newProofPath) {
             if (isset($validated['amount'])) {
                 $payment->amount = $validated['amount'];
             }
+            if ($newProofPath !== null) {
+                // Ganti bukti lama (jika ada) supaya tidak jadi orphan.
+                $this->deletePaymentProof($payment->proof_path);
+                $payment->proof_path = $newProofPath;
+            }
             $payment->status = 'verified';
             $payment->verified_at = now();
+            // Backfill paid_at bila belum ada (mis. admin approve tanpa customer
+            // upload bukti) — laporan revenue di-bucket by paid_at; NULL = tak
+            // pernah terhitung di Total Revenue/chart selamanya.
+            $payment->paid_at ??= now();
             $payment->verified_by = $request->user('admin')?->id;
             $payment->rejection_reason = null;
             $payment->save();
@@ -197,7 +266,10 @@ class OrderController extends Controller
     public function rejectPayment(Request $request, Order $order, OrderPayment $payment): RedirectResponse
     {
         abort_if($payment->order_id !== $order->id, 404);
-        abort_if($payment->status !== 'pending', 422, 'Payment sudah diproses sebelumnya.');
+
+        if ($payment->status !== 'pending') {
+            return $this->alreadyProcessedRedirect($order, $payment, 'Reject');
+        }
 
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:500'],
@@ -234,7 +306,8 @@ class OrderController extends Controller
         $totalVerified = (float) $order->payments()
             ->where('status', 'verified')
             ->sum('amount');
-        $orderTotal = (float) $order->total;
+        // Lunas saat pembayaran menutup total + kode unik (payableTotal).
+        $orderTotal = (float) $order->payableTotal();
 
         if ($totalVerified <= 0) {
             $order->status = 'pending';
@@ -256,50 +329,6 @@ class OrderController extends Controller
      * Default: 'paid' saja — partial_paid / pending / cancelled / refunded /
      * shipped (sudah) / completed (terlalu lanjut) di-reject 422.
      */
-    /**
-     * Generate shipment via fulfillment API (Agenwebsite).
-     * Requires order paid, + shipping_courier + shipping_service set.
-     * If already has AWB (fulfillment_status=shipped + resi), skip with info.
-     */
-    public function generateShipment(Request $request, Order $order): RedirectResponse
-    {
-        abort_if(
-            ! in_array($order->status, self::SHIPPABLE_FROM, true),
-            422,
-            'Order belum siap kirim. Status sekarang: '.$order->status,
-        );
-
-        abort_if(
-            ! $order->shipping_courier || ! $order->shipping_service,
-            422,
-            'Order belum memiliki kurir dan layanan pengiriman.',
-        );
-
-        if ($order->fulfillment_status === 'shipped' && $order->shipping_resi) {
-            return redirect()
-                ->route('admin.orders.show', $order)
-                ->with('info', 'Resi sudah tersedia: '.$order->shipping_resi.'.');
-        }
-
-        $service = app(FulfillmentService::class);
-        $result = $service->createShipment($order);
-
-        return match ($result['status']) {
-            'awb_ready' => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('status', 'Resi berhasil dibuat: '.$result['tracking_number'].'.'),
-            'waiting_awb' => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('status', 'Menunggu AWB dari sistem.'),
-            'pending_payment' => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('info', 'Menunggu pembayaran pengiriman.'),
-            default => redirect()
-                ->route('admin.orders.show', $order)
-                ->with('error', $result['message'] ?? 'Gagal membuat resi.'),
-        };
-    }
-
     public function markShipped(Request $request, Order $order): RedirectResponse
     {
         abort_if(
@@ -310,7 +339,7 @@ class OrderController extends Controller
         );
 
         $validated = $request->validate([
-            'shipping_courier' => ['required', 'string', 'in:'.implode(',', self::COURIERS)],
+            'shipping_courier' => ['required', 'string', Rule::in(array_keys($this->courierOptions($order)))],
             'shipping_resi' => ['required', 'string', 'min:4', 'max:64'],
         ]);
 
@@ -328,6 +357,160 @@ class OrderController extends Controller
         return redirect()
             ->route('admin.orders.show', $order)
             ->with('status', 'Resi berhasil di-input. Order ditandai sebagai dikirim.');
+    }
+
+    /**
+     * Tandai order 'shipped' → 'completed' secara manual oleh admin.
+     *
+     * Alasan: sejak resi diinput manual (auto-shipment mati), order tak menerima
+     * callback AWB 'delivered' → tanpa aksi ini order macet di 'shipped' selamanya.
+     * Tombol ini menutup siklus + memicu OrderCompleted (WA terima kasih ke pembeli).
+     *
+     * Precondition: status harus salah satu dari self::COMPLETABLE_FROM ('shipped').
+     * pending / paid (belum kirim) / completed (sudah) / cancelled / refunded → 422.
+     */
+    public function markCompleted(Request $request, Order $order): RedirectResponse
+    {
+        abort_if(
+            ! in_array($order->status, self::COMPLETABLE_FROM, true),
+            422,
+            'Order belum bisa diselesaikan. Status sekarang: '.$order->status
+                .'. Hanya status berikut yang bisa diselesaikan: '.implode(', ', self::COMPLETABLE_FROM).'.',
+        );
+
+        $justCompleted = false;
+
+        DB::transaction(function () use ($order, $request, &$justCompleted) {
+            // Audit jejak penyelesaian manual di order_meta (tanpa perlu kolom baru).
+            $meta = $order->order_meta ?? [];
+            $meta['completed_at'] = now()->toIso8601String();
+            $meta['completed_by'] = $request->user('admin')?->id;
+            $meta['completed_manually'] = true;
+            $order->order_meta = $meta;
+
+            // markCompleted() mem-persist status, fulfillment_status, + order_meta
+            // di atas sekaligus (save menyertakan semua atribut dirty).
+            $justCompleted = $order->markCompleted();
+        });
+
+        // WA terima kasih ke pembeli — hanya sekali saat transisi ke completed.
+        if ($justCompleted) {
+            OrderCompleted::dispatch($order->fresh());
+        }
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('status', 'Order ditandai selesai. Notifikasi WhatsApp terima kasih dikirim ke pembeli.');
+    }
+
+    /**
+     * Opsi B (non-blocking): cek apakah resi manual sudah terdeteksi di sistem
+     * kurir lewat endpoint tracking Agenwebsite. TIDAK menolak/mengubah resi —
+     * hanya indikator terdeteksi/belum + refresh tracking_status (order manual
+     * tak dapat callback AWB, jadi ini satu-satunya cara status trackingnya ke-update).
+     *
+     * Catatan: API tidak punya validator resi khusus; "belum terdeteksi" bisa
+     * berarti resi salah ATAU benar tapi belum discan kurir — makanya jangan
+     * dijadikan hard-block.
+     */
+    public function checkResi(Order $order): JsonResponse
+    {
+        if (! $order->shipping_resi || ! $order->shipping_courier) {
+            return response()->json([
+                'ok' => false,
+                'detected' => false,
+                'message' => 'Order belum memiliki kurir & nomor resi.',
+            ], 422);
+        }
+
+        try {
+            $history = AgenwebsiteClient::fromConfig()->tracking(
+                $order->shipping_resi,
+                strtolower(trim((string) $order->shipping_courier)),
+                TrackController::phoneVerification($order->phone),
+            );
+        } catch (\Throwable) {
+            $history = [];
+        }
+
+        $history = is_array($history) ? array_values($history) : [];
+        $detected = $history !== [];
+
+        $latestStatus = null;
+        if ($detected) {
+            $last = $history[count($history) - 1];
+            $latestStatus = is_array($last)
+                ? ($last['status'] ?? $last['desc'] ?? $last['description'] ?? null)
+                : null;
+
+            // Simpan status terbaru → tampil di detail admin & halaman tracking customer.
+            if (is_string($latestStatus) && $latestStatus !== '') {
+                $order->forceFill(['tracking_status' => $latestStatus])->save();
+            }
+        }
+
+        // Auto-complete: kalau order masih 'shipped' dan status kurir sudah
+        // "delivered", tutup siklus otomatis (sama seperti webhook AWB, tapi untuk
+        // resi manual yang tak dapat callback). Guard COMPLETABLE_FROM cegah
+        // transisi dari status yang tak valid.
+        $autoCompleted = false;
+        if (in_array($order->status, self::COMPLETABLE_FROM, true)
+            && stripos((string) $latestStatus, 'deliver') !== false) {
+            $autoCompleted = $order->markCompleted();
+            if ($autoCompleted) {
+                OrderCompleted::dispatch($order->fresh());
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'detected' => $detected,
+            'status' => $latestStatus,
+            'completed' => $autoCompleted,
+            'history_count' => count($history),
+            'message' => $autoCompleted
+                ? 'Resi terdeteksi DELIVERED — order otomatis ditandai selesai.'
+                : ($detected
+                    ? 'Resi terdeteksi di sistem kurir.'
+                    : 'Resi belum terdeteksi di sistem kurir — kemungkinan belum discan. Coba lagi nanti.'),
+        ]);
+    }
+
+    /**
+     * Opsi kurir untuk dropdown "Tandai Dikirim", SINKRON dengan kurir aktif
+     * (Settings 'shipping.couriers', fallback config('shipping.couriers')).
+     * Nilai = courier_id (mis. 'jne') supaya konsisten dengan yang disimpan saat
+     * customer checkout & dipakai halaman tracking; label dari config
+     * 'shipping.courier_labels' (id tak dikenal → strtoupper).
+     *
+     * Kurir yang SUDAH tersimpan di order (pilihan customer) selalu disertakan
+     * walau tidak lagi aktif — supaya bisa jadi default terpilih & tetap valid
+     * saat form disubmit.
+     *
+     * @return array<string, string> [courier_id => label]
+     */
+    protected function courierOptions(Order $order): array
+    {
+        $active = Settings::get('shipping.couriers', config('shipping.couriers', []));
+        $active = is_array($active) ? $active : [];
+        $labels = (array) config('shipping.courier_labels', []);
+
+        $options = [];
+        foreach ($active as $id) {
+            $id = (string) $id;
+            if ($id === '') {
+                continue;
+            }
+            $options[$id] = $labels[$id] ?? strtoupper($id);
+        }
+
+        // Kurir pilihan customer harus selalu ada sebagai opsi (default select).
+        $current = trim((string) ($order->shipping_courier ?? ''));
+        if ($current !== '' && ! isset($options[$current])) {
+            $options[$current] = $labels[$current] ?? strtoupper($current);
+        }
+
+        return $options;
     }
 
     /**
@@ -354,5 +537,148 @@ class OrderController extends Controller
         return redirect()
             ->route('admin.orders.show', $order)
             ->with('status', 'Order berhasil di-refund.');
+    }
+
+    /**
+     * Kirim pengingat cicilan ke customer via WhatsApp: status tiap angsuran,
+     * tagihan berikutnya + jatuh tempo, sisa, rekening, dan link upload bukti
+     * bayar yang baru (signed). Manual dari tombol "Reminder Cicilan" di detail
+     * order — tiap klik membuat notifikasi baru (upload URL selalu segar).
+     *
+     * Guard: hanya untuk order cicilan yang masih ada angsuran belum lunas.
+     */
+    public function remindInstallment(Order $order, InstallmentReminder $reminder, WhatsappNotifier $notifier): RedirectResponse
+    {
+        $order->loadMissing(['items.course', 'payments']);
+
+        abort_if(! $reminder->isInstallment($order), 422, 'Order ini bukan pesanan cicilan.');
+        // Mirror the view-side can_remind guard: never dun a cancelled/refunded
+        // order (refund() flips status but leaves angsuran pending, so a direct
+        // POST would otherwise still pass hasOutstanding()).
+        abort_if(in_array($order->status, ['cancelled', 'refunded'], true), 422,
+            'Order sudah '.$order->status.' — reminder cicilan tidak dikirim.');
+        abort_if(! $reminder->hasOutstanding($order), 422, 'Semua cicilan sudah lunas — tidak ada yang perlu diingatkan.');
+
+        if (trim((string) $order->phone) === '') {
+            return back()->with('error', 'Order tidak punya nomor WhatsApp — reminder tidak bisa dikirim.');
+        }
+
+        $notification = $notifier->send(
+            'customer_installment_reminder',
+            (string) $order->phone,
+            $this->installmentReminderPayload($order, $reminder),
+            $order,
+        );
+
+        $message = match ($notification->status) {
+            'sent' => 'Reminder cicilan berhasil dikirim via WhatsApp.',
+            'failed' => 'Gagal mengirim reminder: '.($notification->error ?: 'error tidak diketahui').'.',
+            default => 'Reminder cicilan masuk antrean kirim (gateway WhatsApp belum dikonfigurasi).',
+        };
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with($notification->status === 'failed' ? 'error' : 'status', $message);
+    }
+
+    /**
+     * Susun payload template `customer_installment_reminder`: rincian tiap
+     * angsuran, tagihan berikutnya, sisa, rekening, dan upload URL baru.
+     *
+     * @return array<string, string>
+     */
+    protected function installmentReminderPayload(Order $order, InstallmentReminder $reminder): array
+    {
+        $courseTitle = $order->items->first(fn ($item) => $item->course_id !== null)?->course?->title
+            ?? 'Kelas';
+
+        $statusText = [
+            'verified' => '✅ Lunas',
+            'pending' => '⏳ Belum bayar',
+            'rejected' => '❌ Ditolak — upload ulang',
+        ];
+
+        $progress = collect($reminder->schedule($order))
+            ->map(fn (array $s) => $s['label'].': Rp '.number_format($s['amount'], 0, ',', '.')
+                .' — '.($statusText[$s['status']] ?? $s['status']))
+            ->implode("\n");
+
+        $next = $reminder->nextDue($order);
+        $nextDue = '—';
+        if ($next) {
+            $nextDue = $next['label'].' — Rp '.number_format($next['amount'], 0, ',', '.');
+            if ($next['due_date']) {
+                $nextDue .= "\nJatuh tempo: ".$next['due_date']->translatedFormat('d M Y');
+                if ($next['overdue_days'] > 0) {
+                    $nextDue .= ' (⚠️ lewat '.$next['overdue_days'].' hari)';
+                }
+            }
+        }
+
+        $banks = collect(Settings::getBankAccounts())
+            ->map(fn (array $a) => '• '.($a['bank'] ?? '').' - '.($a['number'] ?? '').' (a.n '.($a['holder'] ?? '').')')
+            ->implode("\n");
+        if ($banks === '') {
+            $banks = '(Rekening belum dikonfigurasi)';
+        }
+
+        return [
+            'customer_name' => (string) $order->customer_name,
+            'course_title' => (string) $courseTitle,
+            'order_number' => (string) $order->order_number,
+            'progress' => $progress,
+            'next_due' => $nextDue,
+            'remaining' => number_format($reminder->remaining($order), 0, ',', '.'),
+            'bank_accounts' => $banks,
+            'upload_url' => $this->generateUploadUrl($order, $reminder),
+        ];
+    }
+
+    /**
+     * Signed upload URL untuk customer upload bukti bayar. TTL schedule-aware:
+     * untuk order cicilan link hidup sampai angsuran terakhir jatuh tempo (+
+     * grace) — bukan cuma 7 hari yang keburu mati sebelum angsuran ditagih.
+     * Konsisten dengan CourseCheckoutController::generateUploadUrl().
+     */
+    protected function generateUploadUrl(Order $order, InstallmentReminder $reminder): string
+    {
+        return URL::temporarySignedRoute(
+            'upload.show',
+            $reminder->uploadUrlExpiry($order),
+            ['order_number' => $order->order_number],
+        );
+    }
+
+    /**
+     * Simpan bukti bayar yang di-upload admin saat approve manual. Path & disk
+     * konsisten dengan UploadController (payment-proofs/<order>/<payment_id>-rand).
+     */
+    protected function storePaymentProof(UploadedFile $file, Order $order, OrderPayment $payment): string
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
+        $filename = sprintf('%d-%s.%s', $payment->id, Str::random(8), $ext);
+
+        return $file->storeAs('payment-proofs/'.$order->order_number, $filename, 'public');
+    }
+
+    /** Hapus file bukti lama HANYA bila milik kita (prefix payment-proofs/). */
+    protected function deletePaymentProof(?string $path): void
+    {
+        if ($path && str_starts_with($path, 'payment-proofs/') && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    /**
+     * Redirect ramah saat approve/reject dikirim ke payment yang sudah diproses
+     * (double-submit / tab basi). Pesan menerangkan status, tanpa halaman error.
+     */
+    protected function alreadyProcessedRedirect(Order $order, OrderPayment $payment, string $verb): RedirectResponse
+    {
+        $label = $payment->status === 'verified' ? 'sudah diverifikasi' : 'sudah ditolak';
+
+        return redirect()
+            ->route('admin.orders.show', $order)
+            ->with('error', 'Pembayaran ini '.$label.' sebelumnya — '.$verb.' dibatalkan.');
     }
 }

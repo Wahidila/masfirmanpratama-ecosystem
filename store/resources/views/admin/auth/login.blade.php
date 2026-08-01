@@ -125,6 +125,10 @@
                                             Ingat saya di perangkat ini
                                         </label>
                                     </div>
+                                    <div class="-mt-2 text-right">
+                                        <a href="{{ route('password.request') }}"
+                                            class="text-brand-500 hover:text-brand-600 text-sm font-medium">Lupa password?</a>
+                                    </div>
                                     <!-- Button -->
                                     <div>
                                         <button type="submit"

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BlogCategory;
 use App\Models\Post;
+use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,6 +23,24 @@ class BlogPageTest extends TestCase
             ->assertSee('Artikel Tayang')
             ->assertDontSee('Artikel Draft')
             ->assertDontSee('Artikel Terjadwal');
+    }
+
+    /**
+     * Regresi: post 'published' dengan published_at masa depan HARUS tetap tayang
+     * (status 'published' = sumber kebenaran visibilitas). Untuk menunda tayang,
+     * gunakan status 'scheduled'. Cegah bug "Published tapi hilang dari /blog".
+     */
+    public function test_blog_index_shows_published_even_with_future_date(): void
+    {
+        Post::factory()->published()->create([
+            'title' => 'Published Tanggal Depan',
+            'slug' => 'published-tanggal-depan',
+            'published_at' => now()->addDays(10),
+        ]);
+
+        $this->get(route('blog.index'))
+            ->assertOk()
+            ->assertSee('Published Tanggal Depan');
     }
 
     public function test_blog_index_filters_by_category(): void
@@ -89,7 +108,7 @@ class BlogPageTest extends TestCase
 
     public function test_blog_show_lists_related_products_cta(): void
     {
-        $product = \App\Models\Product::factory()->create(['title' => 'Buku Mind Power', 'slug' => 'buku-mind-power', 'type' => 'book', 'status' => 'active']);
+        $product = Product::factory()->create(['title' => 'Buku Mind Power', 'slug' => 'buku-mind-power', 'type' => 'book', 'status' => 'active']);
         $post = Post::factory()->published()->create(['slug' => 'with-cta']);
         $post->products()->attach($product);
 

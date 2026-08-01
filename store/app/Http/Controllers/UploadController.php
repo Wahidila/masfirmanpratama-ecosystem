@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Events\PaymentSubmitted;
 use App\Models\Order;
+use App\Models\OrderPayment;
+use App\Services\Installment\InstallmentReminder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -55,23 +58,41 @@ class UploadController extends Controller
             return $this->m1StubView($request, $order_number);
         }
 
-        $pendingPayments = $order->payments
+        $payments = $order->payments; // sudah orderBy('id') = urutan sequence
+
+        $pendingPayments = $payments
             ->where('status', 'pending')
             ->whereNull('proof_path')
             ->values();
 
         // Determine payment context dari real Order.
-        $totalPayments = $order->payments->count();
+        $totalPayments = $payments->count();
         $isInstallment = $totalPayments > 1;
         $paymentType = $isInstallment ? 'cicilan' : 'lunas';
 
-        // Default ke pending payment pertama (atau seq dari query string kalau valid).
-        $defaultSequence = (int) $request->query('seq', 0);
-        $defaultSequence = max(0, min($totalPayments - 1, $defaultSequence));
+        // Cicilan bebas (free-form): 1 DP row di checkout + customer bisa menambah
+        // pembayaran bebas kapan saja. Sisa = total tagihan (payableTotal) − verified.
+        $isFreeForm = (bool) data_get($order->order_meta, 'installment.free_form');
+        $verifiedAmount = (int) $payments->where('status', 'verified')->sum('amount');
+        $remaining = max(0, $order->payableTotal() - $verifiedAmount);
+
+        // Default ke angsuran BERIKUTNYA yang bisa diupload (pending + belum ada
+        // bukti) — bukan selalu DP. Kalau customer buka link reminder setelah DP
+        // lunas, langsung ke-arah cicilan yang benar. ?seq= eksplisit tetap
+        // dihormati (mis. redirect balik setelah upload).
+        $explicitSeq = $request->query('seq');
+        if ($explicitSeq !== null && $explicitSeq !== '') {
+            $defaultSequence = max(0, min($totalPayments - 1, (int) $explicitSeq));
+        } else {
+            $idx = $payments->search(fn ($p) => $p->status === 'pending' && $p->proof_path === null);
+            $defaultSequence = $idx === false ? 0 : (int) $idx;
+        }
 
         // Total transfer = nominal payment yang sedang di-target.
-        $targetPayment = $order->payments[$defaultSequence] ?? null;
+        $targetPayment = $payments[$defaultSequence] ?? null;
         $totalTransfer = $targetPayment ? (int) $targetPayment->amount : 0;
+
+        [$installmentOptions, $installmentAmounts] = $this->installmentOptions($payments, $totalPayments);
 
         return view('pages.upload', [
             'orderNumber' => $order_number,
@@ -81,9 +102,60 @@ class UploadController extends Controller
             'defaultSequence' => $defaultSequence,
             'dbOrder' => $order,
             'pendingPayments' => $pendingPayments,
-            'uploadStoreUrl' => $this->signedStoreUrl($order_number),
+            'installmentOptions' => $installmentOptions,
+            'installmentAmounts' => $installmentAmounts,
+            'isFreeForm' => $isFreeForm,
+            'remaining' => $remaining,
+            'uploadStoreUrl' => $this->signedStoreUrl($order_number, $order),
             'trackUrl' => $this->signedTrackUrl($order_number),
         ]);
+    }
+
+    /**
+     * Build opsi dropdown cicilan + nominal per-sequence untuk halaman upload.
+     *
+     * Real order → state-aware: tandai mana yang sudah lunas / menunggu verifikasi
+     * / ditolak, dan hanya yang 'pending + belum ada bukti' yang bisa dipilih.
+     * Stub M1 (payments null) → count-based, semua bisa dipilih (backward compat).
+     *
+     * @param  Collection<int, OrderPayment>|null  $payments
+     * @return array{0: list<array<string, mixed>>, 1: array<int, int>}
+     */
+    protected function installmentOptions(?Collection $payments, int $totalPayments): array
+    {
+        $options = [];
+        $amounts = [];
+        $installmentCount = max(0, $totalPayments - 1);
+
+        for ($i = 0; $i < $totalPayments; $i++) {
+            $payment = $payments?->get($i);
+            $status = $payment?->status;
+            $hasProof = $payment && $payment->proof_path !== null;
+            $uploadable = $payment ? ($status === 'pending' && ! $hasProof) : true;
+
+            if ($payment) {
+                $amounts[$i] = (int) $payment->amount;
+            }
+
+            $statusNote = match (true) {
+                $status === 'verified' => 'sudah lunas',
+                $status === 'rejected' => 'ditolak — hubungi admin',
+                $status === 'pending' && $hasProof => 'menunggu verifikasi',
+                default => '',
+            };
+
+            $options[] = [
+                'value' => $i,
+                'label' => $i === 0 ? 'Down Payment (DP)' : 'Cicilan ke-'.$i.' dari '.$installmentCount,
+                'note' => $i === 0
+                    ? 'Pembayaran pertama dari '.$totalPayments
+                    : ($i === $totalPayments - 1 ? 'Cicilan terakhir' : ''),
+                'status_note' => $statusNote,
+                'uploadable' => $uploadable,
+            ];
+        }
+
+        return [$options, $amounts];
     }
 
     /**
@@ -100,12 +172,14 @@ class UploadController extends Controller
                 'max:2048', // KB → 2 MB
             ],
             'installment_sequence' => ['nullable', 'integer', 'min:0', 'max:23'],
+            'new_payment_amount' => ['nullable', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:500'],
         ], [
             'proof_file.required' => 'Pilih file bukti transfer dulu sebelum mengirim.',
             'proof_file.image' => 'File harus berupa gambar (JPG, PNG, atau WebP).',
             'proof_file.mimes' => 'Format tidak didukung. Pakai JPG, PNG, atau WebP.',
             'proof_file.max' => 'Ukuran file terlalu besar. Maksimal 2 MB.',
+            'new_payment_amount.min' => 'Nominal pembayaran minimal Rp 1.',
         ]);
 
         $order = Order::where('order_number', $order_number)->first();
@@ -115,6 +189,13 @@ class UploadController extends Controller
             // tanpa real order). Fallback ke behavior M1 stub: success flash
             // tanpa save, supaya mockup tetep work.
             return $this->m1StubFlashRedirect($request, $order_number);
+        }
+
+        // Cicilan bebas: customer menambah pembayaran baru dengan nominal bebas
+        // (di luar DP). Buat OrderPayment baru + lampirkan bukti sekaligus.
+        $isFreeForm = (bool) data_get($order->order_meta, 'installment.free_form');
+        if ($isFreeForm && filled($request->input('new_payment_amount'))) {
+            return $this->storeFreeFormPayment($request, $order, (int) $validated['new_payment_amount']);
         }
 
         $sequence = (int) ($validated['installment_sequence'] ?? 0);
@@ -173,55 +254,81 @@ class UploadController extends Controller
         // Fire event AFTER commit — listener bisa baca persisted state.
         PaymentSubmitted::dispatch($order->fresh(), $payment->fresh(), $sequence);
 
-        return redirect($this->signedShowUrl($order_number, ['seq' => $sequence]))
+        return redirect($this->signedShowUrl($order_number, ['seq' => $sequence], $order))
+            ->with('upload.success', true)
+            ->with('upload.sequence', $sequence);
+    }
+
+    /**
+     * Cicilan bebas: buat pembayaran BARU (nominal bebas dari customer) +
+     * lampirkan bukti sekaligus. Status 'pending' → admin verify seperti biasa.
+     */
+    protected function storeFreeFormPayment(Request $request, Order $order, int $amount): RedirectResponse
+    {
+        $payment = new OrderPayment([
+            'order_id' => $order->id,
+            'amount' => $amount,
+            'method' => 'transfer',
+            'status' => 'pending',
+        ]);
+        $payment->save();
+
+        $file = $request->file('proof_file');
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
+        $filename = sprintf('%d-%s.%s', $payment->id, Str::random(8), $ext);
+        $path = $file->storeAs('payment-proofs/'.$order->order_number, $filename, 'public');
+
+        DB::transaction(function () use ($payment, $path) {
+            $payment->proof_path = $path;
+            $payment->paid_at = now();
+            $payment->save();
+        });
+
+        // Sequence = posisi payment ini di daftar (0-indexed by id).
+        $sequence = (int) $order->payments()->orderBy('id')->pluck('id')->search($payment->id);
+
+        PaymentSubmitted::dispatch($order->fresh(), $payment->fresh(), $sequence);
+
+        return redirect($this->signedShowUrl($order->order_number, ['seq' => $sequence], $order))
             ->with('upload.success', true)
             ->with('upload.sequence', $sequence);
     }
 
     /**
      * Generate signed POST URL ke /upload/{order_number} buat form action.
-     * TTL match config('checkout.upload_url_ttl_days') sehingga form expire
-     * konsisten dengan show URL.
+     * TTL schedule-aware (InstallmentReminder::uploadUrlExpiry) sehingga form
+     * expire konsisten dengan show URL — untuk order cicilan, form tetap bisa
+     * disubmit sampai angsuran terakhir jatuh tempo, bukan cuma 7 hari.
      */
-    protected function signedStoreUrl(string $order_number): string
+    protected function signedStoreUrl(string $order_number, ?Order $order = null): string
     {
-        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
-
         return URL::temporarySignedRoute(
             'upload.store',
-            now()->addDays($ttlDays),
+            app(InstallmentReminder::class)->uploadUrlExpiry($order),
             ['order_number' => $order_number],
         );
     }
 
     /**
      * Generate signed GET URL kembali ke upload page (redirect after store).
+     * TTL schedule-aware, konsisten dengan signedStoreUrl().
      */
-    protected function signedShowUrl(string $order_number, array $extraParams = []): string
+    protected function signedShowUrl(string $order_number, array $extraParams = [], ?Order $order = null): string
     {
-        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
-
         return URL::temporarySignedRoute(
             'upload.show',
-            now()->addDays($ttlDays),
+            app(InstallmentReminder::class)->uploadUrlExpiry($order),
             array_merge(['order_number' => $order_number], $extraParams),
         );
     }
 
     /**
-     * Generate signed GET URL ke /track/{order_number}. TTL config-driven
-     * (default 30 days, lebih panjang dari upload supaya customer bisa
-     * monitor sampai delivered).
+     * Generate signed GET URL ke /track/{order_number}. Signed PERMANEN (tanpa
+     * kedaluwarsa) supaya customer bisa memantau pesanan kapan saja.
      */
     protected function signedTrackUrl(string $order_number): string
     {
-        $ttlDays = max(1, (int) config('checkout.track_url_ttl_days', 30));
-
-        return URL::temporarySignedRoute(
-            'track.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $order_number],
-        );
+        return URL::signedRoute('track.show', ['order_number' => $order_number]);
     }
 
     /**
@@ -246,6 +353,8 @@ class UploadController extends Controller
         $defaultSequence = (int) $request->query('seq', 0);
         $defaultSequence = max(0, min($totalPayments - 1, $defaultSequence));
 
+        [$installmentOptions, $installmentAmounts] = $this->installmentOptions(null, $totalPayments);
+
         return view('pages.upload', [
             'orderNumber' => $order_number,
             'paymentType' => $paymentType,
@@ -254,6 +363,10 @@ class UploadController extends Controller
             'defaultSequence' => $defaultSequence,
             'dbOrder' => null,
             'pendingPayments' => collect(),
+            'installmentOptions' => $installmentOptions,
+            'installmentAmounts' => $installmentAmounts,
+            'isFreeForm' => false,
+            'remaining' => 0,
             'uploadStoreUrl' => $this->signedStoreUrl($order_number),
             'trackUrl' => $this->signedTrackUrl($order_number),
         ]);

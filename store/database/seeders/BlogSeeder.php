@@ -55,7 +55,7 @@ class BlogSeeder extends Seeder
         ));
 
         foreach (self::POSTS as $item) {
-            $body = "<p>".fake()->paragraph(8)."</p>\n<h3>Poin Penting</h3>\n<ul><li>".fake()->sentence()."</li><li>".fake()->sentence()."</li></ul>\n<p>".fake()->paragraph(6)."</p>";
+            $body = '<p>'.fake()->paragraph(8)."</p>\n<h3>Poin Penting</h3>\n<ul><li>".fake()->sentence().'</li><li>'.fake()->sentence()."</li></ul>\n<p>".fake()->paragraph(6).'</p>';
 
             $post = Post::factory()
                 ->{$item['status']}()

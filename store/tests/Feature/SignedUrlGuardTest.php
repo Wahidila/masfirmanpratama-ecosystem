@@ -200,7 +200,7 @@ class SignedUrlGuardTest extends TestCase
         $this->assertLessThanOrEqual($expectedMax, (int) $params['expires']);
     }
 
-    public function test_checkout_redirects_to_signed_upload_url_with_track_url_in_session(): void
+    public function test_checkout_redirects_to_success_page_with_signed_upload_and_track(): void
     {
         $product = Product::where('slug', 'kelas-amc-reguler')->first();
 
@@ -216,17 +216,18 @@ class SignedUrlGuardTest extends TestCase
         ]);
 
         $response->assertStatus(302);
-        $location = $response->headers->get('Location');
 
-        // Redirect target adalah signed upload URL.
-        $this->assertStringContainsString('/upload/MFP-', $location);
-        $this->assertStringContainsString('signature=', $location);
-        $this->assertStringContainsString('expires=', $location);
+        // Ambil order_number dari redirect (DB bisa punya order seed lain).
+        preg_match('#/checkout/success/(MFP-\d{8}-[A-Z0-9]+)#', $response->headers->get('Location'), $m);
+        $this->assertNotEmpty($m, 'Redirect harus ke /checkout/success/{order}');
+        $orderNumber = $m[1];
 
-        // Track URL stashed di session — bisa di-pakai di success page.
-        $response->assertSessionHas('checkout.track_url');
-        $trackUrl = session('checkout.track_url');
-        $this->assertStringContainsString('/track/MFP-', $trackUrl);
-        $this->assertStringContainsString('signature=', $trackUrl);
+        // Success page menyediakan signed upload + track URL (di-generate server-side).
+        $success = $this->get(route('checkout.success', ['order' => $orderNumber]));
+        $success->assertOk();
+        $success->assertSee('/upload/'.$orderNumber.'?', false);
+        $success->assertSee('/track/'.$orderNumber.'?', false);
+        $success->assertSee('signature=', false);
+        $success->assertSee('expires=', false);
     }
 }

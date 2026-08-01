@@ -14,7 +14,7 @@
         </x-empty-state>
     </x-card>
 @else
-    <x-table :heads="['Kode', 'Label', 'Klik', 'Order', 'Status', 'Aksi']">
+    <x-table :heads="['Kode', 'Produk', 'Label', 'Klik', 'Order', 'Status', 'Aksi']">
         @foreach ($referrals as $referral)
             <tr class="hover:bg-slate-50/70 transition-colors">
                 <td class="px-5 py-3.5">
@@ -28,12 +28,28 @@
                         </button>
                     </div>
                 </td>
+                <td class="px-5 py-3.5">
+                    @php $prodName = $referral->target_url ? ($productNames[$referral->target_url] ?? null) : null; @endphp
+                    @if ($prodName)
+                        <span class="text-slate-700">{{ $prodName }}</span>
+                    @elseif ($referral->target_url)
+                        <span class="text-xs text-slate-400">URL custom</span>
+                    @else
+                        <span class="text-xs text-slate-400">Halaman utama</span>
+                    @endif
+                </td>
                 <td class="px-5 py-3.5 text-slate-600">{{ $referral->label ?: '—' }}</td>
                 <td class="px-5 py-3.5 font-medium text-slate-700">{{ number_format($referral->clicks_count) }}</td>
                 <td class="px-5 py-3.5 font-medium text-slate-700">{{ number_format($referral->orders_count) }}</td>
                 <td class="px-5 py-3.5"><x-status-badge :status="$referral->is_active ? 'active' : 'inactive'" /></td>
                 <td class="px-5 py-3.5">
                     <div class="flex items-center justify-end gap-1">
+                        @if ($referral->target_url)
+                            <a href="{{ $referral->target_url }}" target="_blank" rel="noopener"
+                               class="p-1.5 rounded-lg text-slate-400 hover:text-secondary-600 hover:bg-secondary-50 transition" aria-label="Lihat produk di store">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </a>
+                        @endif
                         <a href="{{ route('referrals.edit', $referral) }}" class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition" aria-label="Edit">
                             <i data-lucide="pencil" class="w-4 h-4"></i>
                         </a>

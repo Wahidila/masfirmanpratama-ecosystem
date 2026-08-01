@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Course;
 use App\Models\InstallmentScheme;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -17,7 +18,7 @@ class InstallmentSchemeFactory extends Factory
         $n = $this->faker->numberBetween(1, 12);
 
         return [
-            'product_id' => null,
+            'course_id' => null,
             'name' => $n.'x Cicilan',
             'dp_pct' => $this->faker->numberBetween(0, 100),
             'n_installments' => $n,
@@ -31,8 +32,15 @@ class InstallmentSchemeFactory extends Factory
         return $this->state(fn () => ['active' => false]);
     }
 
+    /** Skema global (berlaku semua kelas). */
     public function global(): static
     {
-        return $this->state(fn () => ['product_id' => null]);
+        return $this->state(fn () => ['course_id' => null]);
+    }
+
+    /** Skema dikunci ke satu kelas. */
+    public function forCourse(Course $course): static
+    {
+        return $this->state(fn () => ['course_id' => $course->id]);
     }
 }

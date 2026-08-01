@@ -26,12 +26,14 @@ class SendCustomerOrderShippedNotification
             return;
         }
 
-        $ttlDays = (int) config('checkout.track_url_ttl_days', 30);
-        $trackUrl = URL::temporarySignedRoute(
-            'track.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $event->order->order_number],
-        );
+        $trackUrl = URL::signedRoute('track.show', ['order_number' => $event->order->order_number]);
+
+        // Label kurir yang manusiawi (JNE, SiCepat) dari courier_id tersimpan (jne,
+        // sicepat). Fallback strtoupper bila id tak ada di map.
+        $courierId = trim((string) ($event->order->shipping_courier ?? ''));
+        $courierLabel = $courierId === ''
+            ? '-'
+            : (config('shipping.courier_labels.'.strtolower($courierId)) ?: strtoupper($courierId));
 
         $this->notifier->send(
             template: 'customer_order_shipped',
@@ -39,10 +41,15 @@ class SendCustomerOrderShippedNotification
             payload: [
                 'order_number' => $event->order->order_number,
                 'customer_name' => $event->order->customer_name,
+                // Kunci HARUS cocok dengan placeholder template: {courier},
+                // {tracking_number}, {track_url}.
+                'courier' => $courierLabel,
+                'tracking_number' => (string) ($event->order->shipping_resi ?? '-'),
+                'track_url' => $trackUrl,
+                // Data mentah disimpan juga untuk record/debug di payload_json.
                 'shipping_courier' => $event->order->shipping_courier,
                 'shipping_resi' => $event->order->shipping_resi,
                 'shipped_at' => optional($event->order->shipped_at)->toIso8601String(),
-                'track_url' => $trackUrl,
             ],
             order: $event->order,
         );

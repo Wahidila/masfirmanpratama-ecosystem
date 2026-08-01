@@ -6,40 +6,42 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductRequest;
 use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+    /** Ambang "stok menipis" untuk badge & filter (produk fisik). */
+    public const LOW_STOCK_THRESHOLD = 5;
+
+    /** Kolom yang boleh dipakai sorting (whitelist — cegah SQL injection via ?sort). */
+    public const SORTABLE = ['title', 'price', 'stock', 'created_at'];
+
     /**
-     * Quick stats + listing produk dengan optional filter status, type, search,
-     * dan view (active=default, trashed=onlyTrashed for archived view).
+     * Quick stats + listing produk dengan optional filter status, type, stok,
+     * search, sorting, dan view (active=default, trashed=onlyTrashed).
      */
     public function index(Request $request): View
     {
-        $filterStatus = $request->query('status');
-        $search = trim((string) $request->query('q', ''));
         $view = $request->query('view', 'active'); // 'active' (default) | 'trashed'
 
-        $query = Product::query()->latest('id');
-
-        // View toggle: trashed = onlyTrashed (soft-deleted), default = exclude trashed
+        $query = Product::query();
         if ($view === 'trashed') {
             $query->onlyTrashed();
         }
+        $this->applyFilters($query, $request);
 
-        if (in_array($filterStatus, ['draft', 'active', 'archived'], true)) {
-            $query->where('status', $filterStatus);
-        }
-
-        if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('slug', 'like', "%{$search}%");
-            });
+        // Sorting whitelist; default = terbaru (id desc).
+        [$sort, $dir] = $this->resolveSort($request);
+        if ($sort !== null) {
+            $query->orderBy($sort, $dir);
+        } else {
+            $query->latest('id');
         }
 
         $products = $query->paginate(20)->withQueryString();
@@ -52,13 +54,82 @@ class ProductController extends Controller
             'trashed' => Product::onlyTrashed()->count(),
         ];
 
+        // Tipe yang benar-benar ada (filter tipe hanya berguna kalau katalog campuran;
+        // toko ini praktis semua 'book' — kelas di modul terpisah).
+        $types = Product::query()->select('type')->distinct()->orderBy('type')->pluck('type')->all();
+
+        // Total baris yang cocok filter (untuk "pilih semua N sesuai filter").
+        $filteredTotal = $products->total();
+
         return view('admin.products.index', [
             'products' => $products,
             'stats' => $stats,
-            'filterStatus' => $filterStatus,
-            'search' => $search,
+            'filterStatus' => $request->query('status'),
+            'filterType' => $request->query('type'),
+            'filterStock' => $request->query('stock'),
+            'search' => trim((string) $request->query('q', '')),
             'view' => $view,
+            'sort' => $sort,
+            'dir' => $dir,
+            'types' => $types,
+            'filteredTotal' => $filteredTotal,
+            'lowStockThreshold' => self::LOW_STOCK_THRESHOLD,
         ]);
+    }
+
+    /**
+     * Terapkan filter status/type/stok/search ke query. Dipakai bersama index()
+     * (listing) & bulk() (mode "pilih semua sesuai filter"). TIDAK menangani
+     * view/trashed — caller yang atur (onlyTrashed) sesuai konteks aksi.
+     */
+    protected function applyFilters(Builder $query, Request $request): Builder
+    {
+        // input() (bukan query()) supaya jalan untuk GET (listing) & POST bulk
+        // (filter datang sebagai hidden input di body form saat "pilih semua").
+        $status = $request->input('status');
+        if (in_array($status, ['draft', 'active', 'archived'], true)) {
+            $query->where('status', $status);
+        }
+
+        $type = $request->input('type');
+        if (in_array($type, ['book', 'course'], true)) {
+            $query->where('type', $type);
+        }
+
+        // Stok hanya bermakna untuk produk fisik — samakan dgn badge (yang hanya
+        // menandai is_shippable). Non-shippable (mis. digital) tak masuk filter stok.
+        $stock = $request->input('stock');
+        if ($stock === 'out') {
+            $query->where('is_shippable', true)->where('stock', '<=', 0);
+        } elseif ($stock === 'low') {
+            $query->where('is_shippable', true)
+                ->where('stock', '>', 0)
+                ->where('stock', '<=', self::LOW_STOCK_THRESHOLD);
+        }
+
+        $search = trim((string) $request->input('q', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Resolve sort+dir dari request dengan whitelist. Return [null, dir] kalau
+     * kolom tak valid (caller pakai default).
+     *
+     * @return array{0: ?string, 1: string}
+     */
+    protected function resolveSort(Request $request): array
+    {
+        $dir = strtolower((string) $request->query('dir')) === 'asc' ? 'asc' : 'desc';
+        $sort = $request->query('sort');
+
+        return in_array($sort, self::SORTABLE, true) ? [$sort, $dir] : [null, $dir];
     }
 
     public function create(): View
@@ -170,19 +241,29 @@ class ProductController extends Controller
     {
         $data = $request->validate([
             'action' => ['required', 'string', 'in:archive,activate,soft_delete,restore,force_delete'],
-            'ids' => ['required', 'array', 'min:1'],
+            'select_all' => ['nullable', 'boolean'],
+            // ids wajib KECUALI mode "pilih semua sesuai filter". max:1000 cegah
+            // silent-truncate PHP max_input_vars saat seleksi manual sangat besar.
+            'ids' => [Rule::requiredIf(fn () => ! $request->boolean('select_all')), 'array', 'max:1000'],
             'ids.*' => ['integer', 'min:1'],
         ]);
 
         $action = $data['action'];
-        $ids = $data['ids'];
+        $selectAll = $request->boolean('select_all');
 
         // Untuk restore/force_delete kita perlu trashed records, action lain pakai active set
-        $query = in_array($action, ['restore', 'force_delete'], true)
+        $base = in_array($action, ['restore', 'force_delete'], true)
             ? Product::onlyTrashed()
             : Product::query();
 
-        $products = $query->whereIn('id', $ids)->get();
+        if ($selectAll) {
+            // Semua produk yang cocok filter SAAT INI (bukan cuma 20 di halaman) —
+            // pakai filter yang sama dengan listing supaya aksi massal konsisten.
+            $products = $this->applyFilters($base, $request)->get();
+        } else {
+            $products = $base->whereIn('id', $data['ids'] ?? [])->get();
+        }
+
         $count = $products->count();
 
         if ($count === 0) {
@@ -199,8 +280,22 @@ class ProductController extends Controller
         };
 
         return redirect()
-            ->route('admin.products.index', $request->only(['view', 'status', 'q']))
+            ->route('admin.products.index', $request->only(['view', 'status', 'q', 'type', 'stock', 'sort', 'dir']))
             ->with('status', $message);
+    }
+
+    /**
+     * Toggle status cepat dari list tanpa buka halaman Edit: active <-> archived,
+     * draft -> active (publish). Tidak menyentuh soft-delete.
+     */
+    public function toggleStatus(Request $request, Product $product): RedirectResponse
+    {
+        $product->status = $product->status === 'active' ? 'archived' : 'active';
+        $product->save();
+
+        $label = $product->status === 'active' ? 'diaktifkan' : 'diarsipkan';
+
+        return back()->with('status', "Produk \"{$product->title}\" {$label}.");
     }
 
     /**

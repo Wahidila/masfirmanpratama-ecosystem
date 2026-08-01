@@ -27,4 +27,31 @@ class AgenwebsiteClientTest extends TestCase
                 && $request->hasHeader('site-url');
         });
     }
+
+    /**
+     * REGRESSION: API bisa balas validation bag ala Laravel di mana `message`/
+     * `errors` berupa ARRAY, bukan string. Kalau array itu diteruskan apa adanya
+     * dan bocor ke Blade {{ }} → htmlspecialchars(): array given → 500.
+     * post() harus selalu mengembalikan `message` berupa STRING (errors bag
+     * di-flatten jadi satu baris yang terbaca).
+     */
+    public function test_coerces_array_error_message_to_string(): void
+    {
+        Http::fake([
+            '*/license/activate' => Http::response([
+                'message' => ['The given data was invalid.'],
+                'errors' => [
+                    'receiver.postcode' => ['Kode pos penerima wajib diisi.'],
+                    'signed_key' => ['Signed key tidak valid.'],
+                ],
+            ], 422),
+        ]);
+
+        $result = app(AgenwebsiteClient::class)->activateLicense();
+
+        $this->assertSame('error', $result['status']);
+        $this->assertIsString($result['message']);
+        $this->assertStringContainsString('Kode pos penerima wajib diisi.', $result['message']);
+        $this->assertStringContainsString('Signed key tidak valid.', $result['message']);
+    }
 }

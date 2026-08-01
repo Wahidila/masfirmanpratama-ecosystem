@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header
         title="Settings"
-        subtitle="Kelola info toko & rekening bank yang dipakai di halaman publik (checkout, upload, kontak)." />
+        subtitle="Kelola info toko, rekening bank, pengiriman, WhatsApp, & konten footer yang dipakai di halaman publik." />
 
     @if (session('status'))
         <div class="mb-6">
@@ -31,6 +31,14 @@
             class="px-4 py-2.5 -mb-px border-b-2 transition {{ $tab === 'whatsapp' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90' }}">
             WhatsApp
         </a>
+        <a href="{{ route('admin.settings.index', ['tab' => 'footer']) }}"
+            class="px-4 py-2.5 -mb-px border-b-2 transition {{ $tab === 'footer' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90' }}">
+            Footer
+        </a>
+        <a href="{{ route('admin.settings.index', ['tab' => 'logo']) }}"
+            class="px-4 py-2.5 -mb-px border-b-2 transition {{ $tab === 'logo' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90' }}">
+            Logo
+        </a>
     </div>
 
     @if ($tab === 'store-info')
@@ -42,6 +50,10 @@
         ])
     @elseif ($tab === 'whatsapp')
         @include('admin.settings._whatsapp', ['whatsappData' => $whatsappData])
+    @elseif ($tab === 'footer')
+        @include('admin.settings._footer', ['footerData' => $footerData])
+    @elseif ($tab === 'logo')
+        @include('admin.settings._logo', ['brandingData' => $brandingData])
     @else
         @include('admin.settings._bank_accounts', ['bankAccounts' => $bankAccounts])
     @endif

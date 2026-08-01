@@ -27,8 +27,6 @@ class OrderShippedMail extends Mailable
 
     public function content(): Content
     {
-        $ttlDays = (int) config('checkout.track_url_ttl_days', 30);
-
         return new Content(
             view: 'emails.order-shipped',
             with: [
@@ -36,11 +34,7 @@ class OrderShippedMail extends Mailable
                 'tracking_number' => $this->order->shipping_resi,
                 'courier' => $this->order->shipping_courier,
                 'customer_name' => $this->order->customer_name,
-                'tracking_url' => URL::temporarySignedRoute(
-                    'track.show',
-                    now()->addDays($ttlDays),
-                    ['order_number' => $this->order->order_number],
-                ),
+                'tracking_url' => URL::signedRoute('track.show', ['order_number' => $this->order->order_number]),
             ],
         );
     }

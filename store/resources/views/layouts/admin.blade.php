@@ -18,6 +18,20 @@
     {{-- Admin JS (Alpine + stores via Vite) --}}
     @vite(['resources/js/admin.js'])
 
+    {{-- Lucide icons (dipakai icon-picker & tombol dinamis). Pin versi sama dgn store. --}}
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" defer></script>
+    <script>
+        (function () {
+            const renderIcons = () => window.lucide && window.lucide.createIcons();
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderIcons);
+            } else {
+                renderIcons();
+            }
+            document.addEventListener('alpine:initialized', renderIcons);
+        })();
+    </script>
+
     {{-- x-cloak --}}
     <style>[x-cloak] { display: none !important; }</style>
 
@@ -60,7 +74,11 @@
         @include('layouts.partials.admin-sidebar')
 
         {{-- Main content area --}}
-        <div class="flex-1 transition-all duration-300 ease-in-out"
+        {{-- min-w-0 WAJIB: tanpa ini flex item (flex-1) punya min-width:auto sehingga
+             tidak bisa menyusut untuk memberi ruang bagi margin-kiri-nya sendiri
+             (xl:ml-[290px] = lebar sidebar). Akibatnya konten meluber 290px ke kanan
+             dan terpotong di layar laptop. Berlaku untuk SEMUA halaman /admin. --}}
+        <div class="flex-1 min-w-0 transition-all duration-300 ease-in-out"
             :class="{
                 'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
                 'xl:ml-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isHovered,

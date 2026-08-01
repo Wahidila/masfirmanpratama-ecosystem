@@ -55,6 +55,7 @@
     <form method="GET" action="{{ route('admin.courses.index') }}"
         class="mb-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs sm:flex-row sm:items-end dark:border-gray-800 dark:bg-white/[0.03]">
         <input type="hidden" name="view" value="{{ $view ?? 'active' }}">
+        @if ($sort) <input type="hidden" name="sort" value="{{ $sort }}"> <input type="hidden" name="dir" value="{{ $dir }}"> @endif
         <div class="flex-1">
             <label for="q" class="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Cari</label>
             <div class="relative">
@@ -82,7 +83,7 @@
             Filter
         </x-admin.button>
 
-        @if ($search || $filterStatus)
+        @if ($search || $filterStatus || $sort)
             <x-admin.button href="{{ route('admin.courses.index', ['view' => $view ?? 'active']) }}" variant="outline" size="sm">
                 Reset
             </x-admin.button>
@@ -90,20 +91,46 @@
     </form>
 
     {{-- Bulk action form; keep it separate so row delete/restore forms are not nested. --}}
-    <div x-data="{ selected: [], get hasSelection() { return this.selected.length > 0; } }">
+    <div x-data="{
+            selected: [],
+            selectAllMatching: false,
+            pageIds: {{ \Illuminate\Support\Js::from($courses->pluck('id')->values()) }},
+            get hasSelection() { return this.selected.length > 0 || this.selectAllMatching; },
+            get allOnPageSelected() { return this.pageIds.length > 0 && this.pageIds.every(id => this.selected.includes(id)); },
+            toggleAllOnPage(check) { this.selectAllMatching = false; this.selected = check ? [...this.pageIds] : []; },
+        }">
         <form id="bulk-form" method="POST" action="{{ route('admin.courses.bulk') }}" class="hidden">
             @csrf
             <input type="hidden" name="view" value="{{ $view ?? 'active' }}">
             @if ($filterStatus) <input type="hidden" name="status" value="{{ $filterStatus }}"> @endif
             @if ($search) <input type="hidden" name="q" value="{{ $search }}"> @endif
+            {{-- Flag "pilih semua sesuai filter": '1' saat aktif, '' saat tidak. --}}
+            <input type="hidden" name="select_all" x-bind:value="selectAllMatching ? '1' : ''">
         </form>
 
         {{-- Bulk action toolbar (sticky bottom-style, conditional) --}}
         <div x-show="hasSelection" x-cloak
             class="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 text-xs dark:border-brand-500/30 dark:bg-brand-500/15">
             <span class="font-medium text-brand-900 dark:text-brand-400">
-                <span x-text="selected.length"></span> dipilih
+                <span x-show="!selectAllMatching"><span x-text="selected.length"></span> dipilih</span>
+                <span x-show="selectAllMatching" x-cloak>Semua {{ number_format($filteredTotal, 0, ',', '.') }} kelas sesuai filter</span>
             </span>
+
+            @if ($filteredTotal > $courses->count())
+                <template x-if="allOnPageSelected && !selectAllMatching">
+                    <button type="button" @click="selectAllMatching = true"
+                        class="underline font-medium text-brand-700 hover:text-brand-800 dark:text-brand-300">
+                        Pilih semua {{ number_format($filteredTotal, 0, ',', '.') }} sesuai filter
+                    </button>
+                </template>
+                <template x-if="selectAllMatching">
+                    <button type="button" @click="selectAllMatching = false; selected = []"
+                        class="underline font-medium text-brand-700 hover:text-brand-800 dark:text-brand-300">
+                        Batalkan
+                    </button>
+                </template>
+            @endif
+
             <span class="text-gray-400 dark:text-gray-500">·</span>
 
             @if ($isTrashed)
@@ -113,7 +140,7 @@
                     Restore
                 </button>
                 <button type="submit" form="bulk-form" name="action" value="force_delete"
-                    onclick="return confirm('Hapus permanen kelas yang dipilih? Tindakan ini tidak bisa dibatalkan.');"
+                    @click="if (!confirm((selectAllMatching ? {{ $filteredTotal }} : selected.length) + ' kelas akan DIHAPUS PERMANEN & tidak bisa dibatalkan. Lanjut?')) $event.preventDefault()"
                     class="inline-flex items-center gap-1 rounded-lg bg-error-500 px-3 py-1.5 font-medium text-white hover:bg-error-600 transition">
                     <x-admin.icon name="trash" class="h-3 w-3" />
                     Hapus permanen
@@ -128,18 +155,32 @@
                     Archive (status)
                 </button>
                 <button type="submit" form="bulk-form" name="action" value="soft_delete"
-                    onclick="return confirm('Pindahkan ke arsip (soft delete)? Bisa di-restore.');"
+                    @click="if (!confirm((selectAllMatching ? {{ $filteredTotal }} : selected.length) + ' kelas akan dipindahkan ke arsip (soft delete). Bisa di-restore. Lanjut?')) $event.preventDefault()"
                     class="inline-flex items-center gap-1 rounded-lg bg-error-500 px-3 py-1.5 font-medium text-white hover:bg-error-600 transition">
                     <x-admin.icon name="trash" class="h-3 w-3" />
                     Soft delete
                 </button>
             @endif
 
-            <button type="button" @click="selected = []; document.querySelectorAll('input[name=&quot;ids[]&quot;]').forEach(el => el.checked = false)"
+            <button type="button" @click="selected = []; selectAllMatching = false"
                 class="ml-auto inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50 transition dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.03]">
                 Clear
             </button>
         </div>
+
+        @php
+            // Query aktif (tanpa sort/dir) untuk link header sortable.
+            $baseQuery = array_filter([
+                'view' => ($view ?? 'active') !== 'active' ? $view : null,
+                'status' => $filterStatus ?: null,
+                'q' => $search ?: null,
+            ]);
+            $sortLink = fn ($col) => route('admin.courses.index', array_merge($baseQuery, [
+                'sort' => $col,
+                'dir' => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
+            ]));
+            $sortIcon = fn ($col) => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
+        @endphp
 
         {{-- Table --}}
         <x-admin.table
@@ -152,11 +193,28 @@
             ]"
             :rows="$courses"
             empty="Belum ada kelas yang cocok dengan filter ini.">
+            <x-slot:head>
+                <tr class="border-b border-gray-100 text-theme-xs font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                    <th class="w-8 px-5 py-3 sm:px-6">
+                        <input type="checkbox" :checked="allOnPageSelected" @change="toggleAllOnPage($event.target.checked)"
+                            aria-label="Pilih semua di halaman"
+                            class="rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700">
+                    </th>
+                    <th class="px-5 py-3 text-left sm:px-6">
+                        <a href="{{ $sortLink('title') }}" class="inline-flex items-center gap-1 hover:text-brand-500">Kelas <span class="text-brand-500">{{ $sortIcon('title') }}</span></a>
+                    </th>
+                    <th class="px-5 py-3 text-left sm:px-6">
+                        <a href="{{ $sortLink('price') }}" class="inline-flex items-center gap-1 hover:text-brand-500">Harga <span class="text-brand-500">{{ $sortIcon('price') }}</span></a>
+                    </th>
+                    <th class="px-5 py-3 text-left sm:px-6">Status</th>
+                    <th class="px-5 py-3 text-right sm:px-6">Aksi</th>
+                </tr>
+            </x-slot:head>
             @foreach ($courses as $course)
                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.03] transition {{ $isTrashed ? 'opacity-75' : '' }}">
                     <td class="px-4 py-3">
                         <input type="checkbox" form="bulk-form" name="ids[]" value="{{ $course->id }}"
-                            x-on:change="$event.target.checked ? selected.push({{ $course->id }}) : (selected = selected.filter(id => id !== {{ $course->id }}))"
+                            x-model.number="selected"
                             class="rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700">
                     </td>
                     <td class="px-4 py-3">
@@ -196,6 +254,24 @@
                                     </button>
                                 </form>
                             @else
+                                {{-- Toggle status cepat: active <-> archived tanpa buka Edit --}}
+                                <form method="POST" action="{{ route('admin.courses.toggle-status', $course) }}" class="inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    @if ($course->status === 'active')
+                                        <button type="submit" title="Sembunyikan dari store (archived)"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-warning-200 bg-white px-3 py-1.5 text-xs font-medium text-warning-700 hover:bg-warning-50 transition dark:border-warning-500/30 dark:bg-white/[0.03] dark:text-warning-500 dark:hover:bg-warning-500/15">
+                                            <x-admin.icon name="archive" class="h-3 w-3" />
+                                            Sembunyikan
+                                        </button>
+                                    @else
+                                        <button type="submit" title="Terbitkan ke store (active)"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-success-200 bg-white px-3 py-1.5 text-xs font-medium text-success-700 hover:bg-success-50 transition dark:border-success-500/30 dark:bg-white/[0.03] dark:text-success-500 dark:hover:bg-success-500/15">
+                                            <x-admin.icon name="check-circle" class="h-3 w-3" />
+                                            Terbitkan
+                                        </button>
+                                    @endif
+                                </form>
                                 <a href="{{ route('admin.courses.edit', $course) }}"
                                     class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition dark:border-gray-700 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.03]">
                                     <x-admin.icon name="edit" class="h-3 w-3" />

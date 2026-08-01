@@ -12,27 +12,11 @@
     $waText = rawurlencode("Halo Admin, saya baru saja upload bukti bayar untuk order {$orderNumber}. Mohon dicek.");
     $waLink = "https://wa.me/{$waAdmin['number']}?text={$waText}";
 
-    // Generate dropdown options dari skema cicilan.
-    // M1: stateless (tidak tahu cicilan ke berapa yang sudah dibayar) — admin/user pilih
-    // manual. M2: pakai data orders.status + order_payments untuk auto-skip yang sudah lunas
-    // dan disable opsi yang belum jatuh tempo.
-    $installmentOptions = [];
-    if ($isInstallment) {
-        $remaining = $totalPayments - 1;
-        $installmentOptions[] = [
-            'value' => 0,
-            'label' => 'Down Payment (DP)',
-            'note' => "Pembayaran pertama dari {$totalPayments}",
-        ];
-        for ($i = 1; $i < $totalPayments; $i++) {
-            $isLast = $i === $totalPayments - 1;
-            $installmentOptions[] = [
-                'value' => $i,
-                'label' => "Cicilan ke-{$i} dari {$remaining}",
-                'note' => $isLast ? 'Cicilan terakhir' : '',
-            ];
-        }
-    }
+    // Opsi dropdown cicilan + nominal per-sequence disiapkan oleh UploadController.
+    // Untuk order nyata state-aware (tandai lunas/menunggu/ditolak + disable yang
+    // tak bisa diupload); untuk stub M1 count-based. Default fallback [] biar aman.
+    $installmentOptions = $installmentOptions ?? [];
+    $installmentAmounts = $installmentAmounts ?? [];
 
     $successFlash = session('upload.success');
 @endphp
@@ -70,6 +54,7 @@
             totalTransfer: @js($totalTransfer),
             totalPayments: @js($totalPayments),
             defaultSequence: @js($defaultSequence),
+            installmentAmounts: @js($installmentAmounts),
             maxBytes: 2 * 1024 * 1024,
             acceptTypes: ['image/jpeg', 'image/png', 'image/webp'],
             initialSuccess: @js((bool) $successFlash),
@@ -113,9 +98,12 @@
                 </p>
             </div>
 
+            @if (! ($isFreeForm && count($pendingPayments) === 0))
             <div class="sm:text-right">
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-                    @if ($isInstallment)
+                    @if ($isFreeForm)
+                        Bayar DP Sekarang
+                    @elseif ($isInstallment)
                         Nominal Pembayaran (DP / Cicilan)
                     @else
                         Total Transfer (Lunas)
@@ -124,17 +112,19 @@
                 <p
                     class="mt-2 text-2xl font-extrabold leading-tight text-primary-600 sm:text-3xl"
                     data-testid="upload-total-transfer"
+                    x-text="currentAmountLabel"
                 >
                     @if ($totalTransfer > 0)
                         Rp {{ number_format($totalTransfer, 0, ',', '.') }}
                     @else
-                        <span class="text-slate-500">—</span>
+                        —
                     @endif
                 </p>
                 <p class="mt-1 text-xs text-slate-500">
                     Pastikan nominal transfer sesuai sampai 3 digit terakhir.
                 </p>
             </div>
+            @endif
         </section>
 
         {{-- ====================================================== --}}
@@ -190,7 +180,10 @@
 
         {{-- ====================================================== --}}
         {{-- Form upload bukti                                        --}}
+        {{-- Cicilan bebas: form ini HANYA untuk upload bukti DP (saat DP belum  --}}
+        {{-- ada buktinya). Sesudah itu pakai form "Bayar cicilan lagi" di bawah.--}}
         {{-- ====================================================== --}}
+        @if (! $isFreeForm || count($pendingPayments) > 0)
         <form
             x-show="!success"
             x-cloak
@@ -222,13 +215,13 @@
                         required
                     >
                         @foreach ($installmentOptions as $opt)
-                            <option value="{{ $opt['value'] }}">
-                                {{ $opt['label'] }}@if (! empty($opt['note'])) — {{ $opt['note'] }}@endif
+                            <option value="{{ $opt['value'] }}" @disabled(! ($opt['uploadable'] ?? true)) @selected($opt['value'] === $defaultSequence)>
+                                {{ $opt['label'] }}@if (! empty($opt['note'])) — {{ $opt['note'] }}@endif @if (! empty($opt['status_note'])) · {{ $opt['status_note'] }}@endif
                             </option>
                         @endforeach
                     </select>
                     <p class="text-xs text-slate-500">
-                        Pilih cicilan yang sedang kamu bayar (auto-detect dari order kamu setelah login admin di M2).
+                        Terpilih otomatis ke pembayaran berikutnya yang belum lunas. Yang sudah lunas / sedang diverifikasi tidak bisa dipilih lagi.
                     </p>
                 @else
                     {{-- Lunas — placeholder read-only supaya backend tetap dapat field konsisten. --}}
@@ -396,6 +389,51 @@
                 </button>
             </div>
         </form>
+        @endif
+
+        @if ($isFreeForm && count($pendingPayments) === 0 && $remaining > 0)
+            {{-- Cicilan bebas: tambah pembayaran berikutnya (nominal bebas, tanpa jatuh tempo).
+                 Tampil setelah bukti DP terkirim — jadi hanya ada SATU form di layar. --}}
+            <div class="mt-8 rounded-3xl border border-primary-100 bg-primary-50/40 p-6 sm:p-8" data-testid="freeform-payment">
+                <div class="flex items-start gap-3">
+                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+                        <i data-lucide="plus" class="h-5 w-5"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Bayar cicilan lagi</h3>
+                        <p class="mt-0.5 text-sm text-slate-600">
+                            Bebas — bayar berapa saja, kapan saja, tanpa jatuh tempo. Sisa tagihan:
+                            <span class="font-bold text-primary-700">Rp {{ number_format($remaining, 0, ',', '.') }}</span>.
+                        </p>
+                    </div>
+                </div>
+
+                <form method="POST"
+                      action="{{ $uploadStoreUrl ?? route('upload.store', ['order_number' => $orderNumber]) }}"
+                      enctype="multipart/form-data"
+                      class="mt-5 space-y-4">
+                    @csrf
+                    <div>
+                        <label for="new_payment_amount" class="block text-sm font-bold text-slate-900">Nominal yang Anda transfer (Rp)</label>
+                        <input type="number" id="new_payment_amount" name="new_payment_amount" min="1" max="{{ $remaining }}" inputmode="numeric" required
+                               placeholder="Contoh: {{ number_format(min($remaining, 500000), 0, ',', '.') }}"
+                               class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200">
+                    </div>
+                    <div>
+                        <label for="new_proof_file" class="block text-sm font-bold text-slate-900">Bukti transfer</label>
+                        <input type="file" id="new_proof_file" name="proof_file" accept="image/jpeg,image/png,image/webp" required
+                               class="mt-1.5 block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-700">
+                        <p class="mt-1 text-xs text-slate-400">JPG, PNG, atau WebP. Maks 2 MB.</p>
+                    </div>
+                    @error('new_payment_amount') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <button type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-full bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition hover:bg-primary-700">
+                        <i data-lucide="upload-cloud" class="h-5 w-5"></i>
+                        Kirim pembayaran
+                    </button>
+                </form>
+            </div>
+        @endif
 
         {{-- ====================================================== --}}
         {{-- Footer info                                              --}}
@@ -418,6 +456,7 @@
                     paymentType: cfg.paymentType || 'lunas',
                     totalTransfer: Number(cfg.totalTransfer) || 0,
                     totalPayments: Number(cfg.totalPayments) || 1,
+                    installmentAmounts: (cfg.installmentAmounts && typeof cfg.installmentAmounts === 'object') ? cfg.installmentAmounts : {},
                     maxBytes: Number(cfg.maxBytes) || (2 * 1024 * 1024),
                     acceptTypes: Array.isArray(cfg.acceptTypes) ? cfg.acceptTypes : ['image/jpeg', 'image/png', 'image/webp'],
 
@@ -436,6 +475,15 @@
                     // Computed
                     get canSubmit() {
                         return !!this.file && !this.fileError && !this.submitting;
+                    },
+                    // Nominal yang ditampilkan mengikuti pilihan cicilan (kalau ada
+                    // data per-sequence); fallback ke totalTransfer server.
+                    get currentAmountLabel() {
+                        const seq = Number(this.form.sequence) || 0;
+                        const amt = (this.installmentAmounts && this.installmentAmounts[seq] != null)
+                            ? Number(this.installmentAmounts[seq])
+                            : this.totalTransfer;
+                        return amt > 0 ? ('Rp ' + amt.toLocaleString('id-ID')) : '—';
                     },
                     get fileTypeLabel() {
                         if (!this.file) return '';

@@ -6,10 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Services\Settings;
 use App\Services\Shipping\AgenwebsiteClient;
 use App\Services\XSenderService;
+use App\Support\HtmlSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -17,14 +22,49 @@ class SettingsController extends Controller
     /**
      * Tab yang diizinkan.
      */
-    protected const ALLOWED_TABS = ['store-info', 'bank-accounts', 'shipping', 'whatsapp'];
+    protected const ALLOWED_TABS = ['store-info', 'bank-accounts', 'shipping', 'whatsapp', 'footer', 'logo'];
 
     /**
-     * Daftar kurir yang tersedia.
+     * Static fallback bila API courier master tidak bisa di-fetch
+     * (license invalid / network down / cache kosong).
      */
     protected const AVAILABLE_COURIERS = [
         'jne', 'jnt', 'sicepat', 'anteraja', 'pos', 'tiki', 'spx', 'lion', 'paxel',
     ];
+
+    /**
+     * Build live courier id ⇒ title map dari API (cached 24h). Fallback ke
+     * static list bila API gagal — admin tetap bisa pilih kurir, sekadar
+     * kehilangan label cantik dari API.
+     *
+     * @return array<string, string>
+     */
+    protected function liveCouriersMap(): array
+    {
+        try {
+            $client = AgenwebsiteClient::fromConfig();
+            $couriers = $client->couriers();
+        } catch (\Throwable) {
+            $couriers = [];
+        }
+
+        $map = [];
+        foreach ($couriers as $c) {
+            $id = $c['id'] ?? null;
+            if (! $id || isset($map[$id])) {
+                continue;
+            }
+            $map[$id] = (string) ($c['title'] ?? strtoupper($id));
+        }
+
+        if ($map === []) {
+            foreach (self::AVAILABLE_COURIERS as $id) {
+                $map[$id] = strtoupper($id);
+            }
+        }
+
+        return $map;
+    }
 
     /**
      * Halaman tunggal Settings dengan tab:
@@ -49,11 +89,19 @@ class SettingsController extends Controller
 
         if ($tab === 'shipping') {
             $viewData['shippingData'] = $this->getShippingData();
-            $viewData['availableCouriers'] = self::AVAILABLE_COURIERS;
+            $viewData['availableCouriers'] = $this->liveCouriersMap();
         }
 
         if ($tab === 'whatsapp') {
             $viewData['whatsappData'] = $this->getWhatsappData();
+        }
+
+        if ($tab === 'footer') {
+            $viewData['footerData'] = Settings::getFooter();
+        }
+
+        if ($tab === 'logo') {
+            $viewData['brandingData'] = Settings::getBranding();
         }
 
         return view('admin.settings.index', $viewData);
@@ -93,6 +141,8 @@ class SettingsController extends Controller
             'service_markup_raw' => $serviceMarkupLines,
             'shipping_enabled' => Settings::get('shipping.shipping_enabled', true),
             'default_weight_kg' => Settings::get('shipping.default_weight_kg', config('shipping.default_weight_kg')),
+            'license' => Settings::get('shipping.license', config('shipping.license')),
+            'site_url' => Settings::get('shipping.site_url', config('shipping.site_url')),
             'license_status' => $licenseStatus,
         ];
     }
@@ -138,6 +188,7 @@ class SettingsController extends Controller
             'bank_accounts.*.number' => ['nullable', 'string', 'max:40'],
             'bank_accounts.*.holder' => ['nullable', 'string', 'max:120'],
             'bank_accounts.*.logo_color' => ['nullable', 'string', 'max:30'],
+            'bank_accounts.*.logo' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('bank_logos', [])))],
             'bank_accounts.*.primary' => ['nullable'],
         ]);
 
@@ -161,6 +212,7 @@ class SettingsController extends Controller
                 'bank' => $acc['bank'],
                 'number' => $acc['number'],
                 'holder' => $acc['holder'] ?? '',
+                'logo' => $acc['logo'] ?? '',
                 'logo_color' => $acc['logo_color'] ?? 'slate',
                 'primary' => ! empty($acc['primary']),
             ])
@@ -178,18 +230,23 @@ class SettingsController extends Controller
      * Update shipping settings (tab shipping).
      *
      * Validasi + persist ke DB via Settings service.
-     * site_url dan license tidak bisa diubah dari form — di-hardcode di .env.
+     * License + site_url (domain) bisa diisi dari form — fallback ke .env bila
+     * dikosongkan. Domain agenwebsite license-bound, jadi keduanya disimpan bareng.
      */
     public function updateShipping(Request $request): RedirectResponse
     {
+        $allowedCourierIds = array_keys($this->liveCouriersMap());
+
         $data = $request->validate([
             'origin' => ['required', 'string', 'max:100'],
             'origin_zipcode' => ['required', 'string', 'max:10'],
             'couriers' => ['nullable', 'array'],
-            'couriers.*' => ['string', 'in:'.implode(',', self::AVAILABLE_COURIERS)],
+            'couriers.*' => ['string', 'in:'.implode(',', $allowedCourierIds)],
             'service_markup' => ['nullable', 'string'],
             'shipping_enabled' => ['nullable'],
             'default_weight_kg' => ['required', 'numeric', 'min:0.1', 'max:100'],
+            'license' => ['nullable', 'string', 'max:255'],
+            'site_url' => ['nullable', 'url', 'max:255'],
         ], [
             'origin.required' => 'Kota asal wajib diisi.',
             'origin_zipcode.required' => 'Kode pos asal wajib diisi.',
@@ -197,11 +254,26 @@ class SettingsController extends Controller
             'default_weight_kg.min' => 'Berat default minimal 0.1 kg.',
             'default_weight_kg.max' => 'Berat default maksimal 100 kg.',
             'couriers.*.in' => 'Kurir tidak valid.',
+            'site_url.url' => 'Domain harus berupa URL valid (mis. https://masfirmanpratama.com).',
         ]);
 
         // Simpan origin
         Settings::set('shipping.origin', $data['origin'], 'string');
         Settings::set('shipping.origin_zipcode', $data['origin_zipcode'], 'string');
+
+        // Simpan license + domain (kosong = fallback ke .env). Bila berubah,
+        // flush cache master (couriers/services) yang license/domain-bound.
+        $oldLicense = Settings::get('shipping.license', config('shipping.license'));
+        $oldSiteUrl = Settings::get('shipping.site_url', config('shipping.site_url'));
+        Settings::set('shipping.license', $data['license'] ?? '', 'string');
+        Settings::set('shipping.site_url', $data['site_url'] ?? '', 'string');
+
+        if (($data['license'] ?? '') !== $oldLicense || ($data['site_url'] ?? '') !== $oldSiteUrl) {
+            Cache::forget('shipping.couriers');
+            foreach (['domestic', 'instant', 'international'] as $cat) {
+                Cache::forget('shipping.services.'.$cat);
+            }
+        }
 
         // Simpan daftar kurir aktif
         Settings::set('shipping.couriers', $data['couriers'] ?? [], 'array');
@@ -240,14 +312,81 @@ class SettingsController extends Controller
     }
 
     /**
+     * Test koneksi lisensi Agenwebsite — pakai license + site_url dari form
+     * (bisa dites SEBELUM disimpan), bukan dari DB/config.
+     */
+    public function testShipping(Request $request): JsonResponse
+    {
+        $license = trim((string) $request->input('license'));
+        $siteUrl = trim((string) $request->input('site_url'));
+
+        // Kosong = pakai nilai .env/config saat ini (test config yang sedang aktif).
+        $cfg = config('shipping');
+        if ($license !== '') {
+            $cfg['license'] = $license;
+        }
+        if ($siteUrl !== '') {
+            $cfg['site_url'] = $siteUrl;
+            $cfg['user_agent'] = 'WordPress/'.$cfg['wordpress_version'].'; '.$siteUrl;
+        }
+
+        if (($cfg['license'] ?? '') === '') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Kode lisensi belum diisi.',
+            ]);
+        }
+
+        try {
+            $client = new AgenwebsiteClient($cfg);
+            $result = $client->activateLicense();
+
+            if (($result['status'] ?? '') === 'success') {
+                $data = is_array($result['result'] ?? null) ? $result['result'] : [];
+                $detail = [];
+                if (! empty($data['account_email'])) {
+                    $detail[] = 'Akun: '.$data['account_email'];
+                }
+                if (! empty($data['type'])) {
+                    $detail[] = 'Tipe: '.$data['type'];
+                }
+                if (! empty($data['expire_date'])) {
+                    $detail[] = 'Berlaku hingga '.$data['expire_date'];
+                }
+                if (! empty($data['shipping_quota'])) {
+                    $detail[] = 'Kuota: '.$data['shipping_quota'];
+                }
+
+                return response()->json([
+                    'ok' => true,
+                    'message' => $detail === [] ? 'Lisensi aktif & terhubung.' : implode(' · ', $detail),
+                ]);
+            }
+
+            return response()->json([
+                'ok' => false,
+                'message' => $result['message'] ?? 'Lisensi tidak dapat diverifikasi.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Exception: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Data untuk tab WhatsApp (XSender gateway).
      */
     protected function getWhatsappData(): array
     {
+        $waAdmin = Settings::getWaAdmin();
+
         return [
             'api_key' => Settings::get('xsender.api_key', config('services.xsender.api_key')),
             'sender' => Settings::get('xsender.sender', config('services.xsender.sender')),
             'endpoint' => Settings::get('xsender.endpoint', config('services.xsender.endpoint', 'https://xsender.id/id/send-message')),
+            'admin_number' => $waAdmin['number'] ?? '',
         ];
     }
 
@@ -260,6 +399,7 @@ class SettingsController extends Controller
             'xsender_api_key' => ['required', 'string', 'max:255'],
             'xsender_sender' => ['required', 'string', 'max:30'],
             'xsender_endpoint' => ['nullable', 'url', 'max:255'],
+            'wa_admin_number' => ['nullable', 'string', 'max:30'],
         ], [
             'xsender_api_key.required' => 'API Key XSender wajib diisi.',
             'xsender_sender.required' => 'Nomor WhatsApp XSender wajib diisi.',
@@ -273,9 +413,162 @@ class SettingsController extends Controller
             Settings::set('xsender.endpoint', $data['xsender_endpoint'], 'string');
         }
 
+        // Nomor WA admin = penerima alert (mis. "bukti bayar baru"). Kalau kosong,
+        // fallback ke config placeholder yang TIDAK terdaftar di WA → alert gagal.
+        if (! empty($data['wa_admin_number'])) {
+            $current = Settings::getWaAdmin();
+            Settings::set('wa_admin', [
+                'number' => XSenderService::normalizePhone($data['wa_admin_number']),
+                'label' => $current['label'] ?? 'Admin',
+            ], 'array');
+        }
+
         return redirect()
             ->route('admin.settings.index', ['tab' => 'whatsapp'])
             ->with('status', 'Pengaturan WhatsApp (XSender) berhasil diperbarui.');
+    }
+
+    /**
+     * Update konten footer storefront (tab footer). Satu form menyimpan semua:
+     * brand/tagline/kontak/copyright (scalar) + socials/links/legal (list).
+     * Href boleh relatif (/produk?...) atau absolut, jadi divalidasi sebagai string.
+     */
+    public function updateFooter(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'brand_text' => ['nullable', 'string', 'max:60'],
+            'brand_accent' => ['nullable', 'string', 'max:60'],
+            'tagline' => ['nullable', 'string', 'max:300'],
+            'address' => ['nullable', 'string', 'max:300'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'copyright' => ['nullable', 'string', 'max:200'],
+            'socials' => ['nullable', 'array'],
+            // Icon dari picker terkurasi (nama Lucide valid) — tolak nama bebas
+            // supaya icon dijamin ter-render di footer storefront.
+            'socials.*.icon' => ['nullable', 'string', 'max:40', 'in:'.implode(',', array_keys(Settings::FOOTER_SOCIAL_ICONS))],
+            'socials.*.href' => ['nullable', 'string', 'max:300'],
+            'socials.*.label' => ['nullable', 'string', 'max:60'],
+            'links' => ['nullable', 'array'],
+            'links.*.group' => ['nullable', 'string', 'max:60'],
+            'links.*.label' => ['nullable', 'string', 'max:80'],
+            'links.*.href' => ['nullable', 'string', 'max:300'],
+            'legal' => ['nullable', 'array'],
+            'legal.*.label' => ['nullable', 'string', 'max:80'],
+            'legal.*.href' => ['nullable', 'string', 'max:300'],
+        ], [
+            'email.email' => 'Format email tidak valid.',
+            'socials.*.icon.in' => 'Icon media sosial tidak dikenal — pilih dari daftar icon yang tersedia.',
+        ]);
+
+        // URL footer tampil di halaman publik → tolak skema eksekusi
+        // (javascript:/data:/vbscript:) yang bisa jadi stored-XSS. Path relatif
+        // & http(s)/mailto/tel tetap boleh.
+        foreach (['socials', 'links', 'legal'] as $section) {
+            foreach ($data[$section] ?? [] as $idx => $row) {
+                if (! empty($row['href']) && ! HtmlSanitizer::isSafeUrl($row['href'])) {
+                    return back()->withInput()->withErrors([
+                        'footer_url' => 'URL "'.$row['href'].'" memakai skema berbahaya (javascript:/data:/vbscript:) dan tidak disimpan. Pakai http(s), mailto:, tel:, atau path relatif (mis. /blog).',
+                    ]);
+                }
+            }
+        }
+
+        foreach (['brand_text', 'brand_accent', 'tagline', 'address', 'phone', 'email', 'copyright'] as $key) {
+            Settings::set('footer.'.$key, $data[$key] ?? '', 'string');
+        }
+
+        // Socials: butuh icon + href; label default dari nama icon.
+        $socials = collect($data['socials'] ?? [])
+            ->filter(fn ($s) => ! empty($s['icon']) && ! empty($s['href']))
+            ->map(fn ($s) => [
+                'icon' => $s['icon'],
+                'href' => $s['href'],
+                'label' => $s['label'] ?: ucfirst($s['icon']),
+            ])
+            ->values()
+            ->all();
+        Settings::set('footer.socials', $socials, 'array');
+
+        // Link kolom: butuh group + label + href.
+        $links = collect($data['links'] ?? [])
+            ->filter(fn ($l) => ! empty($l['group']) && ! empty($l['label']) && ! empty($l['href']))
+            ->map(fn ($l) => ['group' => $l['group'], 'label' => $l['label'], 'href' => $l['href']])
+            ->values()
+            ->all();
+        Settings::set('footer.links', $links, 'array');
+
+        // Legal: butuh label + href.
+        $legal = collect($data['legal'] ?? [])
+            ->filter(fn ($l) => ! empty($l['label']) && ! empty($l['href']))
+            ->map(fn ($l) => ['label' => $l['label'], 'href' => $l['href']])
+            ->values()
+            ->all();
+        Settings::set('footer.legal', $legal, 'array');
+
+        return redirect()
+            ->route('admin.settings.index', ['tab' => 'footer'])
+            ->with('status', 'Footer berhasil diperbarui.');
+    }
+
+    /**
+     * Update logo header & footer. Tiap slot: upload file baru (ganti + hapus
+     * lama), centang "hapus" (kosongkan), atau biarkan. SVG diizinkan (logo
+     * sering vektor) — karena itu pakai mimes, bukan rule `image` yg tolak SVG.
+     */
+    public function updateLogo(Request $request): RedirectResponse
+    {
+        // Hanya raster (png/jpg/webp). SVG SENGAJA tak diizinkan: file di disk
+        // publik disajikan di /storage/... same-origin, dan SVG yang dibuka
+        // langsung (bukan via <img>) mengeksekusi <script> di dalamnya =
+        // stored-XSS. `image` rule memverifikasi konten benar-benar gambar.
+        $request->validate([
+            'header_logo' => ['nullable', 'file', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'footer_logo' => ['nullable', 'file', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'remove_header_logo' => ['nullable', 'boolean'],
+            'remove_footer_logo' => ['nullable', 'boolean'],
+        ], [
+            'header_logo.mimes' => 'Logo header harus PNG, JPG, atau WebP.',
+            'footer_logo.mimes' => 'Logo footer harus PNG, JPG, atau WebP.',
+            'header_logo.image' => 'Logo header harus berupa gambar (PNG, JPG, WebP).',
+            'footer_logo.image' => 'Logo footer harus berupa gambar (PNG, JPG, WebP).',
+            'header_logo.max' => 'Ukuran logo header maksimal 2 MB.',
+            'footer_logo.max' => 'Ukuran logo footer maksimal 2 MB.',
+        ]);
+
+        foreach (['header' => 'header_logo', 'footer' => 'footer_logo'] as $slot => $field) {
+            $key = 'branding.'.$field;
+            $current = Settings::get($key);
+
+            if ($request->hasFile($field)) {
+                $this->deleteLogo($current);
+                Settings::set($key, $this->storeLogo($request->file($field)), 'string');
+            } elseif ($request->boolean('remove_'.$field)) {
+                $this->deleteLogo($current);
+                Settings::set($key, '', 'string');
+            }
+        }
+
+        return redirect()
+            ->route('admin.settings.index', ['tab' => 'logo'])
+            ->with('status', 'Logo berhasil diperbarui.');
+    }
+
+    /** Simpan upload logo ke disk public folder branding/. */
+    protected function storeLogo(UploadedFile $file): string
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'png');
+        $filename = now()->format('YmdHis').'-'.Str::random(6).'.'.$ext;
+
+        return $file->storeAs('branding', $filename, 'public');
+    }
+
+    /** Hapus file logo lama HANYA bila milik kita (prefix branding/). */
+    protected function deleteLogo(mixed $path): void
+    {
+        if (is_string($path) && str_starts_with($path, 'branding/') && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     /**

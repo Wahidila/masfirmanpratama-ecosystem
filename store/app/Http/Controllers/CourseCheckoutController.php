@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
-use App\Models\InstallmentScheme;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
 use App\Models\WaNotification;
+use App\Services\Installment\InstallmentReminder;
 use App\Services\Settings;
 use App\Services\XSenderService;
 use Illuminate\Http\RedirectResponse;
@@ -40,14 +40,8 @@ class CourseCheckoutController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        $schemes = InstallmentScheme::active()
-            ->forCourse($course->id)
-            ->orderBy('n_installments')
-            ->get();
-
         return view('pages.courses.checkout', [
             'course' => $course,
-            'schemes' => $schemes,
         ]);
     }
 
@@ -62,32 +56,30 @@ class CourseCheckoutController extends Controller
 
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
-            'customer_email' => ['required', 'email', 'max:120'],
+            // Email selalu OPSIONAL (sisi affiliate tak lagi butuh email — self-referral
+            // check dihapus).
+            'customer_email' => ['nullable', 'email', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:30'],
             'occupation' => ['nullable', 'string', 'max:100'],
             'motivation' => ['nullable', 'string', 'max:500'],
             'payment_type' => ['required', 'in:lunas,cicilan'],
-            'installment_scheme_id' => ['nullable', 'required_if:payment_type,cicilan', 'integer', 'exists:installment_schemes,id'],
+            // Cicilan bebas: customer isi nominal DP (bebas), sisa dicicil kapan saja.
+            'dp_amount' => ['nullable', 'required_if:payment_type,cicilan', 'integer', 'min:1', 'max:'.(int) $course->price],
             'ref_code' => ['nullable', 'string', 'max:64'],
         ], [
             'customer_name.required' => 'Nama lengkap wajib diisi.',
-            'customer_email.required' => 'Email wajib diisi.',
             'customer_email.email' => 'Format email tidak valid.',
             'customer_phone.required' => 'Nomor WhatsApp wajib diisi.',
             'payment_type.required' => 'Pilih metode pembayaran.',
-            'installment_scheme_id.required_if' => 'Pilih skema cicilan.',
+            'dp_amount.required_if' => 'Isi jumlah DP yang dibayar sekarang.',
+            'dp_amount.min' => 'DP minimal Rp 1.',
+            'dp_amount.max' => 'DP tidak boleh melebihi harga kelas.',
         ]);
 
-        // Resolve installment scheme if cicilan
-        $scheme = null;
-        if ($validated['payment_type'] === 'cicilan' && ! empty($validated['installment_scheme_id'])) {
-            $scheme = InstallmentScheme::active()
-                ->forCourse($course->id)
-                ->where('id', $validated['installment_scheme_id'])
-                ->firstOrFail();
-        }
+        // Cicilan bebas: nominal DP dari customer (0 untuk lunas).
+        $dpAmount = $validated['payment_type'] === 'cicilan' ? (int) $validated['dp_amount'] : 0;
 
-        $order = DB::transaction(function () use ($validated, $course, $scheme, $request) {
+        $order = DB::transaction(function () use ($validated, $course, $dpAmount, $request) {
             // Referral code: input form override, fallback ke cookie affiliate
             $refCode = $validated['ref_code'] ?? $request->cookie('referral_code');
 
@@ -95,9 +87,10 @@ class CourseCheckoutController extends Controller
                 'order_number' => $this->generateOrderNumber(),
                 'customer_name' => $validated['customer_name'],
                 'phone' => $validated['customer_phone'],
-                'email' => $validated['customer_email'],
+                'email' => $validated['customer_email'] ?? null,
                 'address' => '',
                 'total' => (int) $course->price,
+                'unique_code' => Order::generateUniqueCode((int) $course->price),
                 'status' => 'pending',
                 'ref_code' => $refCode ?: null,
             ]);
@@ -111,24 +104,28 @@ class CourseCheckoutController extends Controller
                 'subtotal' => (int) $course->price,
             ]);
 
-            // Generate payment schedule
-            $this->generatePaymentSchedule($order, (int) $course->price, $validated['payment_type'], $scheme);
+            // Cicilan bebas: buat pembayaran DP saja (kode unik dibebankan ke DP).
+            $this->generatePaymentSchedule($order, (int) $course->price, $validated['payment_type'], $dpAmount);
 
-            // Simpan data tambahan di order_meta (occupation, motivation)
-            if (! empty($validated['occupation']) || ! empty($validated['motivation'])) {
-                $order->update([
-                    'order_meta' => [
-                        'occupation' => $validated['occupation'] ?? '',
-                        'motivation' => $validated['motivation'] ?? '',
-                    ],
-                ]);
+            // Data tambahan + penanda cicilan bebas di order_meta (dipakai halaman
+            // upload/track & InstallmentReminder untuk mode free-form tanpa jadwal).
+            $meta = [
+                'occupation' => $validated['occupation'] ?? '',
+                'motivation' => $validated['motivation'] ?? '',
+            ];
+            if ($validated['payment_type'] === 'cicilan') {
+                $meta['installment'] = [
+                    'free_form' => true,
+                    'dp' => $dpAmount,
+                ];
             }
+            $order->update(['order_meta' => $meta]);
 
             return $order;
         });
 
         // Kirim notifikasi WhatsApp ke customer
-        $uploadUrl = $this->generateUploadUrl($order->order_number);
+        $uploadUrl = $this->generateUploadUrl($order);
         $this->sendWhatsAppNotification($order, $course, $validated, $uploadUrl);
 
         return redirect()
@@ -145,62 +142,71 @@ class CourseCheckoutController extends Controller
         $course = Course::where('slug', $slug)->firstOrFail();
         $orderModel = Order::where('order_number', $order)->firstOrFail();
         $orderModel->load(['payments' => fn ($q) => $q->orderBy('id')]);
-        $bankAccounts = Settings::getBankAccounts();
-        $uploadUrl = session('upload_url', $this->generateUploadUrl($order));
 
-        $isCicilan = $orderModel->payments->count() > 1;
-        $firstPayment = $orderModel->payments->first();
+        $payments = $orderModel->payments;
+        $isFreeForm = (bool) data_get($orderModel->order_meta, 'installment.free_form');
+        $isCicilan = $payments->count() > 1 || $isFreeForm;
+        $firstPayment = $payments->first();
+
+        // Yang HARUS ditransfer sekarang: DP (cicilan) atau total penuh (lunas).
+        $totalTransfer = (int) ($firstPayment->amount ?? $orderModel->total);
+
+        // Jadwal tetap HANYA untuk model lama (>1 payment terjadwal). Cicilan bebas
+        // (free-form): tanpa jadwal / jatuh tempo — sisa dibayar bebas kapan saja.
+        $schedule = [];
+        if ($isCicilan && ! $isFreeForm) {
+            $interval = (int) data_get($orderModel->order_meta, 'installment.interval_days', 30);
+            foreach ($payments->values() as $i => $payment) {
+                $schedule[] = [
+                    'label' => $i === 0 ? 'DP — bayar sekarang' : 'Cicilan ke-'.$i,
+                    'due_label' => $i === 0 ? 'Sekarang' : 'H+'.($i * $interval),
+                    'amount' => (int) $payment->amount,
+                ];
+            }
+        }
+
+        // Sisa tagihan untuk cicilan bebas (payableTotal − terverifikasi).
+        $verified = (int) $payments->where('status', 'verified')->sum('amount');
+        $remaining = max(0, $orderModel->payableTotal() - $verified);
 
         return view('pages.courses.checkout-success', [
             'course' => $course,
             'order' => $orderModel,
-            'bankAccounts' => $bankAccounts,
-            'uploadUrl' => $uploadUrl,
+            'bankAccounts' => Settings::getBankAccounts(),
+            'waAdmin' => Settings::getWaAdmin(),
+            'uploadUrl' => session('upload_url', $this->generateUploadUrl($orderModel)),
+            'trackUrl' => $this->generateTrackUrl($orderModel->order_number),
             'isCicilan' => $isCicilan,
-            'firstPayment' => $firstPayment,
+            'isFreeForm' => $isFreeForm,
+            'paymentType' => $isCicilan ? 'cicilan' : 'lunas',
+            'totalTransfer' => $totalTransfer,
+            'schedule' => $schedule,
+            'remaining' => $remaining,
         ]);
     }
 
     /**
-     * Generate payment schedule berdasarkan payment_type.
-     * Lunas = 1 record full amount.
-     * Cicilan = DP + n_installments sesuai scheme.
+     * Generate pembayaran awal berdasarkan payment_type.
+     * Lunas   = 1 record sebesar payableTotal (total + kode unik).
+     * Cicilan = 1 record DP (nominal bebas dari customer + kode unik). Sisa
+     *           dibayar bebas kapan saja lewat halaman upload (tanpa jadwal/tempo).
      */
-    protected function generatePaymentSchedule(Order $order, int $total, string $paymentType, ?InstallmentScheme $scheme): void
+    protected function generatePaymentSchedule(Order $order, int $total, string $paymentType, int $dpAmount): void
     {
-        if ($paymentType === 'cicilan' && $scheme) {
-            // DP amount
-            $dpAmount = (int) ceil($total * ((float) $scheme->dp_pct / 100));
-            $remaining = $total - $dpAmount;
-            $perInstallment = (int) ceil($remaining / $scheme->n_installments);
-
-            // DP payment
+        if ($paymentType === 'cicilan') {
+            // DP saja — kode unik dibebankan ke DP (transfer pertama) supaya
+            // nominal khas & gampang dicocokkan admin.
             OrderPayment::create([
                 'order_id' => $order->id,
-                'amount' => $dpAmount,
+                'amount' => $dpAmount + (int) $order->unique_code,
                 'method' => 'transfer',
                 'status' => 'pending',
             ]);
-
-            // Installment payments
-            for ($i = 1; $i <= $scheme->n_installments; $i++) {
-                // Last installment absorbs rounding difference
-                $amount = ($i === $scheme->n_installments)
-                    ? $remaining - ($perInstallment * ($scheme->n_installments - 1))
-                    : $perInstallment;
-
-                OrderPayment::create([
-                    'order_id' => $order->id,
-                    'amount' => max(0, $amount),
-                    'method' => 'transfer',
-                    'status' => 'pending',
-                ]);
-            }
         } else {
-            // Lunas — single payment
+            // Lunas — single payment sebesar total + kode unik (payableTotal).
             OrderPayment::create([
                 'order_id' => $order->id,
-                'amount' => $total,
+                'amount' => $order->payableTotal(),
                 'method' => 'transfer',
                 'status' => 'pending',
             ]);
@@ -310,17 +316,25 @@ class CourseCheckoutController extends Controller
     }
 
     /**
-     * Generate signed upload URL untuk customer upload bukti bayar.
-     * TTL = 7 hari (sama dengan book checkout).
+     * Generate signed upload URL untuk customer upload bukti bayar. TTL
+     * schedule-aware: untuk order cicilan, link hidup sampai angsuran terakhir
+     * jatuh tempo (+ grace) — bukan cuma 7 hari yang keburu mati sebelum
+     * angsuran ditagih. Order lunas/buku tetap pakai TTL default.
      */
-    protected function generateUploadUrl(string $orderNumber): string
+    protected function generateUploadUrl(Order $order): string
     {
-        $ttlDays = max(1, (int) config('checkout.upload_url_ttl_days', 7));
-
         return URL::temporarySignedRoute(
             'upload.show',
-            now()->addDays($ttlDays),
-            ['order_number' => $orderNumber],
+            app(InstallmentReminder::class)->uploadUrlExpiry($order),
+            ['order_number' => $order->order_number],
         );
+    }
+
+    /**
+     * Signed URL untuk halaman lacak order. Signed PERMANEN (tanpa kedaluwarsa).
+     */
+    protected function generateTrackUrl(string $orderNumber): string
+    {
+        return URL::signedRoute('track.show', ['order_number' => $orderNumber]);
     }
 }

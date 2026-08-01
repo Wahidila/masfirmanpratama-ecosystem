@@ -2,8 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Course;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderPayment;
+use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class TrackOrderPageTest extends TestCase
@@ -111,6 +117,61 @@ class TrackOrderPageTest extends TestCase
         $response->assertSee('Pesanan Diproses', false);
         $response->assertSee('Dikirim', false);
         $response->assertSee('Selesai', false);
+    }
+
+    // ─── Course (non-physical) timeline ────────────────────────────────────
+
+    /** Order kelas = non-fisik → timeline TANPA diproses/dikirim + tanpa kartu pengiriman. */
+    public function test_course_order_track_hides_shipping_steps(): void
+    {
+        $course = Course::factory()->create(['title' => 'Kelas Track Test']);
+        $order = Order::factory()->create([
+            'order_number' => 'COURSE-20260101-ABC-XYZ999',
+            'status' => 'paid',
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'course_id' => $course->id,
+            'product_id' => null,
+        ]);
+
+        $response = $this->get($this->signedTrack($order->order_number));
+        $response->assertStatus(200);
+
+        // Timeline kelas: dibuat → bukti diupload → kelas aktif.
+        $response->assertSee('data-step="active"', false);
+        $response->assertSee('Kelas Aktif', false);
+
+        // TANPA step pengiriman fisik + tanpa kartu pengiriman/resi/riwayat lacak.
+        $response->assertDontSee('data-step="processing"', false);
+        $response->assertDontSee('data-step="shipped"', false);
+        $response->assertDontSee('Pesanan Diproses', false);
+        $response->assertDontSee('data-testid="shipment-card"', false);
+        $response->assertDontSee('data-testid="tracking-history-card"', false);
+        $response->assertDontSee('Riwayat Lacak Paket', false);
+    }
+
+    /** Regresi: order fisik (buku shippable) TETAP punya step diproses & dikirim. */
+    public function test_physical_order_track_keeps_shipping_steps(): void
+    {
+        $product = Product::factory()->create(['is_shippable' => true]);
+        $order = Order::factory()->create([
+            'order_number' => 'MFP-20260101-PHYS01',
+            'status' => 'paid',
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'course_id' => null,
+        ]);
+
+        $response = $this->get($this->signedTrack($order->order_number));
+        $response->assertStatus(200);
+
+        $response->assertSee('data-step="processing"', false);
+        $response->assertSee('data-step="shipped"', false);
+        $response->assertSee('Pesanan Diproses', false);
+        $response->assertDontSee('data-step="active"', false); // 'active' hanya utk kelas
     }
 
     // ─── Order items ───────────────────────────────────────────────────────
@@ -229,5 +290,109 @@ class TrackOrderPageTest extends TestCase
         $waNumber = config('store.wa_admin.number');
         $response->assertSee('https://wa.me/'.$waNumber, false);
         $response->assertSee('Tanya Admin', false);
+    }
+
+    // ─── DB-driven status (order nyata) ─────────────────────────────────────
+
+    private function seedTrackOrder(string $status, bool $withProof, string $proofStatus = 'pending'): Order
+    {
+        $order = Order::create([
+            'order_number' => 'MFP-20260701-'.strtoupper(Str::random(6)),
+            'customer_name' => 'Track Real',
+            'phone' => '081234567890',
+            'address' => 'Jl. Test, Malang, Jawa Timur',
+            'total' => 165000,
+            'status' => $status,
+            'shipping_city' => 'Malang',
+            'shipping_province' => 'Jawa Timur',
+        ]);
+        $payment = OrderPayment::create([
+            'order_id' => $order->id,
+            'amount' => 165000,
+            'method' => 'transfer',
+            'status' => $proofStatus,
+        ]);
+        if ($withProof) {
+            $payment->proof_path = 'payment-proofs/'.$order->order_number.'/1.jpg';
+            $payment->paid_at = now();
+            $payment->save();
+        }
+
+        return $order;
+    }
+
+    public function test_track_status_reflects_real_order_pending_unpaid(): void
+    {
+        $order = $this->seedTrackOrder('pending', withProof: false);
+
+        $this->get($this->signedTrack($order->order_number))
+            ->assertStatus(200)
+            ->assertSee('data-status="unpaid"', false)
+            ->assertSee('Menunggu Pembayaran', false);
+    }
+
+    public function test_track_status_reflects_real_order_proof_uploaded(): void
+    {
+        $order = $this->seedTrackOrder('pending', withProof: true);
+
+        $this->get($this->signedTrack($order->order_number))
+            ->assertStatus(200)
+            ->assertSee('data-status="waiting_confirmation"', false)
+            ->assertSee('Menunggu Verifikasi', false);
+    }
+
+    public function test_track_status_reflects_real_order_paid(): void
+    {
+        $order = $this->seedTrackOrder('paid', withProof: true, proofStatus: 'verified');
+
+        $this->get($this->signedTrack($order->order_number))
+            ->assertStatus(200)
+            ->assertSee('data-status="paid"', false);
+    }
+
+    public function test_track_status_reflects_real_order_completed(): void
+    {
+        $order = $this->seedTrackOrder('completed', withProof: true, proofStatus: 'verified');
+
+        $this->get($this->signedTrack($order->order_number))
+            ->assertStatus(200)
+            ->assertSee('data-status="completed"', false)
+            ->assertSee('Pesanan Selesai', false);
+    }
+
+    public function test_track_status_reflects_real_order_cancelled(): void
+    {
+        $order = $this->seedTrackOrder('cancelled', withProof: false);
+
+        $this->get($this->signedTrack($order->order_number))
+            ->assertStatus(200)
+            ->assertSee('data-status="cancelled"', false)
+            ->assertSee('Pesanan Dibatalkan', false);
+    }
+
+    public function test_track_items_and_totals_come_from_real_order(): void
+    {
+        $product = Product::factory()->create([
+            'slug' => 'buku-track', 'title' => 'Buku Tracking Test',
+            'type' => 'book', 'price' => 150000, 'is_shippable' => true, 'status' => 'active',
+        ]);
+        $order = Order::create([
+            'order_number' => 'MFP-20260701-ITEMS1',
+            'customer_name' => 'Item Test', 'phone' => '0812', 'address' => 'Jl. Test',
+            'total' => 165000, 'shipping_cost' => 15000, 'status' => 'paid',
+        ]);
+        OrderItem::create([
+            'order_id' => $order->id, 'product_id' => $product->id,
+            'qty' => 1, 'unit_price' => 150000, 'subtotal' => 150000,
+        ]);
+        OrderPayment::create([
+            'order_id' => $order->id, 'amount' => 165000, 'method' => 'transfer', 'status' => 'verified',
+        ]);
+
+        $this->get($this->signedTrack($order->order_number))
+            ->assertStatus(200)
+            ->assertSee('Buku Tracking Test', false)   // item nyata, bukan dummy "Kelas Reguler AMC"
+            ->assertDontSee('Kelas Reguler AMC', false)
+            ->assertSee('Rp 165.000', false);           // total nyata
     }
 }

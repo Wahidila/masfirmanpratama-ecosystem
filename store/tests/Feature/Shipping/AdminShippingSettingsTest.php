@@ -5,9 +5,11 @@ namespace Tests\Feature\Shipping;
 use App\Models\Admin;
 use App\Models\Product;
 use App\Services\Settings;
+use App\Services\Shipping\AgenwebsiteClient;
 use App\Services\Shipping\ShippingRateService;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -22,6 +24,41 @@ class AdminShippingSettingsTest extends TestCase
         parent::setUp();
         $this->seed(AdminSeeder::class);
         $this->admin = Admin::first();
+
+        // Cegah default cache (couriers/services 24h) bocor antar test method.
+        Cache::flush();
+
+        // Default fakes — admin shipping tab + update sekarang fetch live couriers
+        // master via Settings page render dan validasi update. Tanpa stub ini, test
+        // bisa hit network beneran (atau timeout) di env CI. Tiap test boleh override.
+        $this->fakeShippingMasters();
+    }
+
+    protected function fakeShippingMasters(): void
+    {
+        Http::fake([
+            '*/license/activate' => Http::response([
+                'data' => ['type' => 'exclusive', 'expire_date' => '2027-06-30'],
+                'message' => 'OK',
+            ], 200),
+            '*/shipping/couriers' => Http::response([
+                'message' => 'OK',
+                'data' => [
+                    ['id' => 'jne', 'title' => 'JNE', 'category' => 'domestic'],
+                    ['id' => 'jnt', 'title' => 'J&T Express', 'category' => 'domestic'],
+                    ['id' => 'sicepat', 'title' => 'SiCepat', 'category' => 'domestic'],
+                    ['id' => 'anteraja', 'title' => 'AnterAja', 'category' => 'domestic'],
+                    ['id' => 'pos', 'title' => 'POS', 'category' => 'domestic'],
+                ],
+            ], 200),
+            '*/shipping/services' => Http::response([
+                'message' => 'OK',
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'is_premium' => 0, 'enable' => 1, 'extra_cost' => 0],
+                ],
+            ], 200),
+        ]);
     }
 
     public function test_admin_can_view_shipping_tab(): void
@@ -75,6 +112,17 @@ class AdminShippingSettingsTest extends TestCase
         Settings::set('shipping.couriers', ['jne'], 'array');
 
         Http::fake([
+            '*/shipping/services' => Http::response([
+                'message' => 'OK',
+                'data' => [
+                    ['courier_id' => 'jne_reg', 'name' => 'REG', 'courier' => 'jne',
+                        'category' => 'domestic', 'is_premium' => 0, 'enable' => 1, 'extra_cost' => 0],
+                ],
+            ], 200),
+            '*/shipping/couriers' => Http::response([
+                'message' => 'OK',
+                'data' => [['id' => 'jne', 'title' => 'JNE', 'category' => 'domestic']],
+            ], 200),
             '*/shipping/price' => Http::response([
                 'message' => 'Success',
                 'data' => [
@@ -109,11 +157,16 @@ class AdminShippingSettingsTest extends TestCase
 
         $this->assertNotEmpty($rates);
 
-        // Verify the API was called with bandung origin (from DB) not surabaya (from config)
+        // Verify the API was called with bandung origin (from DB) not surabaya (from config).
+        // Scope ke endpoint price — services/couriers calls jangan diperiksa di sini.
         Http::assertSent(function ($request) {
-            return $request['origin'] === 'bandung'
-                && $request['origin_zipcode'] === '40111'
-                && $request['courier'] === 'jne';
+            if (! str_contains($request->url(), '/shipping/price')) {
+                return false;
+            }
+
+            return ($request['origin'] ?? null) === 'bandung'
+                && ($request['origin_zipcode'] ?? null) === '40111'
+                && ($request['courier'] ?? null) === 'jne';
         });
     }
 
@@ -141,9 +194,8 @@ class AdminShippingSettingsTest extends TestCase
         $this->assertEmpty($rates);
     }
 
-    public function test_cannot_save_site_url_or_license_via_form(): void
+    public function test_can_save_site_url_and_license_via_form(): void
     {
-        // Attempt to sneak in site_url and license fields
         $response = $this->actingAs($this->admin, 'admin')
             ->put(route('admin.settings.shipping.update'), [
                 'origin' => 'surabaya',
@@ -151,17 +203,61 @@ class AdminShippingSettingsTest extends TestCase
                 'couriers' => ['jne'],
                 'shipping_enabled' => '1',
                 'default_weight_kg' => '1',
-                'site_url' => 'https://evil.com',
-                'license' => 'HACKED_LICENSE',
+                'site_url' => 'https://masfirmanpratama.com',
+                'license' => 'NEW_LICENSE_KEY',
             ]);
 
-        $response->assertRedirect();
+        $response->assertRedirect(route('admin.settings.index', ['tab' => 'shipping']));
 
-        // Verify these were NOT saved
-        $this->assertNull(Settings::get('shipping.site_url'));
-        $this->assertNull(Settings::get('shipping.license'));
-        $this->assertNull(Settings::get('site_url'));
-        $this->assertNull(Settings::get('license'));
+        $this->assertSame('NEW_LICENSE_KEY', Settings::get('shipping.license'));
+        $this->assertSame('https://masfirmanpratama.com', Settings::get('shipping.site_url'));
+    }
+
+    public function test_saved_license_and_site_url_override_config_in_client(): void
+    {
+        Settings::set('shipping.license', 'DB_LICENSE_123', 'string');
+        Settings::set('shipping.site_url', 'https://custom-domain.test', 'string');
+
+        $client = AgenwebsiteClient::fromConfig();
+
+        $ref = new \ReflectionProperty($client, 'cfg');
+        $ref->setAccessible(true);
+        $cfg = $ref->getValue($client);
+
+        $this->assertSame('DB_LICENSE_123', $cfg['license']);
+        $this->assertSame('https://custom-domain.test', $cfg['site_url']);
+        // user_agent harus ikut site_url (domain-bound license).
+        $this->assertStringContainsString('https://custom-domain.test', $cfg['user_agent']);
+    }
+
+    public function test_empty_license_falls_back_to_config(): void
+    {
+        config(['shipping.license' => 'ENV_FALLBACK_LICENSE']);
+        Settings::set('shipping.license', '', 'string');
+
+        $client = AgenwebsiteClient::fromConfig();
+
+        $ref = new \ReflectionProperty($client, 'cfg');
+        $ref->setAccessible(true);
+        $cfg = $ref->getValue($client);
+
+        $this->assertSame('ENV_FALLBACK_LICENSE', $cfg['license']);
+    }
+
+    public function test_invalid_site_url_is_rejected(): void
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->put(route('admin.settings.shipping.update'), [
+                'origin' => 'surabaya',
+                'origin_zipcode' => '60111',
+                'couriers' => ['jne'],
+                'shipping_enabled' => '1',
+                'default_weight_kg' => '1',
+                'site_url' => 'not-a-valid-url',
+                'license' => 'SOME_LICENSE',
+            ]);
+
+        $response->assertSessionHasErrors('site_url');
     }
 
     public function test_update_validates_couriers_in_allowed_list(): void

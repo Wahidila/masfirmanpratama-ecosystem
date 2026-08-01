@@ -6,6 +6,11 @@
     'ctaHref' => 'https://wa.me/6281230633464',
 ])
 
+@php
+    // Logo dinamis dari Settings (tab Settings → Logo di admin); fallback ikon+teks.
+    $headerLogo = \App\Services\Settings::getBranding()['header_logo_url'];
+@endphp
+
 <nav
     x-data="{ open: false, scrolled: false }"
     x-init="window.addEventListener('scroll', () => scrolled = window.scrollY > 8)"
@@ -18,12 +23,16 @@
         <div class="flex items-center justify-between h-20">
             {{-- Logo --}}
             <a href="{{ url('/') }}" class="flex items-center gap-2 cursor-pointer">
-                <span class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
-                    <i data-lucide="brain-circuit" class="w-6 h-6"></i>
-                </span>
-                <span class="font-bold text-xl sm:text-2xl tracking-tight text-slate-900">
-                    {{ $logoText }}<span class="text-primary-600">{{ $logoAccent }}</span>
-                </span>
+                @if ($headerLogo)
+                    <img src="{{ $headerLogo }}" alt="{{ $logoText }} {{ $logoAccent }}" class="h-10 w-auto max-w-[200px] object-contain">
+                @else
+                    <span class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
+                        <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                    </span>
+                    <span class="font-bold text-xl sm:text-2xl tracking-tight text-slate-900">
+                        {{ $logoText }}<span class="text-primary-600">{{ $logoAccent }}</span>
+                    </span>
+                @endif
             </a>
 
             {{-- Desktop nav --}}
